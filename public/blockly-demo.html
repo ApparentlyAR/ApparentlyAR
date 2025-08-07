@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Blockly Demo</title>
   <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="../src/blocks/csv_import.js"></script>
   <style>
     html, body {
       height: 100%;
@@ -115,6 +116,9 @@
       </category>
       <category name="Variables" colour="330" custom="VARIABLE"></category>
       <category name="Functions" colour="290" custom="PROCEDURE"></category>
+      <category name="Data" colour="20">
+        <block type="csv_import"></block>
+      </category>
     </xml>
     <div class="controls">
       <button id="runButton">Run Code</button>
