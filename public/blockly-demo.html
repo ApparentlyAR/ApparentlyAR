@@ -5,51 +5,110 @@
   <title>Blockly Demo</title>
   <script src="https://unpkg.com/blockly/blockly.min.js"></script>
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; }
-    #blocklyDiv { height: 480px; width: 100%; }
-    #output { background: #222; color: #fff; padding: 10px; min-height: 40px; }
+    body {
+      background: #f4f6fa;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 32px auto;
+      padding: 24px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    h2 {
+      margin-top: 0;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #2d3a4a;
+    }
+    #blocklyDiv {
+      height: 480px;
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e0e4ea;
+      margin-bottom: 16px;
+    }
+    .controls {
+      margin-bottom: 16px;
+    }
+    .controls button {
+      background: #2d8cf0;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 18px;
+      margin-right: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .controls button:hover {
+      background: #1765ad;
+    }
+    #output {
+      background: #181c20;
+      color: #e0e4ea;
+      padding: 14px;
+      min-height: 40px;
+      border-radius: 6px;
+      font-family: 'Fira Mono', 'Consolas', monospace;
+      font-size: 1rem;
+      margin-bottom: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    @media (max-width: 700px) {
+      .container { padding: 8px; }
+      #blocklyDiv { height: 320px; }
+    }
   </style>
 </head>
 <body>
-  <h2>Blockly Demo</h2>
-  <div id="blocklyDiv"></div>
-  <xml id="toolbox" style="display: none">
-    <category name="Logic" colour="210">
-      <block type="controls_if"></block>
-      <block type="logic_compare"></block>
-      <block type="logic_operation"></block>
-      <block type="logic_negate"></block>
-      <block type="logic_boolean"></block>
-    </category>
-    <category name="Loops" colour="120">
-      <block type="controls_repeat_ext"></block>
-      <block type="controls_whileUntil"></block>
-    </category>
-    <category name="Math" colour="230">
-      <block type="math_number"></block>
-      <block type="math_arithmetic"></block>
-      <block type="math_single"></block>
-      <block type="math_round"></block>
-      <block type="math_on_list"></block>
-    </category>
-    <category name="Text" colour="160">
-      <block type="text"></block>
-      <block type="text_print"></block>
-    </category>
-    <category name="Lists" colour="260">
-      <block type="lists_create_with"></block>
-      <block type="lists_getIndex"></block>
-      <block type="lists_setIndex"></block>
-      <block type="lists_length"></block>
-    </category>
-    <category name="Variables" colour="330" custom="VARIABLE"></category>
-    <category name="Functions" colour="290" custom="PROCEDURE"></category>
-  </xml>
-  <div style="margin: 10px 0;">
-    <button id="runButton">Run Code</button>
-    <button id="showCodeButton">Show Code</button>
+  <div class="container">
+    <h2>Blockly Demo</h2>
+    <div id="blocklyDiv"></div>
+    <xml id="toolbox" style="display: none">
+      <category name="Logic" colour="210">
+        <block type="controls_if"></block>
+        <block type="logic_compare"></block>
+        <block type="logic_operation"></block>
+        <block type="logic_negate"></block>
+        <block type="logic_boolean"></block>
+      </category>
+      <category name="Loops" colour="120">
+        <block type="controls_repeat_ext"></block>
+        <block type="controls_whileUntil"></block>
+      </category>
+      <category name="Math" colour="230">
+        <block type="math_number"></block>
+        <block type="math_arithmetic"></block>
+        <block type="math_single"></block>
+        <block type="math_round"></block>
+        <block type="math_on_list"></block>
+      </category>
+      <category name="Text" colour="160">
+        <block type="text"></block>
+        <block type="text_print"></block>
+      </category>
+      <category name="Lists" colour="260">
+        <block type="lists_create_with"></block>
+        <block type="lists_getIndex"></block>
+        <block type="lists_setIndex"></block>
+        <block type="lists_length"></block>
+      </category>
+      <category name="Variables" colour="330" custom="VARIABLE"></category>
+      <category name="Functions" colour="290" custom="PROCEDURE"></category>
+    </xml>
+    <div class="controls">
+      <button id="runButton">Run Code</button>
+      <button id="showCodeButton">Show Code</button>
+    </div>
+    <pre id="output"></pre>
   </div>
-  <pre id="output"></pre>
   <script>
     const workspace = Blockly.inject('blocklyDiv', {
       toolbox: document.getElementById('toolbox')
