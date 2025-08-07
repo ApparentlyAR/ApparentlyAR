@@ -76,7 +76,6 @@ ApparentlyAR/
 | Najla      | `@Naslathira`     |
 | Christophe | `@christopheweng` |
 
-Team members, please edit this section to include your GitHub usernames.
 
 ---
 
