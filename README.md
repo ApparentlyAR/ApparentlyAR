@@ -112,6 +112,10 @@ npm test
 
 This will run all tests using Jest. Test files should be named with `.test.js` or `.spec.js` and placed alongside the code they test or in a `__tests__` folder.
 
+### Run the Blockly demo
+
+Open `public/blockly-demo.html` in your browser to try out the Blockly workspace.
+
 ---
 
 ## Example Dataset
