@@ -4,8 +4,37 @@
   <meta charset="UTF-8">
   <title>Blockly Demo</title>
   <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+    // Ensure Blockly.JavaScript is available before loading custom blocks
+    console.log('Blockly.JavaScript available:', !!window.Blockly.JavaScript);
+    console.log('Available JavaScript generators before CSV import:', Object.keys(window.Blockly.JavaScript || {}));
+  </script>
   <script src="../src/blocks/csv_import.js"></script>
+  <script>
+    // Check if CSV import generator was registered
+    console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
+    console.log('CSV import generator type:', typeof window.Blockly.JavaScript['csv_import']);
+    
+    // Show all available generators that might be block-related
+    const allKeys = Object.keys(window.Blockly.JavaScript || {});
+    const blockKeys = allKeys.filter(key => !key.startsWith('ORDER_') && !key.startsWith('STATEMENT_') && !key.startsWith('FUNCTION_') && !key.startsWith('INFINITE_') && !key.startsWith('INDENT') && !key.startsWith('COMMENT_') && !key.startsWith('RESERVED_') && key.length > 2);
+    console.log('Block-related generators:', blockKeys);
+    
+    // Test the generator directly
+    setTimeout(() => {
+      if (window.Blockly.JavaScript['csv_import']) {
+        try {
+          console.log('Testing CSV generator directly...');
+          const result = window.Blockly.JavaScript['csv_import']();
+          console.log('Direct generator test result:', result);
+        } catch (e) {
+          console.error('Direct generator test failed:', e);
+        }
+      }
+    }, 200);
+  </script>
   <style>
     html, body {
       height: 100%;
@@ -136,39 +165,58 @@
 
     document.getElementById('runButton').onclick = function() {
       output.textContent = '';
+      console.log('Run button clicked');
       try {
+        console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
+        console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
+        console.log('Calling workspaceToCode...');
         const code = Blockly.JavaScript.workspaceToCode(workspace);
+        console.log('Generated code:', code);
+        if (!code.trim()) {
+          output.textContent = 'No code generated - make sure you have blocks in the workspace';
+          return;
+        }
         // eslint-disable-next-line no-eval
         const result = eval(code);
+        console.log('Execution result:', result);
         if (result !== undefined) output.textContent = result;
       } catch (e) {
+        console.error('Error details:', e);
         output.textContent = 'Error: ' + e;
       }
     };
 
     document.getElementById('showCodeButton').onclick = function() {
+      console.log('Show code button clicked');
+      console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
+      console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
       const code = Blockly.JavaScript.workspaceToCode(workspace);
-      output.textContent = code;
+      console.log('Generated code:', code);
+      output.textContent = code || 'No code generated';
     };
 
-    document.getElementById('csv-upload-external').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          Papa.parse(event.target.result, {
-            header: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-              Blockly.CsvImportData.data = results.data;
-              Blockly.CsvImportData.filename = file.name;
-              alert('CSV imported: ' + file.name + '\nRows: ' + results.data.length);
-            }
-          });
-        };
-        reader.readAsText(file);
-      }
-    });
+    // External CSV upload handler - only add if element exists
+    const csvUploadExternal = document.getElementById('csv-upload-external');
+    if (csvUploadExternal) {
+      csvUploadExternal.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            Papa.parse(event.target.result, {
+              header: true,
+              skipEmptyLines: true,
+              complete: function(results) {
+                Blockly.CsvImportData.data = results.data;
+                Blockly.CsvImportData.filename = file.name;
+                alert('CSV imported: ' + file.name + '\nRows: ' + results.data.length);
+              }
+            });
+          };
+          reader.readAsText(file);
+        }
+      });
+    }
   </script>
 </body>
 </html> 

@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/ApparentlyAR/ApparentlyAR#readme",
   "devDependencies": {
-    "jest": "^30.0.5"
+    "jest": "^30.0.5",
+    "jsdom": "^26.1.0"
   }
 }
