@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Blockly Demo</title>
   <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="../src/blocks/csv_import.js"></script>
   <style>
     html, body {
@@ -149,6 +150,25 @@
       const code = Blockly.JavaScript.workspaceToCode(workspace);
       output.textContent = code;
     };
+
+    document.getElementById('csv-upload-external').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          Papa.parse(event.target.result, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+              Blockly.CsvImportData.data = results.data;
+              Blockly.CsvImportData.filename = file.name;
+              alert('CSV imported: ' + file.name + '\nRows: ' + results.data.length);
+            }
+          });
+        };
+        reader.readAsText(file);
+      }
+    });
   </script>
 </body>
 </html> 
