@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Blockly Demo</title>
   <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="../src/blocks/csv_import.js"></script>
   <style>
     html, body {
@@ -123,6 +124,7 @@
     <div class="controls">
       <button id="runButton">Run Code</button>
       <button id="showCodeButton">Show Code</button>
+      <input type="file" id="csv-upload-external" accept=".csv,text/csv" style="margin-left:16px;">
     </div>
     <pre id="output"></pre>
   </div>
@@ -149,6 +151,25 @@
       const code = Blockly.JavaScript.workspaceToCode(workspace);
       output.textContent = code;
     };
+
+    document.getElementById('csv-upload-external').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          Papa.parse(event.target.result, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+              Blockly.CsvImportData.data = results.data;
+              Blockly.CsvImportData.filename = file.name;
+              alert('CSV imported: ' + file.name + '\nRows: ' + results.data.length);
+            }
+          });
+        };
+        reader.readAsText(file);
+      }
+    });
   </script>
 </body>
 </html> 
