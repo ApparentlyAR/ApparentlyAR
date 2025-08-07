@@ -7,6 +7,7 @@
   <style>
     html, body { height: 100%; margin: 0; padding: 0; }
     #blocklyDiv { height: 480px; width: 100%; }
+    #output { background: #222; color: #fff; padding: 10px; min-height: 40px; }
   </style>
 </head>
 <body>
@@ -20,10 +21,34 @@
     <block type="text"></block>
     <block type="text_print"></block>
   </xml>
+  <div style="margin: 10px 0;">
+    <button id="runButton">Run Code</button>
+    <button id="showCodeButton">Show Code</button>
+  </div>
+  <pre id="output"></pre>
   <script>
     const workspace = Blockly.inject('blocklyDiv', {
       toolbox: document.getElementById('toolbox')
     });
+
+    const output = document.getElementById('output');
+
+    document.getElementById('runButton').onclick = function() {
+      output.textContent = '';
+      try {
+        const code = Blockly.JavaScript.workspaceToCode(workspace);
+        // eslint-disable-next-line no-eval
+        const result = eval(code);
+        if (result !== undefined) output.textContent = result;
+      } catch (e) {
+        output.textContent = 'Error: ' + e;
+      }
+    };
+
+    document.getElementById('showCodeButton').onclick = function() {
+      const code = Blockly.JavaScript.workspaceToCode(workspace);
+      output.textContent = code;
+    };
   </script>
 </body>
 </html> 
