@@ -9,6 +9,7 @@ ApparentlyAR is a web-based educational platform designed for students in grades
 ### Objective
 
 To improve data literacy among younger students by enabling them to:
+
 - Upload and transform datasets through drag-and-drop programming blocks
 - Manipulate and interact with data visualisations using AR markers
 - Understand foundational data science concepts such as filtering, grouping, averages, and trends
@@ -25,14 +26,14 @@ To improve data literacy among younger students by enabling them to:
 
 ## Tech Stack
 
-| Category          | Tools / Languages                     |
-|------------------|----------------------------------------|
-| Frontend         | HTML, CSS, JavaScript                  |
-| Block Programming| Blockly (custom blocks)                |
-| AR Integration   | MindAR, AR.js, Three.js                |
-| Data Handling    | JavaScript (CSV upload and transforms) |
-| Version Control  | Git, GitHub                            |
-| Development Tools| VS Code, npm, browser development tools|
+| Category          | Tools / Languages                       |
+| ----------------- | --------------------------------------- |
+| Frontend          | HTML, CSS, JavaScript                   |
+| Block Programming | Blockly (custom blocks)                 |
+| AR Integration    | MindAR, AR.js, Three.js                 |
+| Data Handling     | JavaScript (CSV upload and transforms)  |
+| Version Control   | Git, GitHub                             |
+| Development Tools | VS Code, npm, browser development tools |
 
 ---
 
@@ -66,16 +67,15 @@ ApparentlyAR/
 
 ## Team Members
 
-| Name        | GitHub Username     |
-|-------------|---------------------|
-| Pascal      | *(please add yours)* |
-| Faraihan    | *(please add yours)* |
-| Yugansh     | *(please add yours)* |
-| Benjamin    | `@BenGhahramani`     |
-| Najla       | *(please add yours)* |
-| Christophe  | *(please add yours)* |
+| Name       | GitHub Username   |
+| ---------- | ----------------- |
+| Pascal     | `@Pascalrjt`      |
+| Faraihan   | `@RafiPibe`       |
+| Yugansh    | `@Yugansh-Uq`     |
+| Benjamin   | `@BenGhahramani`  |
+| Najla      | `@Naslathira`     |
+| Christophe | `@christopheweng` |
 
-Team members, please edit this section to include your GitHub usernames.
 
 ---
 
