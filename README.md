@@ -104,6 +104,14 @@ npm start
 
 Navigate to `http://localhost:3000` or the port indicated in the terminal.
 
+### Run tests
+
+```
+npm test
+```
+
+This will run all tests using Jest. Test files should be named with `.test.js` or `.spec.js` and placed alongside the code they test or in a `__tests__` folder.
+
 ---
 
 ## Example Dataset
@@ -117,7 +125,17 @@ Bob,10,72
 Charlie,8,90
 ```
 
-Place this in the `src/data/` folder or use the upload interface once implemented.
+- Place this in the `src/data/` folder or use the upload interface once implemented.
+
+---
+
+## Project Structure
+
+- `src/` — Main source code
+  - `__tests__/` — (Optional) Test files can go here or alongside modules
+  - Example: `src/example.test.js` for a sample test
+  - `tests/` — All test files (e.g., `tests/sum.test.js`)
+  - Example: `const sum = require('../src/sum');` in test files
 
 ---
 

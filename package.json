@@ -1,0 +1,23 @@
+{
+  "name": "apparentlyar",
+  "version": "1.0.0",
+  "description": "ApparentlyAR is a web-based educational platform designed for students in grades 8–10 to explore and visualise data using a block-based programming interface combined with Augmented Reality (AR). The platform encourages hands-on, creative learning by allowing students to interact with data through fiducial markers and spatial visualisation.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ApparentlyAR/ApparentlyAR.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ApparentlyAR/ApparentlyAR/issues"
+  },
+  "homepage": "https://github.com/ApparentlyAR/ApparentlyAR#readme",
+  "devDependencies": {
+    "jest": "^30.0.5"
+  }
+}
