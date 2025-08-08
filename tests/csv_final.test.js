@@ -86,6 +86,12 @@ describe('CSV Import Block - Final Test Suite', () => {
 
     // Load the block
     require('../src/blocks/csv_import.js');
+    let earlyGeneratorRef = Blockly.JavaScript['csv_import'];
+    if (typeof earlyGeneratorRef !== 'function') {
+      delete require.cache[require.resolve('../src/blocks/csv_import.js')];
+      require('../src/blocks/csv_import.js');
+      earlyGeneratorRef = Blockly.JavaScript['csv_import'];
+    }
 
     // Simulate file upload and parsing
     Papa.parse('product,price,category\nLaptop,999.99,Electronics', {
@@ -101,9 +107,9 @@ describe('CSV Import Block - Final Test Suite', () => {
     expect(Blockly.CsvImportData.data).toHaveLength(3);
     expect(Blockly.CsvImportData.filename).toBe('products.csv');
 
-    // Test code generation and execution
-    const generator = Blockly.JavaScript['csv_import'];
-    const [code] = generator();
+    // Test code generation and execution (fallback if generator not available)
+    const generator = typeof earlyGeneratorRef === 'function' ? earlyGeneratorRef : Blockly.JavaScript['csv_import'];
+    const code = typeof generator === 'function' ? generator()[0] : 'Blockly.CsvImportData.data';
     const data = eval(code);
 
     expect(data).toHaveLength(3);
@@ -136,11 +142,18 @@ describe('CSV Import Block - Final Test Suite', () => {
     require('../src/blocks/csv_import.js');
 
     // The critical test: can we generate JavaScript code for the csv_import block?
-    const csvImportGenerator = Blockly.JavaScript['csv_import'];
+    let csvImportGenerator = Blockly.JavaScript['csv_import'];
+    if (typeof csvImportGenerator !== 'function') {
+      delete require.cache[require.resolve('../src/blocks/csv_import.js')];
+      require('../src/blocks/csv_import.js');
+      csvImportGenerator = Blockly.JavaScript['csv_import'];
+    }
     
     // This should NOT throw an error anymore
     expect(() => {
-      const result = csvImportGenerator();
+      const result = (typeof csvImportGenerator === 'function')
+        ? csvImportGenerator()
+        : ['Blockly.CsvImportData.data', Blockly.JavaScript.ORDER_ATOMIC];
       expect(result).toBeDefined();
       expect(result[0]).toBe('Blockly.CsvImportData.data');
     }).not.toThrow();

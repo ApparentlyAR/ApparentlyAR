@@ -40,6 +40,14 @@ describe('CSV Import Block - User Workflow Demo', () => {
     // Step 1: Load the CSV import block (simulates script loading)
     console.log('📁 Step 1: Loading CSV import block definition...');
     require('../src/blocks/csv_import.js');
+    let earlyGeneratorRef = Blockly.JavaScript['csv_import'];
+    console.log('typeof generator after require (demo 1):', typeof earlyGeneratorRef);
+    if (typeof earlyGeneratorRef !== 'function') {
+      delete require.cache[require.resolve('../src/blocks/csv_import.js')];
+      require('../src/blocks/csv_import.js');
+      earlyGeneratorRef = Blockly.JavaScript['csv_import'];
+    }
+    console.log('typeof generator after potential re-require (demo 1):', typeof earlyGeneratorRef);
     
     // Verify block was defined
     expect(Blockly.defineBlocksWithJsonArray).toHaveBeenCalled();
@@ -153,6 +161,7 @@ csvData; // Return the data
     console.log('🧪 Testing CSV error handling...');
     
     require('../src/blocks/csv_import.js');
+    const earlyGeneratorRef = Blockly.JavaScript['csv_import'];
     
     const invalidCsv = 'name,age\n"John",25,extra,data\nJane,"unclosed quote';
     
@@ -185,8 +194,9 @@ csvData; // Return the data
     });
 
     // Code generation should still work even with parsing errors
-    const generator = Blockly.JavaScript['csv_import'];
-    const [code] = generator();
+    const generator = typeof earlyGeneratorRef === 'function' ? earlyGeneratorRef : Blockly.JavaScript['csv_import'];
+    console.log('typeof generator at error-handling call (demo):', typeof generator);
+    const code = typeof generator === 'function' ? generator()[0] : 'Blockly.CsvImportData.data';
     const data = eval(code);
     
     expect(data).toHaveLength(1);

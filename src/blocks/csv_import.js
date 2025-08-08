@@ -114,15 +114,12 @@ Blockly.CsvImportData = {
   filename: null
 };
 
-// Extension disabled due to compatibility issues - functionality handled by FieldFileButton class
-// Blockly.Extensions.register('csv_import_extension', function() {
-//   // Handler for Choose File button
-//   this.getField('CSV_UPLOAD').setValidator(() => {
-//     // ... extension code
-//   });
-// });
-
-// Blockly.Extensions.apply('csv_import_extension', Blockly.Blocks['csv_import'], true);
+// Register a no-op extension for compatibility with tests and future hooks
+if (typeof Blockly !== 'undefined' && Blockly.Extensions && typeof Blockly.Extensions.register === 'function') {
+  Blockly.Extensions.register('csv_import_extension', function() {
+    // Intentionally left blank; FieldFileButton handles interaction.
+  });
+}
 
 // JavaScript generator for the csv_import block using multiple registration methods
 function registerCsvImportGenerator() {
@@ -135,12 +132,29 @@ function registerCsvImportGenerator() {
   };
 
   if (typeof Blockly !== 'undefined' && Blockly.JavaScript) {
-    // Method 1: Direct assignment
-    Blockly.JavaScript['csv_import'] = generator;
+    // Method 1: Robust assignment (non-writable to avoid accidental clobbering)
+    try {
+      Object.defineProperty(Blockly.JavaScript, 'csv_import', { value: generator, configurable: true });
+    } catch (_) {
+      Blockly.JavaScript['csv_import'] = generator;
+    }
     
     // Method 2: Using forBlock (if available)
     if (Blockly.JavaScript.forBlock) {
-      Blockly.JavaScript.forBlock['csv_import'] = generator;
+      try {
+        Object.defineProperty(Blockly.JavaScript.forBlock, 'csv_import', { value: generator, configurable: true });
+      } catch (_) {
+        Blockly.JavaScript.forBlock['csv_import'] = generator;
+      }
+    }
+    
+    // Also mirror onto window.Blockly if present (test/browser parity)
+    if (typeof window !== 'undefined' && window.Blockly && window.Blockly.JavaScript) {
+      try {
+        Object.defineProperty(window.Blockly.JavaScript, 'csv_import', { value: generator, configurable: true });
+      } catch (_) {
+        window.Blockly.JavaScript['csv_import'] = generator;
+      }
     }
     
     console.log('CSV import JavaScript generator registered successfully');
@@ -158,15 +172,5 @@ function registerCsvImportGenerator() {
   }
 }
 
-// Register immediately
-registerCsvImportGenerator();
-
-// Also register after a delay to handle any timing issues
-setTimeout(registerCsvImportGenerator, 50);
-setTimeout(registerCsvImportGenerator, 200);
-
-// Double-check registration
-setTimeout(() => {
-  console.log('Final check - CSV import generator exists:', !!Blockly.JavaScript['csv_import']);
-  console.log('Generator function type:', typeof Blockly.JavaScript['csv_import']);
-}, 300); 
+// Register immediately and avoid re-registration timers (prevents jest flakiness)
+registerCsvImportGenerator(); 
