@@ -28,6 +28,7 @@ class FieldFileButton extends Blockly.Field {
     this.button_ = null;
     this.fileInput_ = null;
     this.filename_ = 'No file chosen';
+    this._dialogOpen = false;
   }
 
   static fromJson(options) {
@@ -35,39 +36,44 @@ class FieldFileButton extends Blockly.Field {
   }
 
   showEditor_() {
-    if (!this.fileInput_) {
-      this.fileInput_ = document.createElement('input');
-      this.fileInput_.type = 'file';
-      this.fileInput_.accept = '.csv,text/csv';
-      this.fileInput_.style.display = 'none';
-      this.fileInput_.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          this.filename_ = file.name;
-          // Update the filename field on the parent block
-          if (this.sourceBlock_ && this.sourceBlock_.getField('CSV_FILENAME')) {
-            this.sourceBlock_.getField('CSV_FILENAME').setValue(file.name);
-          }
-          // Re-render this field to hide the button
-          this.render_();
-          
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            Papa.parse(event.target.result, {
-              header: true,
-              skipEmptyLines: true,
-              complete: (results) => {
-                Blockly.CsvImportData.data = results.data;
-                Blockly.CsvImportData.filename = file.name;
-              }
-            });
-          };
-          reader.readAsText(file);
-        }
-      });
+    if (this._dialogOpen) {
+      return;
     }
+    this._dialogOpen = true;
+    // Always create a fresh input per open to avoid stale listeners
+    this.fileInput_ = document.createElement('input');
+    this.fileInput_.type = 'file';
+    this.fileInput_.accept = '.csv,text/csv';
+    this.fileInput_.style.display = 'none';
+    this.fileInput_.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.filename_ = file.name;
+        if (this.sourceBlock_ && this.sourceBlock_.getField('CSV_FILENAME')) {
+          this.sourceBlock_.getField('CSV_FILENAME').setValue(file.name);
+        }
+        this.render_();
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          Papa.parse(event.target.result, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+              Blockly.CsvImportData.data = results.data;
+              Blockly.CsvImportData.filename = file.name;
+              this._dialogOpen = false;
+            }
+          });
+        };
+        reader.readAsText(file);
+      } else {
+        this._dialogOpen = false;
+      }
+    }, { once: true });
     this.fileInput_.value = '';
     this.fileInput_.click();
+    // Safety reset in case 'change' doesn't fire (cancel)
+    setTimeout(() => { this._dialogOpen = false; }, 800);
   }
 
   // Render only the plus button
@@ -93,10 +99,19 @@ class FieldFileButton extends Blockly.Field {
       html.style.width = '24px';
       html.style.height = '24px';
       html.innerHTML = `<button style="height:24px;width:24px;border-radius:50%;border:none;background:#2d8cf0;color:white;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>`;
-      html.querySelector('button').onclick = (e) => {
+      const btn = html.querySelector('button');
+      const stopAll = (e) => {
         e.preventDefault();
-        this.showEditor_();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
       };
+      btn.addEventListener('mousedown', stopAll);
+      btn.addEventListener('touchstart', stopAll, { passive: false });
+      btn.addEventListener('click', (e) => {
+        // We open the editor ourselves and stop further handling to avoid duplicates
+        stopAll(e);
+        this.showEditor_();
+      });
       this.button_.appendChild(html);
       group.appendChild(this.button_);
     }
