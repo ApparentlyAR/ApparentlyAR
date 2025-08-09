@@ -12,6 +12,7 @@
     console.log('Available JavaScript generators before CSV import:', Object.keys(window.Blockly.JavaScript || {}));
   </script>
   <script src="../src/blocks/csv_import.js"></script>
+  <script src="../src/blocks/to_json.js"></script>
   <script>
     // Check if CSV import generator was registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -148,6 +149,11 @@
       <category name="Functions" colour="290" custom="PROCEDURE"></category>
       <category name="Data" colour="20">
         <block type="csv_import"></block>
+        <block type="to_json">
+          <value name="VALUE">
+            <block type="csv_import"></block>
+          </value>
+        </block>
       </category>
     </xml>
     <div class="controls">

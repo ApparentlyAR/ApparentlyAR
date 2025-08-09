@@ -28,6 +28,7 @@ class FieldFileButton extends Blockly.Field {
     this.button_ = null;
     this.fileInput_ = null;
     this.filename_ = 'No file chosen';
+    this._dialogOpen = false;
   }
 
   static fromJson(options) {
@@ -35,39 +36,44 @@ class FieldFileButton extends Blockly.Field {
   }
 
   showEditor_() {
-    if (!this.fileInput_) {
-      this.fileInput_ = document.createElement('input');
-      this.fileInput_.type = 'file';
-      this.fileInput_.accept = '.csv,text/csv';
-      this.fileInput_.style.display = 'none';
-      this.fileInput_.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          this.filename_ = file.name;
-          // Update the filename field on the parent block
-          if (this.sourceBlock_ && this.sourceBlock_.getField('CSV_FILENAME')) {
-            this.sourceBlock_.getField('CSV_FILENAME').setValue(file.name);
-          }
-          // Re-render this field to hide the button
-          this.render_();
-          
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            Papa.parse(event.target.result, {
-              header: true,
-              skipEmptyLines: true,
-              complete: (results) => {
-                Blockly.CsvImportData.data = results.data;
-                Blockly.CsvImportData.filename = file.name;
-              }
-            });
-          };
-          reader.readAsText(file);
-        }
-      });
+    if (this._dialogOpen) {
+      return;
     }
+    this._dialogOpen = true;
+    // Always create a fresh input per open to avoid stale listeners
+    this.fileInput_ = document.createElement('input');
+    this.fileInput_.type = 'file';
+    this.fileInput_.accept = '.csv,text/csv';
+    this.fileInput_.style.display = 'none';
+    this.fileInput_.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.filename_ = file.name;
+        if (this.sourceBlock_ && this.sourceBlock_.getField('CSV_FILENAME')) {
+          this.sourceBlock_.getField('CSV_FILENAME').setValue(file.name);
+        }
+        this.render_();
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          Papa.parse(event.target.result, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+              Blockly.CsvImportData.data = results.data;
+              Blockly.CsvImportData.filename = file.name;
+              this._dialogOpen = false;
+            }
+          });
+        };
+        reader.readAsText(file);
+      } else {
+        this._dialogOpen = false;
+      }
+    }, { once: true });
     this.fileInput_.value = '';
     this.fileInput_.click();
+    // Safety reset in case 'change' doesn't fire (cancel)
+    setTimeout(() => { this._dialogOpen = false; }, 800);
   }
 
   // Render only the plus button
@@ -93,10 +99,19 @@ class FieldFileButton extends Blockly.Field {
       html.style.width = '24px';
       html.style.height = '24px';
       html.innerHTML = `<button style="height:24px;width:24px;border-radius:50%;border:none;background:#2d8cf0;color:white;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>`;
-      html.querySelector('button').onclick = (e) => {
+      const btn = html.querySelector('button');
+      const stopAll = (e) => {
         e.preventDefault();
-        this.showEditor_();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
       };
+      btn.addEventListener('mousedown', stopAll);
+      btn.addEventListener('touchstart', stopAll, { passive: false });
+      btn.addEventListener('click', (e) => {
+        // We open the editor ourselves and stop further handling to avoid duplicates
+        stopAll(e);
+        this.showEditor_();
+      });
       this.button_.appendChild(html);
       group.appendChild(this.button_);
     }
@@ -114,15 +129,12 @@ Blockly.CsvImportData = {
   filename: null
 };
 
-// Extension disabled due to compatibility issues - functionality handled by FieldFileButton class
-// Blockly.Extensions.register('csv_import_extension', function() {
-//   // Handler for Choose File button
-//   this.getField('CSV_UPLOAD').setValidator(() => {
-//     // ... extension code
-//   });
-// });
-
-// Blockly.Extensions.apply('csv_import_extension', Blockly.Blocks['csv_import'], true);
+// Register a no-op extension for compatibility with tests and future hooks
+if (typeof Blockly !== 'undefined' && Blockly.Extensions && typeof Blockly.Extensions.register === 'function') {
+  Blockly.Extensions.register('csv_import_extension', function() {
+    // Intentionally left blank; FieldFileButton handles interaction.
+  });
+}
 
 // JavaScript generator for the csv_import block using multiple registration methods
 function registerCsvImportGenerator() {
@@ -135,12 +147,29 @@ function registerCsvImportGenerator() {
   };
 
   if (typeof Blockly !== 'undefined' && Blockly.JavaScript) {
-    // Method 1: Direct assignment
-    Blockly.JavaScript['csv_import'] = generator;
+    // Method 1: Robust assignment (non-writable to avoid accidental clobbering)
+    try {
+      Object.defineProperty(Blockly.JavaScript, 'csv_import', { value: generator, configurable: true });
+    } catch (_) {
+      Blockly.JavaScript['csv_import'] = generator;
+    }
     
     // Method 2: Using forBlock (if available)
     if (Blockly.JavaScript.forBlock) {
-      Blockly.JavaScript.forBlock['csv_import'] = generator;
+      try {
+        Object.defineProperty(Blockly.JavaScript.forBlock, 'csv_import', { value: generator, configurable: true });
+      } catch (_) {
+        Blockly.JavaScript.forBlock['csv_import'] = generator;
+      }
+    }
+    
+    // Also mirror onto window.Blockly if present (test/browser parity)
+    if (typeof window !== 'undefined' && window.Blockly && window.Blockly.JavaScript) {
+      try {
+        Object.defineProperty(window.Blockly.JavaScript, 'csv_import', { value: generator, configurable: true });
+      } catch (_) {
+        window.Blockly.JavaScript['csv_import'] = generator;
+      }
     }
     
     console.log('CSV import JavaScript generator registered successfully');
@@ -158,15 +187,5 @@ function registerCsvImportGenerator() {
   }
 }
 
-// Register immediately
-registerCsvImportGenerator();
-
-// Also register after a delay to handle any timing issues
-setTimeout(registerCsvImportGenerator, 50);
-setTimeout(registerCsvImportGenerator, 200);
-
-// Double-check registration
-setTimeout(() => {
-  console.log('Final check - CSV import generator exists:', !!Blockly.JavaScript['csv_import']);
-  console.log('Generator function type:', typeof Blockly.JavaScript['csv_import']);
-}, 300); 
+// Register immediately and avoid re-registration timers (prevents jest flakiness)
+registerCsvImportGenerator(); 

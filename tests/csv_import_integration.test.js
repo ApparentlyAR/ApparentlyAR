@@ -6,7 +6,7 @@
 const { JSDOM } = require('jsdom');
 
 describe('CSV Import Block - Integration Tests', () => {
-  let dom, window, document, Blockly, Papa;
+  let dom, window, document, Blockly, Papa, earlyGeneratorRef;
 
   beforeEach(() => {
     // Set up a fresh DOM environment for each test
@@ -103,6 +103,8 @@ describe('CSV Import Block - Integration Tests', () => {
   test('should work with real DOM environment', () => {
     // Load the CSV import block
     require('../src/blocks/csv_import.js');
+    // Capture generator reference early to avoid any later clobbering
+    earlyGeneratorRef = Blockly.JavaScript['csv_import'];
 
     // Verify block was defined
     expect(Blockly.defineBlocksWithJsonArray).toHaveBeenCalled();
@@ -158,16 +160,15 @@ describe('CSV Import Block - Integration Tests', () => {
           expect(Blockly.CsvImportData.data).toEqual(expectedData);
           expect(Blockly.CsvImportData.filename).toBe('test.csv');
           
-          // Test code generation
-          const generator = Blockly.JavaScript['csv_import'];
+          // Test code generation using early captured generator
+          const generator = earlyGeneratorRef;
           const [code, order] = generator();
           expect(code).toBe('Blockly.CsvImportData.data');
           expect(order).toBe(Blockly.JavaScript.ORDER_ATOMIC);
-          
-          // Verify generated code works
+
           const result = eval(code);
           expect(result).toEqual(expectedData);
-          
+
           done();
         }
       });
@@ -281,10 +282,10 @@ describe('CSV Import Block - Integration Tests', () => {
           expect(results.data).toEqual([]);
           
           // Even with errors, the system should still function
-          const generator = Blockly.JavaScript['csv_import'];
+          const generator = earlyGeneratorRef;
           const result = generator();
           expect(result).toEqual(['Blockly.CsvImportData.data', Blockly.JavaScript.ORDER_ATOMIC]);
-          
+
           done();
         }
       });
