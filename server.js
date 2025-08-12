@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
+
 const path = require('path');
-const fs = require('fs');
+
 
 // Import data processing modules
 const dataProcessor = require('./src/backend/dataProcessor');
@@ -17,17 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configure multer for file uploads
-const upload = multer({ 
-  dest: 'uploads/',
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only CSV files are allowed'), false);
-    }
-  }
-});
+
 
 // Routes
 app.get('/', (req, res) => {
@@ -116,29 +106,7 @@ app.post('/api/ar-visualization', async (req, res) => {
   }
 });
 
-// File upload endpoint
-app.post('/api/upload-csv', upload.single('csvFile'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
 
-    const csvData = await dataProcessor.parseCSVFile(req.file.path);
-    
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
-    
-    res.json({ 
-      success: true, 
-      data: csvData,
-      filename: req.file.originalname,
-      summary: dataProcessor.getDataSummary(csvData)
-    });
-  } catch (error) {
-    console.error('File upload error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Error handling middleware
 app.use((error, req, res, next) => {
