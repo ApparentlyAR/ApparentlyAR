@@ -1,4 +1,17 @@
-// Sample test data for development and testing
+/**
+ * Test Data Module
+ * 
+ * Provides sample datasets for development, testing, and demonstration purposes
+ * for the ApparentlyAR data visualization platform.
+ * 
+ * @author ApparentlyAR Team
+ * @version 1.0.0
+ */
+
+/**
+ * Sample student data for educational demonstrations
+ * @type {Array<Object>}
+ */
 const sampleData = [
   { name: 'Alice', age: 25, score: 85, grade: 'A' },
   { name: 'Bob', age: 22, score: 92, grade: 'A' },
@@ -12,6 +25,10 @@ const sampleData = [
   { name: 'Jack', age: 29, score: 76, grade: 'C' }
 ];
 
+/**
+ * Monthly weather data for environmental analysis
+ * @type {Array<Object>}
+ */
 const weatherData = [
   { month: 'Jan', temperature: 15, rainfall: 80, humidity: 65 },
   { month: 'Feb', temperature: 17, rainfall: 70, humidity: 60 },
@@ -27,6 +44,10 @@ const weatherData = [
   { month: 'Dec', temperature: 16, rainfall: 85, humidity: 75 }
 ];
 
+/**
+ * Sales data for business analytics demonstrations
+ * @type {Array<Object>}
+ */
 const salesData = [
   { product: 'Laptop', sales: 120, revenue: 144000, region: 'North' },
   { product: 'Phone', sales: 200, revenue: 120000, region: 'North' },

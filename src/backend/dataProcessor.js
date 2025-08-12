@@ -1,20 +1,41 @@
+/**
+ * Data Processor Module
+ * 
+ * Handles data transformation, filtering, sorting, aggregation, and analysis
+ * for the ApparentlyAR data visualization platform.
+ * 
+ * @author ApparentlyAR Team
+ * @version 1.0.0
+ */
+
 const fs = require('fs');
 const Papa = require('papaparse');
 
+/**
+ * DataProcessor class for handling data operations
+ */
 class DataProcessor {
   constructor() {
+    /**
+     * Supported data processing operations
+     * @type {Object}
+     */
     this.supportedOperations = {
-      filter: this.filterData,
-      sort: this.sortData,
-      aggregate: this.aggregateData,
-      select: this.selectColumns,
-      groupBy: this.groupByData,
-      calculate: this.calculateColumn
+      filter: this.filterData.bind(this),
+      sort: this.sortData.bind(this),
+      aggregate: this.aggregateData.bind(this),
+      select: this.selectColumns.bind(this),
+      groupBy: this.groupByData.bind(this),
+      calculate: this.calculateColumn.bind(this)
     };
   }
 
   /**
    * Parse CSV file and return structured data
+   * 
+   * @param {string} filePath - Path to the CSV file
+   * @returns {Promise<Array>} Parsed data as array of objects
+   * @throws {Error} If CSV parsing fails or contains errors
    */
   async parseCSVFile(filePath) {
     return new Promise((resolve, reject) => {
@@ -38,6 +59,11 @@ class DataProcessor {
 
   /**
    * Process data with a series of operations
+   * 
+   * @param {Array} data - Input data array
+   * @param {Array} operations - Array of operation objects with type and params
+   * @returns {Promise<Array>} Processed data
+   * @throws {Error} If operation type is not supported
    */
   async processData(data, operations) {
     let processedData = [...data];
@@ -57,6 +83,13 @@ class DataProcessor {
 
   /**
    * Filter data based on conditions
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Filter parameters
+   * @param {string} params.column - Column name to filter on
+   * @param {string} params.operator - Filter operator (equals, greater_than, etc.)
+   * @param {*} params.value - Value to compare against
+   * @returns {Array} Filtered data array
    */
   filterData(data, params) {
     const { column, operator, value } = params;
@@ -91,6 +124,12 @@ class DataProcessor {
 
   /**
    * Sort data by column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Sort parameters
+   * @param {string} params.column - Column name to sort by
+   * @param {string} params.direction - Sort direction ('asc' or 'desc')
+   * @returns {Array} Sorted data array
    */
   sortData(data, params) {
     const { column, direction = 'asc' } = params;
@@ -118,6 +157,13 @@ class DataProcessor {
 
   /**
    * Aggregate data (sum, average, count, min, max)
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Aggregation parameters
+   * @param {string} params.column - Column name to aggregate
+   * @param {string} params.operation - Aggregation operation
+   * @returns {number|null} Aggregated value
+   * @throws {Error} If operation is not supported
    */
   aggregateData(data, params) {
     const { column, operation } = params;
@@ -141,7 +187,12 @@ class DataProcessor {
   }
 
   /**
-   * Select specific columns
+   * Select specific columns from data
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Selection parameters
+   * @param {Array} params.columns - Array of column names to select
+   * @returns {Array} Data with only selected columns
    */
   selectColumns(data, params) {
     const { columns } = params;
@@ -159,6 +210,12 @@ class DataProcessor {
 
   /**
    * Group data by column and apply aggregation
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Group by parameters
+   * @param {string} params.groupBy - Column name to group by
+   * @param {Array} params.aggregations - Array of aggregation operations
+   * @returns {Array} Grouped and aggregated data
    */
   groupByData(data, params) {
     const { groupBy, aggregations } = params;
@@ -173,13 +230,31 @@ class DataProcessor {
       groups[groupKey].push(row);
     });
     
-    return Object.entries(groups).map(([groupValue, groupData]) => {
-      const result = { [groupBy]: groupValue };
+    return Object.keys(groups).map(groupKey => {
+      const groupData = groups[groupKey];
+      const result = { [groupBy]: groupKey };
       
       aggregations.forEach(agg => {
         const { column, operation, alias } = agg;
-        const aggValue = this.aggregateData(groupData, { column, operation });
-        result[alias || `${operation}_${column}`] = aggValue;
+        const values = groupData.map(row => parseFloat(row[column])).filter(val => !isNaN(val));
+        
+        switch (operation) {
+          case 'sum':
+            result[alias] = values.reduce((sum, val) => sum + val, 0);
+            break;
+          case 'average':
+            result[alias] = values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : 0;
+            break;
+          case 'count':
+            result[alias] = values.length;
+            break;
+          case 'min':
+            result[alias] = values.length > 0 ? Math.min(...values) : null;
+            break;
+          case 'max':
+            result[alias] = values.length > 0 ? Math.max(...values) : null;
+            break;
+        }
       });
       
       return result;
@@ -187,45 +262,61 @@ class DataProcessor {
   }
 
   /**
-   * Calculate new column based on existing columns
+   * Calculate new column based on expression
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Calculation parameters
+   * @param {string} params.expression - Mathematical expression to evaluate
+   * @param {string} params.newColumnName - Name for the new calculated column
+   * @returns {Array} Data with new calculated column
    */
   calculateColumn(data, params) {
     const { expression, newColumnName } = params;
     
     return data.map(row => {
-      const newRow = { ...row };
-      
-      // Simple expression evaluation (can be extended for more complex expressions)
-      let calculatedValue = expression;
-      
-      // Replace column references with actual values
-      Object.keys(row).forEach(col => {
-        const regex = new RegExp(`\\b${col}\\b`, 'g');
-        calculatedValue = calculatedValue.replace(regex, `"${row[col]}"`);
-      });
-      
       try {
-        // Evaluate the expression (basic implementation - could use a safer expression parser)
-        newRow[newColumnName] = eval(calculatedValue);
+        let calculatedValue = expression;
+        
+        // Replace column references with actual values
+        Object.keys(row).forEach(col => {
+          const regex = new RegExp(`\\b${col}\\b`, 'g');
+          calculatedValue = calculatedValue.replace(regex, row[col]);
+        });
+        
+        // Evaluate the expression
+        const result = eval(calculatedValue);
+        
+        return {
+          ...row,
+          [newColumnName]: isNaN(result) ? null : result
+        };
       } catch (error) {
-        newRow[newColumnName] = null;
+        return {
+          ...row,
+          [newColumnName]: null
+        };
       }
-      
-      return newRow;
     });
   }
 
   /**
-   * Get summary statistics for data
+   * Get data summary with statistics
+   * 
+   * @param {Array} data - Input data array
+   * @returns {Object} Data summary with rows, columns, and column statistics
    */
   getDataSummary(data) {
     if (!data || data.length === 0) {
-      return { rows: 0, columns: 0, summary: {} };
+      return {
+        rows: 0,
+        columns: 0,
+        summary: {}
+      };
     }
-    
+
     const columns = Object.keys(data[0]);
     const summary = {};
-    
+
     columns.forEach(col => {
       const values = data.map(row => row[col]).filter(val => val !== null && val !== undefined);
       const numericValues = values.map(val => parseFloat(val)).filter(val => !isNaN(val));
@@ -233,17 +324,16 @@ class DataProcessor {
       summary[col] = {
         type: numericValues.length === values.length ? 'numeric' : 'text',
         count: values.length,
-        unique: new Set(values).size,
-        nulls: data.length - values.length
+        unique: new Set(values).size
       };
-      
+
       if (numericValues.length > 0) {
         summary[col].min = Math.min(...numericValues);
         summary[col].max = Math.max(...numericValues);
         summary[col].average = numericValues.reduce((sum, val) => sum + val, 0) / numericValues.length;
       }
     });
-    
+
     return {
       rows: data.length,
       columns: columns.length,
@@ -252,7 +342,9 @@ class DataProcessor {
   }
 
   /**
-   * Get available operations
+   * Get list of available operations
+   * 
+   * @returns {Array} Array of supported operation names
    */
   getAvailableOperations() {
     return Object.keys(this.supportedOperations);
