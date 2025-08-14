@@ -100,10 +100,100 @@
       border-radius: 6px;
       font-family: 'Fira Mono', 'Consolas', monospace;
       font-size: 1rem;
-      margin-bottom: 0;
+      margin-bottom: 18px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       width: 100%;
       margin-top: 0;
+    }
+    
+    /* React component styles */
+    .data-visualization-panel, .chart-controls {
+      background: #fff;
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .data-visualization-panel h3, .chart-controls h4 {
+      margin: 0 0 12px 0;
+      color: #2d3a4a;
+    }
+    
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .load-sample-btn, .generate-btn {
+      background: #2d8cf0;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    .load-sample-btn:hover, .generate-btn:hover {
+      background: #1765ad;
+    }
+    
+    .load-sample-btn:disabled, .generate-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .control-group {
+      margin-bottom: 12px;
+    }
+    
+    .control-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+      color: #2d3a4a;
+    }
+    
+    .control-group select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #e0e4ea;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .error-message {
+      background: #ffebee;
+      color: #c62828;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      border-left: 4px solid #c62828;
+    }
+    
+    .chart-container {
+      margin-top: 16px;
+    }
+    
+    .chart-info {
+      display: flex;
+      gap: 20px;
+      margin: 8px 0;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    
+    .chart-config {
+      background: #f8f9fa;
+      border: 1px solid #e0e4ea;
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 0.8rem;
+      max-height: 300px;
+      overflow-y: auto;
     }
     @media (max-width: 700px) {
       .main-content { padding: 0 4px 4px 4px; }
@@ -161,6 +251,10 @@
       <button id="showCodeButton">Show Code</button>
     </div>
     <pre id="output"></pre>
+    
+    <!-- React component containers -->
+    <div id="react-controls-container"></div>
+    <div id="react-chart-container"></div>
   </div>
   <script>
     const workspace = Blockly.inject('blocklyDiv', {
@@ -224,5 +318,8 @@
       });
     }
   </script>
+  
+  <!-- Include React bundle -->
+  <script src="react-bundle.js"></script>
 </body>
 </html> 
