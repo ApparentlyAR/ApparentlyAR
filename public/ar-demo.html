@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>ApparentlyAR - Hand Detection Demo (Chromebook)</title>
+
+  <!-- MediaPipe Hands (browser/JS) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248252/drawing_utils.js"></script>
+
+  <!-- Three.js for 2D/3D overlay -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      overflow: hidden;
+    }
+    .container { display: flex; height: 100vh; }
+    .camera-section { flex: 1; position: relative; }
+    .controls-section {
+      width: 300px; background: #2a2a2a; padding: 20px;
+      border-left: 1px solid #444; overflow-y: auto;
+    }
+    #video { width: 100%; height: 100%; object-fit: cover; }
+    #canvas, #ar-canvas {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .controls-section h2 { margin-top: 0; color: #4CAF50; }
+    .control-group { margin-bottom: 20px; }
+    .control-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .control-group select, .control-group input, .control-group button {
+      width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #555;
+      border-radius: 4px; background: #333; color: white;
+    }
+    .control-group button { background: #4CAF50; border: none; cursor: pointer; font-weight: bold; }
+    .control-group button:hover { background: #45a049; }
+    .status { padding: 10px; border-radius: 4px; margin-bottom: 10px; font-weight: bold; }
+    .status.detecting { background: #2196F3; }
+    .status.ready { background: #4CAF50; }
+    .status.error { background: #f44336; }
+    .chart-info { background: #333; padding: 10px; border-radius: 4px; margin-top: 10px; }
+    .chart-info h3 { margin-top: 0; color: #4CAF50; }
+    .chart-list { max-height: 200px; overflow-y: auto; }
+    .chart-item { background: #444; padding: 8px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; }
+    .chart-item:hover { background: #555; }
+    .chart-item.selected { background: #4CAF50; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="camera-section">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="canvas"></canvas>
+      <canvas id="ar-canvas"></canvas>
+    </div>
+
+    <div class="controls-section">
+      <h2>AR Chart Controls</h2>
+
+      <div class="control-group">
+        <div id="status" class="status">Initialising…</div>
+      </div>
+
+      <div class="control-group">
+        <label for="chartType">Chart Type:</label>
+        <select id="chartType">
+          <option value="bar">Bar Chart</option>
+          <option value="line">Line Chart</option>
+          <option value="pie">Pie Chart</option>
+          <option value="scatter">Scatter Plot</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="sampleData">Sample Data:</label>
+        <select id="sampleData">
+          <option value="students">Student Grades</option>
+          <option value="weather">Weather Data</option>
+          <option value="sales">Sales Data</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <button id="startCamera">Start Camera</button>
+        <button id="stopCamera">Stop Camera</button>
+      </div>
+
+      <div class="control-group">
+        <button id="clearCharts">Clear All Charts</button>
+      </div>
+
+      <div class="chart-info">
+        <h3>Placed Charts</h3>
+        <div id="chartList" class="chart-list">
+          <div class="chart-item">No charts placed yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Global state =====
+    let hands;
+    let mpCamera;
+    let scene, renderer, cameraOrtho;
+    let charts = [];
+    let isDetecting = false;
+    let sending = false; // gate MediaPipe send calls
+    let lastPlacedAt = 0;
+    const PLACE_COOLDOWN_MS = 800;
+
+    // ===== Demo data =====
+    const sampleData = {
+      students: [
+        { name: 'Alice', age: 25, score: 85, grade: 'A' },
+        { name: 'Bob', age: 22, score: 92, grade: 'A' },
+        { name: 'Charlie', age: 28, score: 78, grade: 'B' },
+        { name: 'Diana', age: 24, score: 95, grade: 'A' },
+        { name: 'Eve', age: 26, score: 88, grade: 'A' }
+      ],
+      weather: [
+        { month: 'Jan', temperature: 15, rainfall: 80, humidity: 65 },
+        { month: 'Feb', temperature: 17, rainfall: 70, humidity: 60 },
+        { month: 'Mar', temperature: 20, rainfall: 85, humidity: 70 },
+        { month: 'Apr', temperature: 23, rainfall: 90, humidity: 75 },
+        { month: 'May', temperature: 26, rainfall: 100, humidity: 80 }
+      ],
+      sales: [
+        { product: 'Laptop', sales: 120, revenue: 144000, region: 'North' },
+        { product: 'Phone', sales: 200, revenue: 120000, region: 'North' },
+        { product: 'Tablet', sales: 80, revenue: 64000, region: 'North' },
+        { product: 'Laptop', sales: 150, revenue: 180000, region: 'South' },
+        { product: 'Phone', sales: 180, revenue: 108000, region: 'South' }
+      ]
+    };
+
+    // ===== Utils: sizing =====
+    function sizeCanvasesToVideo() {
+      const video = document.getElementById('video');
+      const overlay = document.getElementById('canvas');
+      const ar = document.getElementById('ar-canvas');
+
+      if (video.videoWidth && video.videoHeight) {
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        ar.width = video.videoWidth;
+        ar.height = video.videoHeight;
+
+        if (renderer) {
+          renderer.setSize(ar.width, ar.height, false);
+        }
+        if (cameraOrtho) {
+          cameraOrtho.left = 0;
+          cameraOrtho.right = ar.width;
+          cameraOrtho.top = 0;
+          cameraOrtho.bottom = ar.height;
+          cameraOrtho.updateProjectionMatrix();
+        }
+      }
+    }
+
+    // ===== MediaPipe Hands setup =====
+    async function initializeHands() {
+      hands = new Hands({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`
+      });
+
+      hands.setOptions({
+        selfieMode: true,                 // front-facing camera feel
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+
+      hands.onResults(onHandResults);
+      updateStatus('Hand detection ready', 'ready');
+    }
+
+    // ===== Three.js setup (orthographic for screen-space overlay) =====
+    function initializeThreeJS() {
+      const ar = document.getElementById('ar-canvas');
+      scene = new THREE.Scene();
+      renderer = new THREE.WebGLRenderer({ canvas: ar, alpha: true, antialias: true });
+
+      // Orthographic camera that maps 1:1 to canvas pixels
+      cameraOrtho = new THREE.OrthographicCamera(0, ar.width, ar.height, 0, -1000, 1000);
+      cameraOrtho.position.z = 10;
+
+      // Soft lighting (mostly irrelevant for MeshBasicMaterial, but fine to keep)
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(10, 10, 5);
+      scene.add(directionalLight);
+
+      animate();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      // Keep textures fresh in case charts update
+      charts.forEach(c => {
+        if (c.mesh.material.map) c.mesh.material.map.needsUpdate = true;
+      });
+      renderer.render(scene, cameraOrtho);
+    }
+
+    // ===== Hand results callback =====
+    function onHandResults(results) {
+      const ctx = document.getElementById('canvas').getContext('2d');
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+      if (results.multiHandLandmarks) {
+        results.multiHandLandmarks.forEach((landmarks, i) => {
+          drawHandLandmarks(ctx, landmarks);
+          const handedness = results.multiHandedness?.[i]?.label; // "Left" | "Right"
+          if (isOpenPalm(landmarks, handedness)) {
+            placeChartAtHand(landmarks);
+          }
+        });
+      }
+    }
+
+    // ===== Drawing utilities =====
+    function drawHandLandmarks(ctx, landmarks) {
+      const cw = ctx.canvas.width, ch = ctx.canvas.height;
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+
+      const connections = [
+        [0, 1], [1, 2], [2, 3], [3, 4],
+        [0, 5], [5, 6], [6, 7], [7, 8],
+        [0, 9], [9, 10], [10, 11], [11, 12],
+        [0, 13], [13, 14], [14, 15], [15, 16],
+        [0, 17], [17, 18], [18, 19], [19, 20]
+      ];
+
+      connections.forEach(([s, e]) => {
+        const a = landmarks[s], b = landmarks[e];
+        ctx.beginPath();
+        ctx.moveTo(a.x * cw, a.y * ch);
+        ctx.lineTo(b.x * cw, b.y * ch);
+        ctx.stroke();
+      });
+
+      ctx.fillStyle = '#ff0000';
+      landmarks.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x * cw, p.y * ch, 3, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+    }
+
+    // ===== Gesture heuristics =====
+    function isOpenPalm(landmarks, handedness = 'Right') {
+      // crude but effective: most fingertips above their base joints (+ thumb rule)
+      const tips = [4, 8, 12, 16, 20];
+      const bases = [3, 6, 10, 14, 18];
+      let extended = 0;
+
+      for (let i = 0; i < tips.length; i++) {
+        const tip = landmarks[tips[i]];
+        const base = landmarks[bases[i]];
+
+        if (i === 0) {
+          // Thumb: for selfieMode, x-direction is mirrored
+          const right = handedness === 'Right';
+          // If right hand, thumb points left in selfie view (tip.x < base.x)
+          if ((right && tip.x < base.x) || (!right && tip.x > base.x)) extended++;
+        } else {
+          if (tip.y < base.y) extended++;
+        }
+      }
+      return extended >= 4;
+    }
+
+    // ===== Chart placement =====
+    function placeChartAtHand(landmarks) {
+      const now = Date.now();
+      if (now - lastPlacedAt < PLACE_COOLDOWN_MS) return;
+      lastPlacedAt = now;
+
+      // Use middle finger base as "palm-ish" point
+      const p = landmarks[9]; // normalised 0..1
+      const ar = document.getElementById('ar-canvas');
+      const x = p.x * ar.width;
+      const y = p.y * ar.height;
+      const z = 0;
+
+      // Avoid near-duplicates (screen-space proximity)
+      const existing = charts.find(c => Math.abs(c.position.x - x) < 40 && Math.abs(c.position.y - y) < 40);
+      if (!existing) createChart(x, y, z);
+    }
+
+    // ===== Chart creation (Chart.js + Three plane) =====
+    function createChart(x, y, z) {
+      const chartType = document.getElementById('chartType').value;
+      const dataType = document.getElementById('sampleData').value;
+      const data = sampleData[dataType];
+
+      // Offscreen canvas for Chart.js (texture source)
+      const chartCanvas = document.createElement('canvas');
+      chartCanvas.width = 360;
+      chartCanvas.height = 240;
+      const chart = generateChart(chartCanvas, chartType, data);
+
+      // Texture + plane sized to canvas pixel size (orthographic pixels)
+      const texture = new THREE.CanvasTexture(chartCanvas);
+      const geometry = new THREE.PlaneGeometry(chartCanvas.width, chartCanvas.height);
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+
+      scene.add(mesh);
+
+      const info = {
+        id: Date.now(),
+        type: chartType,
+        data: dataType,
+        position: { x, y, z },
+        mesh,
+        chart
+      };
+      charts.push(info);
+      updateChartList();
+      console.log(`Chart placed at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+    }
+
+    function generateChart(canvas, type, data) {
+      const ctx = canvas.getContext('2d');
+      let chartConfig;
+
+      switch (type) {
+        case 'bar':
+          chartConfig = {
+            type: 'bar',
+            data: {
+              labels: data.map(d => d.name || d.month || d.product),
+              datasets: [{
+                label: 'Value',
+                data: data.map(d => d.score ?? d.temperature ?? d.sales),
+                backgroundColor: '#4CAF50'
+              }]
+            },
+            options: { responsive: false, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+          };
+          break;
+
+        case 'line':
+          chartConfig = {
+            type: 'line',
+            data: {
+              labels: data.map(d => d.name || d.month || d.product),
+              datasets: [{
+                label: 'Value',
+                data: data.map(d => d.score ?? d.temperature ?? d.sales),
+                borderColor: '#2196F3',
+                backgroundColor: '#2196F3',
+                fill: false
+              }]
+            },
+            options: { responsive: false, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+          };
+          break;
+
+        case 'pie':
+          chartConfig = {
+            type: 'pie',
+            data: {
+              labels: data.map(d => d.name || d.month || d.product),
+              datasets: [{
+                data: data.map(d => d.score ?? d.temperature ?? d.sales),
+                backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336']
+              }]
+            },
+            options: { responsive: false, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+          };
+          break;
+
+        case 'scatter':
+          chartConfig = {
+            type: 'scatter',
+            data: {
+              datasets: [{
+                label: 'Data Points',
+                data: data.map(d => ({
+                  x: d.age ?? d.rainfall ?? d.revenue,
+                  y: d.score ?? d.temperature ?? d.sales
+                })),
+                backgroundColor: '#FF5722'
+              }])
+            },
+            options: {
+              responsive: false, maintainAspectRatio: false, plugins: { legend: { display: false } },
+              scales: { x: { type: 'linear' }, y: { type: 'linear' } }
+            }
+          };
+          break;
+      }
+      return new Chart(ctx, chartConfig);
+    }
+
+    // ===== Chart list UI =====
+    function updateChartList() {
+      const chartList = document.getElementById('chartList');
+      if (charts.length === 0) {
+        chartList.innerHTML = '<div class="chart-item">No charts placed yet</div>';
+        return;
+      }
+      chartList.innerHTML = charts.map(c =>
+        `<div class="chart-item" data-id="${c.id}">${c.type} chart (${c.data})</div>`
+      ).join('');
+
+      chartList.querySelectorAll('.chart-item').forEach(el => {
+        el.addEventListener('click', () => selectChart(Number(el.dataset.id), el));
+      });
+    }
+
+    function selectChart(id, el) {
+      document.querySelectorAll('.chart-item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      console.log(`Selected chart ${id}`);
+    }
+
+    // ===== Status UI =====
+    function updateStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = `status ${type}`;
+    }
+
+    // ===== Camera control (Chromebook friendly) =====
+    async function startCamera() {
+      try {
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('canvas');
+        const ar = document.getElementById('ar-canvas');
+
+        // resize canvases once metadata is available
+        video.addEventListener('loadedmetadata', sizeCanvasesToVideo, { once: true });
+        window.addEventListener('resize', sizeCanvasesToVideo);
+
+        mpCamera = new Camera(video, {
+          onFrame: async () => {
+            if (!isDetecting || sending) return;
+            sending = true;
+            try { await hands.send({ image: video }); } catch (e) {}
+            sending = false;
+          },
+          width: 640,
+          height: 480
+        });
+
+        await mpCamera.start();
+        isDetecting = true;
+        updateStatus('Camera started — show an open palm to place charts', 'detecting');
+      } catch (err) {
+        console.error('Error starting camera:', err);
+        updateStatus('Error starting camera', 'error');
+      }
+    }
+
+    function stopCamera() {
+      if (mpCamera) {
+        mpCamera.stop();
+        isDetecting = false;
+        updateStatus('Camera stopped', 'ready');
+      }
+    }
+
+    function clearCharts() {
+      charts.forEach(c => {
+        scene.remove(c.mesh);
+        c.chart.destroy();
+      });
+      charts = [];
+      updateChartList();
+    }
+
+    // ===== Event hooks =====
+    document.getElementById('startCamera').addEventListener('click', startCamera);
+    document.getElementById('stopCamera').addEventListener('click', stopCamera);
+    document.getElementById('clearCharts').addEventListener('click', clearCharts);
+
+    // ===== Boot =====
+    async function init() {
+      try {
+        await initializeHands();
+        initializeThreeJS();
+        updateStatus('Ready to start camera', 'ready');
+      } catch (e) {
+        console.error('Initialisation error:', e);
+        updateStatus('Initialisation failed', 'error');
+      }
+    }
+    init();
+  </script>
+</body>
+</html>
