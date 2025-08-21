@@ -96,9 +96,16 @@
         <button id="stopCamera">Stop Camera</button>
       </div>
 
-      <div class="control-group">
-        <button id="clearCharts">Clear All Charts</button>
-      </div>
+             <div class="control-group">
+         <button id="clearCharts">Clear All Charts</button>
+       </div>
+       
+       <div class="control-group">
+         <label>
+           <input type="checkbox" id="devMode" style="width: auto; margin-right: 8px;">
+           Dev Mode (Auto-start camera + test data)
+         </label>
+       </div>
 
       <div class="chart-info">
         <h3>Placed Charts</h3>
@@ -490,23 +497,63 @@
       updateChartList();
     }
 
-    // ===== Event hooks =====
-    document.getElementById('startCamera').addEventListener('click', startCamera);
-    document.getElementById('stopCamera').addEventListener('click', stopCamera);
-    document.getElementById('clearCharts').addEventListener('click', clearCharts);
+         // ===== Dev Mode functionality =====
+     function setupDevMode() {
+       const devModeCheckbox = document.getElementById('devMode');
+       
+       // Auto-start camera when dev mode is enabled
+       devModeCheckbox.addEventListener('change', async (e) => {
+         if (e.target.checked) {
+           console.log('Dev mode enabled - auto-starting camera...');
+           updateStatus('Dev mode: Auto-starting camera...', 'detecting');
+           
+           // Set some default test data
+           document.getElementById('chartType').value = 'bar';
+           document.getElementById('sampleData').value = 'students';
+           
+           // Auto-start camera after a short delay
+           setTimeout(async () => {
+             try {
+               await startCamera();
+               updateStatus('Dev mode: Camera ready - show open palm to test!', 'detecting');
+             } catch (error) {
+               console.error('Dev mode camera start failed:', error);
+               updateStatus('Dev mode: Camera start failed', 'error');
+               devModeCheckbox.checked = false;
+             }
+           }, 1000);
+         } else {
+           console.log('Dev mode disabled - stopping camera...');
+           stopCamera();
+           updateStatus('Dev mode disabled', 'ready');
+         }
+       });
+       
+       // Auto-enable dev mode on page load for quick testing
+       if (window.location.search.includes('dev=true')) {
+         devModeCheckbox.checked = true;
+         devModeCheckbox.dispatchEvent(new Event('change'));
+       }
+     }
 
-    // ===== Boot =====
-    async function init() {
-      try {
-        await initializeHands();
-        initializeThreeJS();
-        updateStatus('Ready to start camera', 'ready');
-      } catch (e) {
-        console.error('Initialisation error:', e);
-        updateStatus('Initialisation failed', 'error');
-      }
-    }
-    init();
+     // ===== Event hooks =====
+     document.getElementById('startCamera').addEventListener('click', startCamera);
+     document.getElementById('stopCamera').addEventListener('click', stopCamera);
+     document.getElementById('clearCharts').addEventListener('click', clearCharts);
+
+         // ===== Boot =====
+     async function init() {
+       try {
+         await initializeHands();
+         initializeThreeJS();
+         setupDevMode(); // Setup dev mode functionality
+         updateStatus('Ready to start camera (or enable Dev Mode)', 'ready');
+       } catch (e) {
+         console.error('Initialisation error:', e);
+         updateStatus('Initialisation failed', 'error');
+       }
+     }
+     init();
   </script>
 </body>
 </html>
