@@ -113,12 +113,73 @@ Generates chart configuration for various chart types.
 ```
 
 **Supported Chart Types:**
-- `bar`: Bar charts
-- `line`: Line charts
-- `scatter`: Scatter plots
-- `pie`: Pie charts
-- `doughnut`: Doughnut charts
-- `area`: Area charts
+- `bar`: Bar charts with interactive zoom/pan and click events
+- `line`: Line charts with interactive features and hover effects
+- `scatter`: Scatter plots with zoom capabilities and point selection
+- `pie`: Pie charts for categorical data
+- `doughnut`: Doughnut charts for categorical data with center space
+- `area`: Area charts for trend visualization
+- `histogram`: Frequency distribution charts with customizable bins
+- `boxplot`: Statistical box plots for quartile analysis
+- `heatmap`: 2D data correlation visualization
+- `radar`: Multi-dimensional data comparison charts
+
+**Chart-Specific Options:**
+
+*Histogram:*
+```json
+{
+  "chartType": "histogram",
+  "options": {
+    "valueColumn": "age",
+    "bins": 10,
+    "title": "Age Distribution"
+  }
+}
+```
+
+*Box Plot:*
+```json
+{
+  "chartType": "boxplot", 
+  "options": {
+    "valueColumn": "score",
+    "groupColumn": "grade",
+    "title": "Score Distribution by Grade"
+  }
+}
+```
+
+*Heatmap:*
+```json
+{
+  "chartType": "heatmap",
+  "options": {
+    "xColumn": "month",
+    "yColumn": "region", 
+    "valueColumn": "sales",
+    "title": "Sales Heatmap"
+  }
+}
+```
+
+*Radar Chart:*
+```json
+{
+  "chartType": "radar",
+  "options": {
+    "columns": ["math", "science", "english", "history"],
+    "labelColumn": "student",
+    "title": "Student Performance"
+  }
+}
+```
+
+**Interactive Features:**
+- **Zoom & Pan**: Mouse wheel zoom, click-drag pan on bar, line, scatter, histogram charts
+- **Click Events**: Data point selection and logging for drill-down capabilities  
+- **Hover Effects**: Enhanced tooltips and cursor changes on interactive elements
+- **Animations**: Smooth chart transitions with customizable easing
 
 #### POST `/api/ar-visualization`
 Generates AR-specific visualization data.
