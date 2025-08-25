@@ -975,6 +975,32 @@ class ChartGenerator {
       throw new Error('Data contains no columns');
     }
     
+    // Check for required columns if they are explicitly specified
+    let requiredColumns = [];
+    switch (chartType) {
+      case 'bar':
+      case 'line':
+      case 'area':
+        if (options.xColumn) requiredColumns.push(options.xColumn);
+        if (options.yColumn) requiredColumns.push(options.yColumn);
+        break;
+      case 'scatter':
+        if (options.xColumn) requiredColumns.push(options.xColumn);
+        if (options.yColumn) requiredColumns.push(options.yColumn);
+        break;
+      case 'pie':
+      case 'doughnut':
+        if (options.labelColumn) requiredColumns.push(options.labelColumn);
+        if (options.valueColumn) requiredColumns.push(options.valueColumn);
+        break;
+    }
+    
+    // Validate that explicitly specified columns exist
+    const missingColumns = requiredColumns.filter(col => !availableColumns.includes(col));
+    if (missingColumns.length > 0) {
+      throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+    }
+    
     // Set default options based on available columns if not provided
     let requiredColumns = [];
     switch (chartType) {
