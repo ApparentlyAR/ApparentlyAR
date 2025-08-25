@@ -80,6 +80,7 @@ const ChartControls = ({ onChartGenerate }) => {
           value={dataType} 
           onChange={(e) => setDataType(e.target.value)}
           disabled={loading}
+          className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
         >
           {dataTypes.map(type => (
             <option key={type.value} value={type.value}>
@@ -95,6 +96,7 @@ const ChartControls = ({ onChartGenerate }) => {
           value={chartType} 
           onChange={(e) => setChartType(e.target.value)}
           disabled={loading}
+          className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
         >
           {chartTypes.map(type => (
             <option key={type.value} value={type.value}>
