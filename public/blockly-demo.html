@@ -137,10 +137,69 @@
         height: auto !important;
       }
     }
+
+    /* Resize handles */
+    .resize-handle {
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+
+    .resize-handle-vertical {
+      width: 8px;
+      height: 100%;
+      cursor: col-resize;
+      background: transparent;
+      border-left: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .resize-handle-vertical:hover {
+      background: rgba(110, 168, 254, 0.1);
+      border-left: 1px solid #6ea8fe;
+    }
+
+    .resize-handle-vertical:active,
+    .resize-handle-vertical.dragging {
+      background: rgba(110, 168, 254, 0.2);
+      border-left: 2px solid #6ea8fe;
+      cursor: col-resize;
+    }
+
+    /* Visual indicator dots */
+    .resize-handle-vertical::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 20px;
+      background: #a9b4d0;
+      border-radius: 1px;
+      opacity: 0.3;
+      transition: opacity 0.2s ease;
+    }
+
+    .resize-handle-vertical:hover::before,
+    .resize-handle-vertical.dragging::before {
+      opacity: 0.8;
+      background: #6ea8fe;
+    }
+
+    /* Hide resize handles on mobile */
+    @media (max-width: 980px) {
+      .resize-handle {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body class="m-0 text-text bg-[radial-gradient(1200px_700px_at_70%_-10%,#1b2240,#0a0d18)] min-h-screen">
   <div
+    id="main-grid"
     class="grid h-screen overflow-hidden"
     style="
       grid-template-rows: 56px 1fr 120px;
@@ -148,6 +207,19 @@
     "
     data-areas="desktop"
   >
+    <!-- Resize Handle between blocks and stage -->
+    <div 
+      id="resize-handle-1" 
+      class="resize-handle resize-handle-vertical"
+      style="grid-row: 2; grid-column: 2; margin-left: -4px; z-index: 10;"
+    ></div>
+    
+    <!-- Resize Handle between stage and data -->
+    <div 
+      id="resize-handle-2" 
+      class="resize-handle resize-handle-vertical"
+      style="grid-row: 2; grid-column: 3; margin-left: -4px; z-index: 10;"
+    ></div>
     <!-- Topbar -->
     <header
       style="grid-area: topbar"
@@ -452,6 +524,144 @@
     // Add cleanup on page unload
     window.addEventListener('beforeunload', cleanupWorkspace);
     window.addEventListener('pagehide', cleanupWorkspace);
+
+    // Panel Resizing Functionality
+    let isResizing = false;
+    let currentHandle = null;
+    let startX = 0;
+    let startBlocksWidth = 320;
+    let startDataWidth = 360;
+    let minBlocksWidth = 250;
+    let maxBlocksWidth = 600;
+    let minDataWidth = 300;
+    let maxDataWidth = 600;
+
+    function initializeResizing() {
+      const mainGrid = document.getElementById('main-grid');
+      const handle1 = document.getElementById('resize-handle-1');
+      const handle2 = document.getElementById('resize-handle-2');
+
+      if (!handle1 || !handle2 || !mainGrid) return;
+
+      // Load saved sizes from localStorage
+      const savedBlocksWidth = localStorage.getItem('panelBlocksWidth');
+      const savedDataWidth = localStorage.getItem('panelDataWidth');
+      
+      if (savedBlocksWidth) {
+        startBlocksWidth = parseInt(savedBlocksWidth);
+      }
+      if (savedDataWidth) {
+        startDataWidth = parseInt(savedDataWidth);
+      }
+      
+      // Apply saved sizes
+      mainGrid.style.gridTemplateColumns = `${startBlocksWidth}px 1fr ${startDataWidth}px`;
+
+      // Handle 1 - between blocks and stage
+      handle1.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        currentHandle = 1;
+        startX = e.clientX;
+        handle1.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      // Handle 2 - between stage and data
+      handle2.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        currentHandle = 2;
+        startX = e.clientX;
+        handle2.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      // Mouse move handler
+      document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const deltaX = e.clientX - startX;
+        let newBlocksWidth = startBlocksWidth;
+        let newDataWidth = startDataWidth;
+
+        if (currentHandle === 1) {
+          // Resizing blocks panel
+          newBlocksWidth = Math.max(minBlocksWidth, Math.min(maxBlocksWidth, startBlocksWidth + deltaX));
+        } else if (currentHandle === 2) {
+          // Resizing data panel
+          newDataWidth = Math.max(minDataWidth, Math.min(maxDataWidth, startDataWidth - deltaX));
+        }
+
+        mainGrid.style.gridTemplateColumns = `${newBlocksWidth}px 1fr ${newDataWidth}px`;
+        
+        // Update Blockly workspace
+        if (workspace && currentHandle === 1) {
+          requestAnimationFrame(() => {
+            try {
+              Blockly.svgResize(workspace);
+            } catch (error) {
+              console.warn('Blockly resize error:', error);
+            }
+          });
+        }
+      });
+
+      // Mouse up handler
+      document.addEventListener('mouseup', () => {
+        if (isResizing) {
+          isResizing = false;
+          
+          // Clean up visual states
+          handle1.classList.remove('dragging');
+          handle2.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+
+          // Parse current widths and save to localStorage
+          const currentStyle = mainGrid.style.gridTemplateColumns;
+          const widthMatch = currentStyle.match(/(\d+)px 1fr (\d+)px/);
+          
+          if (widthMatch) {
+            const blocksWidth = parseInt(widthMatch[1]);
+            const dataWidth = parseInt(widthMatch[2]);
+            
+            localStorage.setItem('panelBlocksWidth', blocksWidth);
+            localStorage.setItem('panelDataWidth', dataWidth);
+            
+            startBlocksWidth = blocksWidth;
+            startDataWidth = dataWidth;
+          }
+
+          currentHandle = null;
+
+          // Final Blockly resize
+          if (workspace) {
+            setTimeout(() => {
+              try {
+                Blockly.svgResize(workspace);
+              } catch (error) {
+                console.warn('Blockly final resize error:', error);
+              }
+            }, 100);
+          }
+        }
+      });
+
+      // Prevent text selection during drag
+      document.addEventListener('selectstart', (e) => {
+        if (isResizing) {
+          e.preventDefault();
+        }
+      });
+    }
+
+    // Initialize resizing after workspace is ready
+    setTimeout(() => {
+      initializeResizing();
+    }, 200);
 
     // Bridge functions for React components to call vanilla JS Blockly functions
     window.executeBlocklyCode = function() {
