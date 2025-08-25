@@ -185,40 +185,12 @@
         </button>
       </div>
 
-      <div class="flex items-center gap-2">
-        <button class="rounded-lg text-muted text-sm px-3 py-1.5">
-          File
-        </button>
-        <button class="rounded-lg text-muted text-sm px-3 py-1.5">
-          Edit
-        </button>
-        <button class="rounded-lg text-muted text-sm px-3 py-1.5">
-          Share
-        </button>
-        <button class="rounded-lg text-muted text-sm px-3 py-1.5">
-          Help
-        </button>
-      </div>
 
       <div class="w-px h-7 bg-border mx-2"></div>
 
       <!-- React Button Panel Mount Point -->
       <div id="buttons-root" class="flex items-center gap-2"></div>
 
-      <div class="flex items-center gap-2">
-        <span
-          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#1a2b24] text-ok border border-[#2e5a49] text-xs"
-          >Camera: OK</span
-        >
-        <span
-          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs"
-          >FPS: 28</span
-        >
-        <span
-          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs"
-          >Markers: A,B</span
-        >
-      </div>
 
       <div class="ml-auto flex items-center gap-2">
         <button
@@ -242,43 +214,17 @@
     <!-- Blocks Panel -->
     <aside
       style="grid-area: blocks"
-      class="grid grid-rows-[40px,1fr] bg-panel border-r border-border"
+      class="grid grid-rows-[auto,1fr] bg-panel border-r border-border overflow-hidden"
     >
-      <div
-        class="flex gap-1.5 p-2 border-b border-border bg-panel sticky top-0"
-      >
-        <button
-          class="px-3 py-1.5 rounded-md text-xs bg-[#253054] text-text border border-[#3b4a7a]"
-        >
-          Data
-        </button>
-        <button
-          class="px-3 py-1.5 rounded-md text-xs bg-panel2 text-muted border border-border"
-        >
-          Transform
-        </button>
-        <button
-          class="px-3 py-1.5 rounded-md text-xs bg-panel2 text-muted border border-border"
-        >
-          Visualize
-        </button>
-        <button
-          class="px-3 py-1.5 rounded-md text-xs bg-panel2 text-muted border border-border"
-        >
-          AR Controls
-        </button>
+      <div class="p-2 border-b border-border">
+        <input
+          class="w-full px-3 py-2 rounded-lg border border-border bg-[#0e1220] text-sm text-text placeholder-muted"
+          placeholder="Search blocks..."
+        />
       </div>
-
-      <div class="grid grid-rows-[auto,1fr] overflow-hidden">
-        <div class="p-2 border-b border-border">
-          <input
-            class="w-full px-3 py-2 rounded-lg border border-border bg-[#0e1220] text-sm text-text placeholder-muted"
-            placeholder="Search blocks..."
-          />
-        </div>
-        
-        <!-- Blockly Workspace -->
-        <div id="blocklyDiv" class="w-full h-full overflow-hidden bg-[#0f1324]"></div>
+      
+      <!-- Blockly Workspace -->
+      <div id="blocklyDiv" class="w-full h-full overflow-hidden bg-[#0f1324]"></div>
         
         <!-- Hidden Blockly Toolbox -->
         <xml id="toolbox" style="display: none">
@@ -321,7 +267,6 @@
             </block>
           </category>
         </xml>
-      </div>
     </aside>
 
     <!-- Stage / Visualization Area -->
@@ -332,42 +277,9 @@
       <div
         class="flex items-center gap-2 p-2 border-b border-border bg-[#13182a]"
       >
-        <div class="flex items-center gap-2">
-          <span
-            class="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs"
-            >View</span
-          >
-          <button
-            class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-          >
-            Bar
-          </button>
-          <button
-            class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-          >
-            Scatter
-          </button>
-          <button
-            class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-          >
-            Line
-          </button>
-        </div>
         
         <div id="react-controls-container" class="flex items-center gap-2"></div>
 
-        <div class="ml-auto flex items-center gap-2">
-          <button
-            class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-          >
-            Grid
-          </button>
-          <button
-            class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-          >
-            Link Marker
-          </button>
-        </div>
       </div>
 
       <!-- Visualization Container -->
@@ -390,20 +302,6 @@
           </div>
         </div>
         
-        <div class="absolute left-3 bottom-3 flex gap-2 flex-wrap">
-          <span
-            class="inline-flex items-center px-2 py-1 rounded-full bg-[#1a2b24] text-ok border border-[#2e5a49] text-xs"
-            >Marker A</span
-          >
-          <span
-            class="inline-flex items-center px-2 py-1 rounded-full bg-[#1a2b24] text-ok border border-[#2e5a49] text-xs"
-            >Marker B</span
-          >
-          <span
-            class="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs"
-            >Marker C</span
-          >
-        </div>
       </div>
     </section>
 
@@ -416,96 +314,11 @@
         class="flex items-center gap-2 p-2 border-b border-border bg-[#151a2c]"
       >
         <strong>Data Panel</strong>
-        <button class="ml-auto rounded-lg border border-border px-3 py-1.5 text-sm bg-panel text-text">
-          Import CSV
-        </button>
       </div>
 
-      <div class="p-2 grid gap-1.5 border-b border-border">
-        <div
-          class="flex items-center justify-between gap-2 p-2 rounded-lg border border-border bg-panel2 text-sm"
-        >
-          <span>Sales.csv</span>
-          <span
-            class="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs"
-            >Rows: 1,240</span
-          >
-        </div>
-        <div
-          class="flex items-center justify-between gap-2 p-2 rounded-lg border border-border bg-panel2/60 text-sm opacity-80"
-        >
-          <span>Cities.csv</span>
-          <span
-            class="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs"
-            >Rows: 200</span
-          >
-        </div>
-      </div>
-
-      <div class="overflow-auto p-2 grid gap-3">
-        <div>
-          <div
-            class="text-[11px] uppercase tracking-wider text-muted mb-1.5"
-          >
-            Preview (first 50 rows)
-          </div>
-          <div class="overflow-auto rounded-lg border border-border">
-            <table class="min-w-full text-xs">
-              <thead class="bg-[#141a2e]">
-                <tr>
-                  <th class="border border-border px-2 py-1 text-left text-text">
-                    Region (text)
-                  </th>
-                  <th class="border border-border px-2 py-1 text-left text-text">
-                    Revenue (number)
-                  </th>
-                  <th class="border border-border px-2 py-1 text-left text-text">
-                    Quarter (text)
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="odd:bg-[#12162a] even:bg-[#101426]">
-                  <td class="border border-border px-2 py-1 text-text">North</td>
-                  <td class="border border-border px-2 py-1 text-text">120000</td>
-                  <td class="border border-border px-2 py-1 text-text">Q1</td>
-                </tr>
-                <tr class="odd:bg-[#12162a] even:bg-[#101426]">
-                  <td class="border border-border px-2 py-1 text-text">South</td>
-                  <td class="border border-border px-2 py-1 text-text">98000</td>
-                  <td class="border border-border px-2 py-1 text-text">Q1</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="grid gap-2">
-          <div
-            class="text-[11px] uppercase tracking-wider text-muted mb-0.5"
-          >
-            Cleaning & Transform
-          </div>
-          <div class="grid gap-2">
-            <div class="grid gap-1.5">
-              <label class="text-xs text-muted"
-                >Drop missing in columns</label
-              >
-              <input
-                class="px-3 py-2 rounded-lg border border-border bg-[#0e1220] text-sm text-text placeholder-muted"
-                placeholder="e.g., Revenue, Region"
-              />
-            </div>
-            <div class="grid gap-1.5">
-              <label class="text-xs text-muted">Convert type</label>
-              <select
-                class="px-3 py-2 rounded-lg border border-border bg-[#0e1220] text-sm text-text"
-              >
-                <option>Revenue → Number</option>
-                <option>Quarter → Categorical</option>
-              </select>
-            </div>
-          </div>
+      <div class="overflow-auto p-2">
+        <div class="text-sm text-muted text-center py-8">
+          Data will appear here when imported via blocks
         </div>
       </div>
     </aside>
@@ -515,9 +328,6 @@
       style="grid-area: guide"
       class="flex items-center gap-3 px-3 py-2 bg-[#111524] border-t border-border"
     >
-      <div class="text-sm">
-        Tutorial 2/6: Map columns to axes. Try setting X=Region, Y=Revenue.
-      </div>
       
       <!-- React Output Display Mount Point -->
       <div id="output-root" class="flex-1"></div>
@@ -526,16 +336,6 @@
         <!-- React Status Indicator Mount Point -->
         <div id="status-root"></div>
         
-        <button
-          class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-        >
-          Show Hint
-        </button>
-        <button
-          class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-        >
-          Next ▶
-        </button>
       </div>
     </footer>
   </div>
@@ -708,28 +508,6 @@
       if (window.reactSetError) window.reactSetError(false);
     };
 
-    // External CSV upload handler - only add if element exists
-    const csvUploadExternal = document.getElementById('csv-upload-external');
-    if (csvUploadExternal) {
-      csvUploadExternal.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            Papa.parse(event.target.result, {
-              header: true,
-              skipEmptyLines: true,
-              complete: function(results) {
-                Blockly.CsvImportData.data = results.data;
-                Blockly.CsvImportData.filename = file.name;
-                alert('CSV imported: ' + file.name + '\nRows: ' + results.data.length);
-              }
-            });
-          };
-          reader.readAsText(file);
-        }
-      });
-    }
   </script>
   
   <!-- Include React bundle -->
