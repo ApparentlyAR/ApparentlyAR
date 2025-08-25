@@ -1,14 +1,18 @@
 import React from 'react';
 
 const OutputDisplay = ({ output, isError }) => {
+  if (!output) return null;
+
   return (
-    <pre className={`p-3 min-h-10 rounded-md font-mono text-base sm:text-sm mb-4 shadow-sm w-full overflow-x-auto ${
-      isError 
-        ? 'bg-red-900 text-red-200 border-l-4 border-red-500' 
-        : 'bg-slate-900 text-slate-200'
-    }`}>
-      {output || 'No output'}
-    </pre>
+    <div className="flex-1 mx-2">
+      <pre className={`p-2 rounded-lg font-mono text-xs border max-h-16 overflow-auto ${
+        isError 
+          ? 'bg-[#2b1f1f] text-error border-[#4a2e2e]' 
+          : 'bg-chip text-text border-border'
+      }`}>
+        {output}
+      </pre>
+    </div>
   );
 };
 

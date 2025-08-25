@@ -19,27 +19,30 @@ const ButtonPanel = ({ onRun, onShowCode, isExecuting }) => {
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [onRun, onShowCode, isExecuting]);
   return (
-    <div className="mb-3 flex flex-wrap gap-2 sm:flex-col sm:gap-2">
+    <>
       <button 
         onClick={onRun}
         disabled={isExecuting}
-        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-base font-medium transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+        className="rounded-lg border border-[#2a4bff] bg-gradient-to-b from-[#2a4bff] to-[#2140d9] text-white text-sm px-3 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
       >
         {isExecuting && (
           <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
         )}
-        {isExecuting ? 'Running...' : 'Run Code'} 
-        {!isExecuting && <span className="text-xs opacity-75 ml-1 hidden md:inline">(Ctrl+Enter)</span>}
+        {isExecuting ? 'Running...' : 'Run'} 
       </button>
       <button 
         onClick={onShowCode}
         disabled={isExecuting}
-        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-base font-medium transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+        className="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Show Code
-        {!isExecuting && <span className="text-xs opacity-75 ml-1 hidden md:inline">(Ctrl+K)</span>}
       </button>
-    </div>
+      <button
+        className="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
+      >
+        Save
+      </button>
+    </>
   );
 };
 
