@@ -234,15 +234,19 @@ class ChartGenerator {
    * 
    * @param {Array} data - Data to visualize
    * @param {Object} options - Chart options
-   * @param {string} options.labelColumn - Column name for labels
-   * @param {string} options.valueColumn - Column name for values
+   * @param {string} options.xColumn - Column name for labels (compatible with other chart types)
+   * @param {string} options.yColumn - Column name for values (compatible with other chart types)
+   * @param {string} options.labelColumn - Column name for labels (specific to pie)
+   * @param {string} options.valueColumn - Column name for values (specific to pie)
    * @param {string} options.title - Chart title
    * @returns {Object} Chart.js configuration object
    */
   async generatePieChart(data, options = {}) {
     const {
-      labelColumn = Object.keys(data[0])[0],
-      valueColumn = Object.keys(data[0])[1],
+      xColumn = Object.keys(data[0])[0],
+      yColumn = Object.keys(data[0])[1],
+      labelColumn = options.xColumn || Object.keys(data[0])[0],
+      valueColumn = options.yColumn || Object.keys(data[0])[1],
       title = 'Pie Chart'
     } = options;
 
@@ -282,15 +286,19 @@ class ChartGenerator {
    * 
    * @param {Array} data - Data to visualize
    * @param {Object} options - Chart options
-   * @param {string} options.labelColumn - Column name for labels
-   * @param {string} options.valueColumn - Column name for values
+   * @param {string} options.xColumn - Column name for labels (compatible with other chart types)
+   * @param {string} options.yColumn - Column name for values (compatible with other chart types)
+   * @param {string} options.labelColumn - Column name for labels (specific to doughnut)
+   * @param {string} options.valueColumn - Column name for values (specific to doughnut)
    * @param {string} options.title - Chart title
    * @returns {Object} Chart.js configuration object
    */
   async generateDoughnutChart(data, options = {}) {
     const {
-      labelColumn = Object.keys(data[0])[0],
-      valueColumn = Object.keys(data[0])[1],
+      xColumn = Object.keys(data[0])[0],
+      yColumn = Object.keys(data[0])[1],
+      labelColumn = options.xColumn || Object.keys(data[0])[0],
+      valueColumn = options.yColumn || Object.keys(data[0])[1],
       title = 'Doughnut Chart'
     } = options;
 
@@ -453,27 +461,30 @@ class ChartGenerator {
       throw new Error('No data provided');
     }
     
-    let requiredColumns = [];
+    const availableColumns = Object.keys(data[0]);
+    
+    // For basic validation, just ensure we have at least one column
+    if (availableColumns.length === 0) {
+      throw new Error('Data contains no columns');
+    }
+    
+    // Set default options based on available columns if not provided
     switch (chartType) {
       case 'bar':
       case 'line':
       case 'area':
-        requiredColumns = [options.xColumn, options.yColumn];
+        if (!options.xColumn) options.xColumn = availableColumns[0];
+        if (!options.yColumn) options.yColumn = availableColumns[1] || availableColumns[0];
         break;
       case 'scatter':
-        requiredColumns = [options.xColumn, options.yColumn];
+        if (!options.xColumn) options.xColumn = availableColumns[0];
+        if (!options.yColumn) options.yColumn = availableColumns[1] || availableColumns[0];
         break;
       case 'pie':
       case 'doughnut':
-        requiredColumns = [options.labelColumn, options.valueColumn];
+        if (!options.labelColumn) options.labelColumn = availableColumns[0];
+        if (!options.valueColumn) options.valueColumn = availableColumns[1] || availableColumns[0];
         break;
-    }
-    
-    const availableColumns = Object.keys(data[0]);
-    const missingColumns = requiredColumns.filter(col => !availableColumns.includes(col));
-    
-    if (missingColumns.length > 0) {
-      throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
     }
     
     return true;
