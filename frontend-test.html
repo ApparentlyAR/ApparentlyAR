@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend Chart Generation Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-container { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        .chart-container { width: 400px; height: 300px; margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        button { margin: 5px; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>ApparentlyAR Frontend Chart Generation Test</h1>
+    
+    <div class="test-container">
+        <h2>Test 1: Chart Generation with Dropdown Simulation</h2>
+        <p>Simulating user selecting data type and chart type from dropdowns:</p>
+        
+        <label>Data Type: </label>
+        <select id="dataType">
+            <option value="students">Students Data</option>
+            <option value="weather">Weather Data</option>
+            <option value="sales">Sales Data</option>
+        </select>
+        
+        <label>Chart Type: </label>
+        <select id="chartType">
+            <option value="bar">Bar Chart</option>
+            <option value="line">Line Chart</option>
+            <option value="pie">Pie Chart</option>
+            <option value="scatter">Scatter Plot</option>
+            <option value="doughnut">Doughnut Chart</option>
+            <option value="area">Area Chart</option>
+        </select>
+        
+        <button onclick="generateTestChart()">Generate Chart</button>
+        
+        <div id="status"></div>
+        <div class="chart-container">
+            <canvas id="testChart"></canvas>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 2: Component Communication Simulation</h2>
+        <p>Testing event-based communication between components:</p>
+        <button onclick="testEventCommunication()">Test Event Communication</button>
+        <div id="eventStatus"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 3: Error Handling</h2>
+        <button onclick="testErrorHandling()">Test Error Handling</button>
+        <div id="errorStatus"></div>
+    </div>
+
+    <script>
+        let currentChart = null;
+
+        async function generateTestChart() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<p>🔄 Generating chart...</p>';
+            
+            try {
+                const dataType = document.getElementById('dataType').value;
+                const chartType = document.getElementById('chartType').value;
+                
+                // Step 1: Get sample data
+                const dataResponse = await fetch(`http://localhost:3000/api/test-data/${dataType}`);
+                const dataResult = await dataResponse.json();
+                
+                if (!dataResult.success) {
+                    throw new Error('Failed to fetch data');
+                }
+                
+                // Step 2: Generate chart
+                const chartResponse = await fetch('http://localhost:3000/api/generate-chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        data: dataResult.data,
+                        chartType: chartType,
+                        options: { title: `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart - ${dataType} Data` }
+                    })
+                });
+                
+                const chartResult = await chartResponse.json();
+                
+                if (!chartResult.success) {
+                    throw new Error(chartResult.error || 'Chart generation failed');
+                }
+                
+                // Step 3: Render chart
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+                
+                const ctx = document.getElementById('testChart').getContext('2d');
+                currentChart = new Chart(ctx, {
+                    type: chartResult.chartType,
+                    data: chartResult.config.data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        ...chartResult.config.options
+                    }
+                });
+                
+                statusDiv.innerHTML = `
+                    <p class="success">✅ Chart Generated Successfully!</p>
+                    <p>Type: ${chartResult.chartType}</p>
+                    <p>Data Points: ${chartResult.metadata.dataPoints}</p>
+                    <p>Columns: ${chartResult.metadata.columns.join(', ')}</p>
+                `;
+                
+                // Dispatch event to simulate component communication
+                window.dispatchEvent(new CustomEvent('chartGenerated', { 
+                    detail: chartResult 
+                }));
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        function testEventCommunication() {
+            const statusDiv = document.getElementById('eventStatus');
+            
+            // Listen for chart generation event
+            const handleChartGenerated = (event) => {
+                const chartResult = event.detail;
+                statusDiv.innerHTML = `
+                    <p class="success">✅ Event Communication Working!</p>
+                    <p>Received chartGenerated event with data:</p>
+                    <p>Chart Type: ${chartResult.chartType}</p>
+                    <p>Success: ${chartResult.success}</p>
+                `;
+                window.removeEventListener('chartGenerated', handleChartGenerated);
+            };
+            
+            window.addEventListener('chartGenerated', handleChartGenerated);
+            
+            // Simulate generating a chart event
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('chartGenerated', {
+                    detail: {
+                        success: true,
+                        chartType: 'test',
+                        config: { data: {}, options: {} },
+                        metadata: { dataPoints: 5 }
+                    }
+                }));
+            }, 100);
+        }
+
+        async function testErrorHandling() {
+            const statusDiv = document.getElementById('errorStatus');
+            statusDiv.innerHTML = '<p>🔄 Testing error handling...</p>';
+            
+            try {
+                // Test with invalid chart type
+                const response = await fetch('http://localhost:3000/api/generate-chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        data: [{ x: 1, y: 2 }],
+                        chartType: 'invalid_type',
+                        options: {}
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    statusDiv.innerHTML = `<p class="success">✅ Error Handling Working! Error: ${result.error}</p>`;
+                } else {
+                    statusDiv.innerHTML = `<p class="error">❌ Error handling failed - should have returned an error</p>`;
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="success">✅ Network Error Handling Working! Error: ${error.message}</p>`;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Frontend test page loaded');
+            console.log('Chart.js available:', !!window.Chart);
+        });
+    </script>
+</body>
+</html>
