@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>ApparentlyAR - Hand Detection Demo (Chromebook)</title>
+
+  <!-- MediaPipe Hands (browser/JS) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248252/drawing_utils.js"></script>
+
+  <!-- Three.js for 2D/3D overlay -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      overflow: hidden;
+    }
+    .container { display: flex; height: 100vh; }
+    .camera-section { flex: 1; position: relative; }
+    .controls-section {
+      width: 300px; background: #2a2a2a; padding: 20px;
+      border-left: 1px solid #444; overflow-y: auto;
+    }
+    #video { width: 100%; height: 100%; object-fit: cover; }
+    #canvas, #ar-canvas {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .controls-section h2 { margin-top: 0; color: #4CAF50; }
+    .control-group { margin-bottom: 20px; }
+    .control-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .control-group select, .control-group input, .control-group button {
+      width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #555;
+      border-radius: 4px; background: #333; color: white;
+    }
+    .control-group button { background: #4CAF50; border: none; cursor: pointer; font-weight: bold; }
+    .control-group button:hover { background: #45a049; }
+    .status { padding: 10px; border-radius: 4px; margin-bottom: 10px; font-weight: bold; }
+    .status.detecting { background: #2196F3; }
+    .status.ready { background: #4CAF50; }
+    .status.error { background: #f44336; }
+    .chart-info { background: #333; padding: 10px; border-radius: 4px; margin-top: 10px; }
+    .chart-info h3 { margin-top: 0; color: #4CAF50; }
+    .chart-list { max-height: 200px; overflow-y: auto; }
+    .chart-item { background: #444; padding: 8px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; }
+    .chart-item:hover { background: #555; }
+    .chart-item.selected { background: #4CAF50; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="camera-section">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="canvas"></canvas>
+      <canvas id="ar-canvas"></canvas>
+    </div>
+
+    <div class="controls-section">
+      <h2>AR Chart Controls</h2>
+
+      <div class="control-group">
+        <div id="status" class="status">Initialising…</div>
+      </div>
+
+      <div class="control-group">
+        <label for="chartType">Chart Type:</label>
+        <select id="chartType">
+          <option value="bar">Bar Chart</option>
+          <option value="line">Line Chart</option>
+          <option value="pie">Pie Chart</option>
+          <option value="scatter">Scatter Plot</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="sampleData">Sample Data:</label>
+        <select id="sampleData">
+          <option value="students">Student Grades</option>
+          <option value="weather">Weather Data</option>
+          <option value="sales">Sales Data</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <button id="startCamera">Start Camera</button>
+        <button id="stopCamera">Stop Camera</button>
+      </div>
+
+      <div class="control-group">
+        <button id="clearCharts">Clear All Charts</button>
+      </div>
+       
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="devMode" style="width: auto; margin-right: 8px;">
+          Dev Mode (Auto-start camera + test data)
+        </label>
+      </div>
+
+      <div class="chart-info">
+        <h3>Placed Charts</h3>
+        <div id="chartList" class="chart-list">
+          <div class="chart-item">No charts placed yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ApparentlyAR - Hand Detection Demo
+     * 
+     * Augmented Reality chart visualization using MediaPipe Hands for gesture recognition.
+     * Allows users to place interactive charts in AR space using hand gestures.
+     * 
+     * @author ApparentlyAR Team
+     * @version 1.0.0
+     * @since 2024
+     */
+
+    // ===== Global state =====
+    /** @type {MediaPipe.Hands} MediaPipe Hands instance for hand landmark detection */
+    let hands;
+    
+    /** @type {MediaPipe.Camera} MediaPipe Camera instance for video processing */
+    let mpCamera;
+    
+    /** @type {THREE.Scene} Three.js scene for 3D chart rendering */
+    let scene;
+    
+    /** @type {THREE.WebGLRenderer} Three.js renderer for WebGL graphics */
+    let renderer;
+    
+    /** @type {THREE.OrthographicCamera} Orthographic camera for screen-space overlay */
+    let cameraOrtho;
+    
+    /** @type {Array<Object>} Array of placed chart objects with metadata */
+    let charts = [];
+    
+    /** @type {boolean} Flag indicating if hand detection is currently active */
+    let isDetecting = false;
+    
+    /** @type {boolean} Gate to prevent overlapping MediaPipe send calls */
+    let sending = false;
+    
+    /** @type {number} Timestamp of last chart placement to prevent spam */
+    let lastPlacedAt = 0;
+    
+    /** @type {number} Cooldown period between chart placements (milliseconds) */
+    const PLACE_COOLDOWN_MS = 800;
+
+    /**
+     * Sample datasets for chart generation and testing
+     * @type {Object.<string, Array<Object>>}
+     */
+    const sampleData = {
+      students: [
+        { name: 'Alice', age: 25, score: 85, grade: 'A' },
+        { name: 'Bob', age: 22, score: 92, grade: 'A' },
+        { name: 'Charlie', age: 28, score: 78, grade: 'B' },
+        { name: 'Diana', age: 24, score: 95, grade: 'A' },
+        { name: 'Eve', age: 26, score: 88, grade: 'A' }
+      ],
+      weather: [
+        { month: 'Jan', temperature: 15, rainfall: 80, humidity: 65 },
+        { month: 'Feb', temperature: 17, rainfall: 70, humidity: 60 },
+        { month: 'Mar', temperature: 20, rainfall: 85, humidity: 70 },
+        { month: 'Apr', temperature: 23, rainfall: 90, humidity: 75 },
+        { month: 'May', temperature: 26, rainfall: 100, humidity: 80 }
+      ],
+      sales: [
+        { product: 'Laptop', sales: 120, revenue: 144000, region: 'North' },
+        { product: 'Phone', sales: 200, revenue: 120000, region: 'North' },
+        { product: 'Tablet', sales: 80, revenue: 64000, region: 'North' },
+        { product: 'Laptop', sales: 150, revenue: 180000, region: 'South' },
+        { product: 'Phone', sales: 180, revenue: 108000, region: 'South' }
+      ]
+    };
+
+    /**
+     * Resizes canvas elements to match video dimensions for proper overlay alignment
+     * Updates both hand landmark canvas and AR chart canvas to video resolution
+     * 
+     * @function
+     * @since 1.0.0
+     */
+    function sizeCanvasesToVideo() {
+      const video = document.getElementById('video');
+      const overlay = document.getElementById('canvas');
+      const ar = document.getElementById('ar-canvas');
+
+      if (video.videoWidth && video.videoHeight) {
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        ar.width = video.videoWidth;
+        ar.height = video.videoHeight;
+
+        if (renderer) {
+          renderer.setSize(ar.width, ar.height, false);
+        }
+        if (cameraOrtho) {
+          cameraOrtho.left = 0;
+          cameraOrtho.right = ar.width;
+          cameraOrtho.top = 0;
+          cameraOrtho.bottom = ar.height;
+          cameraOrtho.updateProjectionMatrix();
+        }
+      }
+    }
+
+    /**
+     * Initializes MediaPipe Hands for real-time hand landmark detection
+     * Configures detection parameters and sets up result callback
+     * 
+     * @async
+     * @function
+     * @throws {Error} If MediaPipe Hands fails to initialize
+     * @since 1.0.0
+     */
+    async function initializeHands() {
+      hands = new Hands({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`
+      });
+
+      hands.setOptions({
+        selfieMode: true,                 // front-facing camera feel
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+
+      hands.onResults(onHandResults);
+      updateStatus('Hand detection ready', 'ready');
+    }
+
+    /**
+     * Initializes Three.js scene, camera, and renderer for AR chart visualization
+     * Sets up orthographic camera for screen-space overlay rendering
+     * 
+     * @function
+     * @since 1.0.0
+     */
+    function initializeThreeJS() {
+      scene = new THREE.Scene();
+      cameraOrtho = new THREE.OrthographicCamera(0, 640, 0, 480, 1, 1000);
+      cameraOrtho.position.z = 100;
+
+      renderer = new THREE.WebGLRenderer({ 
+        canvas: document.getElementById('ar-canvas'), 
+        alpha: true 
+      });
+      renderer.setSize(640, 480);
+
+      animate();
+    }
+
+    /**
+     * Animation loop for Three.js rendering and chart texture updates
+     * Continuously updates chart textures and renders the AR scene
+     * 
+     * @function
+     * @since 1.0.0
+     */
+    function animate() {
+      requestAnimationFrame(animate);
+      charts.forEach(chart => {
+        if (chart.chart && chart.chartCanvas) {
+          chart.chart.update('none');
+          chart.chartTexture.needsUpdate = true;
+        }
+      });
+      renderer.render(scene, cameraOrtho);
+    }
+
+    /**
+     * Callback function for MediaPipe Hands detection results
+     * Processes hand landmarks and triggers gesture recognition
+     * 
+     * @function
+     * @param {Object} results - MediaPipe Hands detection results
+     * @param {Array} results.multiHandLandmarks - Array of hand landmark arrays
+     * @param {Array} results.multiHandedness - Array of hand handedness information
+     * @since 1.0.0
+     */
+    function onHandResults(results) {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      if (results.multiHandLandmarks && results.multiHandedness) {
+        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+          const landmarks = results.multiHandLandmarks[i];
+          const handedness = results.multiHandedness[i].label;
+          
+          drawHandLandmarks(ctx, landmarks);
+          
+                     if (isClosedPalm(landmarks, handedness)) {
+             placeChartAtHand(landmarks);
+           }
+        }
+      }
+    }
+
+    /**
+     * Draws hand landmark visualization on canvas with corrected coordinate mapping
+     * Renders finger joints as red dots and connections as green lines
+     * 
+     * @function
+     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * @param {Array<Object>} landmarks - Array of hand landmark objects with x,y,z coordinates
+     * @since 1.0.0
+     */
+    function drawHandLandmarks(ctx, landmarks) {
+      ctx.strokeStyle = '#00FF00';
+      ctx.lineWidth = 2;
+      ctx.fillStyle = '#FF0000';
+      
+      for (let i = 0; i < landmarks.length; i++) {
+        // Fix horizontal inversion by flipping X coordinate
+        const x = (1 - landmarks[i].x) * ctx.canvas.width;
+        const y = landmarks[i].y * ctx.canvas.height;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      
+      const connections = [
+        [0, 1], [1, 2], [2, 3], [3, 4],
+        [0, 5], [5, 6], [6, 7], [7, 8],
+        [0, 9], [9, 10], [10, 11], [11, 12],
+        [0, 13], [13, 14], [14, 15], [15, 16],
+        [0, 17], [17, 18], [18, 19], [19, 20]
+      ];
+      
+      ctx.beginPath();
+      for (const [start, end] of connections) {
+        // Fix horizontal inversion for connection lines too
+        const startX = (1 - landmarks[start].x) * ctx.canvas.width;
+        const startY = landmarks[start].y * ctx.canvas.height;
+        const endX = (1 - landmarks[end].x) * ctx.canvas.width;
+        const endY = landmarks[end].y * ctx.canvas.height;
+        
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+      }
+      ctx.stroke();
+    }
+
+    /**
+     * Detects if hand is in a closed palm (fist) gesture
+     * Counts extended fingers and returns true if most fingers are closed
+     * 
+     * @function
+     * @param {Array<Object>} landmarks - Array of hand landmark objects
+     * @param {string} [handedness='Right'] - Hand handedness ('Left' or 'Right')
+     * @returns {boolean} True if hand is in closed palm gesture
+     * @since 1.0.0
+     */
+    function isClosedPalm(landmarks, handedness = 'Right') {
+      const fingerTips = [4, 8, 12, 16, 20];
+      const fingerMcps = [3, 6, 10, 14, 18];
+      
+      let extendedFingers = 0;
+      
+      for (let i = 0; i < fingerTips.length; i++) {
+        const tip = landmarks[fingerTips[i]];
+        const mcp = landmarks[fingerMcps[i]];
+        
+        if (i === 0) {
+          if (handedness === 'Right' ? tip.x > mcp.x : tip.x < mcp.x) {
+            extendedFingers++;
+          }
+        } else {
+          if (tip.y < mcp.y) {
+            extendedFingers++;
+          }
+        }
+      }
+      
+      // Return true when MOST fingers are closed (0-1 extended)
+      return extendedFingers <= 1;
+    }
+
+    /**
+     * Places a chart at the detected hand position with cooldown protection
+     * Uses palm center landmark for chart placement coordinates
+     * 
+     * @function
+     * @param {Array<Object>} landmarks - Array of hand landmark objects
+     * @since 1.0.0
+     */
+    function placeChartAtHand(landmarks) {
+      const now = Date.now();
+      if (now - lastPlacedAt < PLACE_COOLDOWN_MS) return;
+      
+      const palmCenter = landmarks[9];
+      const canvas = document.getElementById('canvas');
+      
+      // Fix horizontal inversion for chart placement too
+      const x = (1 - palmCenter.x) * canvas.width;
+      const y = (1 - palmCenter.y) * canvas.height;
+      const z = 0;
+      
+      createChart(x, y, z);
+      lastPlacedAt = now;
+    }
+
+    /**
+     * Creates and places a chart in the AR scene at specified coordinates
+     * Generates chart texture from Chart.js and creates Three.js mesh
+     * 
+     * @function
+     * @param {number} x - X coordinate for chart placement
+     * @param {number} y - Y coordinate for chart placement
+     * @param {number} z - Z coordinate for chart placement
+     * @since 1.0.0
+     */
+    function createChart(x, y, z) {
+      const chartId = 'chart_' + Date.now();
+      const chartCanvas = document.createElement('canvas');
+      chartCanvas.width = 400;
+      chartCanvas.height = 300;
+      chartCanvas.id = chartId;
+      
+      const chartType = document.getElementById('chartType').value;
+      const datasetName = document.getElementById('sampleData').value;
+      const chart = generateChart(chartCanvas, chartType, sampleData[datasetName]);
+      
+      const texture = new THREE.CanvasTexture(chartCanvas);
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+      const geometry = new THREE.PlaneGeometry(200, 150);
+      const mesh = new THREE.Mesh(geometry, material);
+      
+      mesh.position.set(x - 100, y - 75, z);
+      scene.add(mesh);
+      
+      const chartObj = {
+        id: chartId,
+        chart: chart,
+        chartCanvas: chartCanvas,
+        chartTexture: texture,
+        mesh: mesh,
+        type: chartType,
+        dataset: datasetName,
+        x: x,
+        y: y,
+        z: z
+      };
+      
+      charts.push(chartObj);
+      updateChartList();
+      
+      console.log(`Chart placed: ${chartType} with ${datasetName} data at (${x}, ${y})`);
+    }
+
+    /**
+     * Generates Chart.js configuration and chart instance for specified data
+     * Creates different chart types (bar, line, pie, scatter) based on data structure
+     * 
+     * @function
+     * @param {HTMLCanvasElement} canvas - Canvas element for chart rendering
+     * @param {string} type - Chart type ('bar', 'line', 'pie', 'scatter')
+     * @param {Array<Object>} data - Data array for chart generation
+     * @returns {Chart} Chart.js chart instance
+     * @since 1.0.0
+     */
+    function generateChart(canvas, type, data) {
+      const ctx = canvas.getContext('2d');
+      
+      let chartConfig = {
+        type: type,
+        data: {},
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            legend: { display: true },
+            title: { display: true, text: `${type.toUpperCase()} Chart` }
+          }
+        }
+      };
+      
+      if (type === 'bar' || type === 'line') {
+        if (data === sampleData.students) {
+          chartConfig.data = {
+            labels: data.map(d => d.name),
+            datasets: [{ 
+              label: 'Scores', 
+              data: data.map(d => d.score),
+              backgroundColor: 'rgba(76, 175, 80, 0.8)',
+              borderColor: 'rgba(76, 175, 80, 1)',
+              borderWidth: 2
+            }]
+          };
+        } else if (data === sampleData.weather) {
+          chartConfig.data = {
+            labels: data.map(d => d.month),
+            datasets: [{ 
+              label: 'Temperature (°C)', 
+              data: data.map(d => d.temperature),
+              backgroundColor: 'rgba(76, 175, 80, 0.8)',
+              borderColor: 'rgba(76, 175, 80, 1)',
+              borderWidth: 2
+            }]
+          };
+        } else if (data === sampleData.sales) {
+          chartConfig.data = {
+            labels: data.map(d => d.product),
+            datasets: [{ 
+              label: 'Sales', 
+              data: data.map(d => d.sales),
+              backgroundColor: 'rgba(76, 175, 80, 0.8)',
+              borderColor: 'rgba(76, 175, 80, 1)',
+              borderWidth: 2
+            }]
+          };
+        }
+      } else if (type === 'pie') {
+        if (data === sampleData.students) {
+          chartConfig.data = {
+            labels: data.map(d => d.name),
+            datasets: [{ 
+              data: data.map(d => d.score),
+              backgroundColor: [
+                'rgba(76, 175, 80, 0.8)',
+                'rgba(33, 150, 243, 0.8)',
+                'rgba(255, 193, 7, 0.8)',
+                'rgba(244, 67, 54, 0.8)',
+                'rgba(156, 39, 176, 0.8)'
+              ]
+            }]
+          };
+        }
+      } else if (type === 'scatter') {
+        if (data === sampleData.students) {
+          chartConfig.data = {
+            datasets: [{ 
+              label: 'Age vs Score',
+              data: data.map(d => ({ x: d.age, y: d.score })),
+              backgroundColor: 'rgba(76, 175, 80, 0.8)'
+            }]
+          };
+        }
+      }
+      
+      return new Chart(ctx, chartConfig);
+    }
+
+    /**
+     * Updates the chart list UI with currently placed charts
+     * Renders chart information in the sidebar for user reference
+     * 
+     * @function
+     * @since 1.0.0
+     */
+    function updateChartList() {
+      const listEl = document.getElementById('chartList');
+      if (charts.length === 0) {
+        listEl.innerHTML = '<div class="chart-item">No charts placed yet</div>';
+      } else {
+        listEl.innerHTML = charts.map(chart => 
+          `<div class="chart-item" onclick="selectChart('${chart.id}', this)">
+             ${chart.type.toUpperCase()} - ${chart.dataset} (#${chart.id.split('_')[1]})
+           </div>`
+        ).join('');
+      }
+    }
+
+    /**
+     * Handles chart selection in the UI list
+     * Updates visual selection state for selected chart
+     * 
+     * @function
+     * @param {string} id - Chart ID for selection
+     * @param {HTMLElement} el - DOM element that was clicked
+     * @since 1.0.0
+     */
+    function selectChart(id, el) {
+      document.querySelectorAll('.chart-item').forEach(item => item.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    /**
+     * Updates the status display with message and type styling
+     * Provides user feedback for system state and operations
+     * 
+     * @function
+     * @param {string} message - Status message to display
+     * @param {string} type - Status type ('ready', 'detecting', 'error')
+     * @since 1.0.0
+     */
+    function updateStatus(message, type) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+    }
+
+    /**
+     * Starts camera capture and MediaPipe hand detection
+     * Initializes video stream and begins real-time processing
+     * 
+     * @async
+     * @function
+     * @throws {Error} If camera access fails or MediaPipe initialization fails
+     * @since 1.0.0
+     */
+    async function startCamera() {
+      try {
+        const video = document.getElementById('video');
+        sizeCanvasesToVideo();
+        window.addEventListener('resize', sizeCanvasesToVideo);
+
+        mpCamera = new Camera(video, {
+          onFrame: async () => {
+            if (!isDetecting || sending) return;
+            sending = true;
+            try { await hands.send({ image: video }); } catch (e) {}
+            sending = false;
+          },
+          width: 640,
+          height: 480
+        });
+
+        await mpCamera.start();
+        isDetecting = true;
+        updateStatus('Camera started — make a fist to place charts', 'detecting');
+      } catch (err) {
+        console.error('Error starting camera:', err);
+        updateStatus('Error starting camera', 'error');
+      }
+    }
+
+    /**
+     * Stops camera capture and hand detection
+     * Cleans up video stream and MediaPipe processing
+     * 
+     * @function
+     * @since 1.0.0
+     */
+    function stopCamera() {
+      if (mpCamera) {
+        mpCamera.stop();
+        isDetecting = false;
+        updateStatus('Camera stopped', 'ready');
+      }
+    }
+
+    /**
+     * Removes all placed charts from the AR scene
+     * Cleans up Three.js meshes and Chart.js instances
+     * 
+     * @function
+     * @since 1.0.0
+     */
+    function clearCharts() {
+      charts.forEach(c => {
+        scene.remove(c.mesh);
+        c.chart.destroy();
+      });
+      charts = [];
+      updateChartList();
+    }
+
+    /**
+     * Sets up development mode functionality for quick testing
+     * Auto-starts camera and pre-selects test data when enabled
+     * 
+     * @function
+     * @since 1.0.0
+     */
+    /**
+     * Sets up development mode functionality for quick testing
+     * Auto-starts camera and pre-selects test data when enabled
+     * 
+     * @function
+     * @since 1.0.0
+     */
+    function setupDevMode() {
+      const devModeCheckbox = document.getElementById('devMode');
+      
+      // Auto-start camera when dev mode is enabled
+      devModeCheckbox.addEventListener('change', async (e) => {
+        if (e.target.checked) {
+          console.log('Dev mode enabled - auto-starting camera...');
+          updateStatus('Dev mode: Auto-starting camera...', 'detecting');
+          
+          // Set some default test data
+          document.getElementById('chartType').value = 'bar';
+          document.getElementById('sampleData').value = 'students';
+          
+          // Auto-start camera after a short delay
+          setTimeout(async () => {
+            try {
+              await startCamera();
+                             updateStatus('Dev mode: Camera ready - make a fist to test!', 'detecting');
+            } catch (error) {
+              console.error('Dev mode camera start failed:', error);
+              updateStatus('Dev mode: Camera start failed', 'error');
+              devModeCheckbox.checked = false;
+            }
+          }, 1000);
+        } else {
+          console.log('Dev mode disabled - stopping camera...');
+          stopCamera();
+          updateStatus('Dev mode disabled', 'ready');
+        }
+      });
+      
+      // Auto-enable dev mode on page load for quick testing
+      if (window.location.search.includes('dev=true')) {
+        devModeCheckbox.checked = true;
+        devModeCheckbox.dispatchEvent(new Event('change'));
+      }
+    }
+
+    /**
+     * Event listener setup for UI controls
+     * Binds button clicks to corresponding functions
+     */
+    document.getElementById('startCamera').addEventListener('click', startCamera);
+    document.getElementById('stopCamera').addEventListener('click', stopCamera);
+    document.getElementById('clearCharts').addEventListener('click', clearCharts);
+
+    /**
+     * Application initialization function
+     * Sets up all components and starts the AR demo
+     * 
+     * @async
+     * @function
+     * @throws {Error} If initialization fails
+     * @since 1.0.0
+     */
+    async function init() {
+      try {
+        await initializeHands();
+        initializeThreeJS();
+        setupDevMode(); // Setup dev mode functionality
+        updateStatus('Ready to start camera (or enable Dev Mode)', 'ready');
+      } catch (e) {
+        console.error('Initialisation error:', e);
+        updateStatus('Initialisation failed', 'error');
+      }
+    }
+    init();
+  </script>
+</body>
+</html>
+
