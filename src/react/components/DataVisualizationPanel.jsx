@@ -68,10 +68,10 @@ const DataVisualizationPanel = () => {
       
       {chartData && (
         <div className="chart-container">
-          <h4>{chartData.config?.options?.plugins?.title?.text}</h4>
+          <h4 className="text-lg font-semibold text-slate-700 mb-2">{chartData.config?.options?.plugins?.title?.text}</h4>
           <div className="chart-info">
-            <p>Chart Type: {chartData.type}</p>
-            <p>Data Points: {chartData.config?.data?.labels?.length || 0}</p>
+            <p>Chart Type: <span className="font-medium">{chartData.type}</span></p>
+            <p>Data Points: <span className="font-medium">{chartData.config?.data?.labels?.length || 0}</span></p>
           </div>
           <pre className="chart-config">
             {JSON.stringify(chartData.config, null, 2)}
