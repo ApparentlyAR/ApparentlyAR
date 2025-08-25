@@ -72,47 +72,61 @@ const ChartControls = ({ onChartGenerate }) => {
 
   return (
     <div className="chart-controls">
-      <h4>Chart Controls</h4>
+      <h4 className="text-lg font-semibold text-slate-800 mb-4">Chart Controls</h4>
       
-      <div className="control-group">
-        <label>Data Type:</label>
-        <select 
-          value={dataType} 
-          onChange={(e) => setDataType(e.target.value)}
-          disabled={loading}
-          className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-        >
-          {dataTypes.map(type => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="control-group">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Data Type:</label>
+          <select 
+            value={dataType} 
+            onChange={(e) => setDataType(e.target.value)}
+            disabled={loading}
+            className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+          >
+            {dataTypes.map(type => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="control-group">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Chart Type:</label>
+          <select 
+            value={chartType} 
+            onChange={(e) => setChartType(e.target.value)}
+            disabled={loading}
+            className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+          >
+            {chartTypes.map(type => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="control-group">
+          <label className="block text-sm font-medium text-gray-700 mb-2">&nbsp;</label>
+          <button 
+            onClick={handleGenerateChart}
+            disabled={loading}
+            className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium"
+          >
+            {loading ? 'Generating...' : 'Generate Chart'}
+          </button>
+        </div>
       </div>
       
-      <div className="control-group">
-        <label>Chart Type:</label>
-        <select 
-          value={chartType} 
-          onChange={(e) => setChartType(e.target.value)}
-          disabled={loading}
-          className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-        >
-          {chartTypes.map(type => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      
-      <button 
-        onClick={handleGenerateChart}
-        disabled={loading}
-        className="generate-btn"
-      >
-        {loading ? 'Generating...' : 'Generate Chart'}
-      </button>
+      {loading && (
+        <div className="mt-4 text-center">
+          <div className="inline-flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+            <span className="text-sm text-gray-600">Generating chart...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

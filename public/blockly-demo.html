@@ -8,6 +8,7 @@
   <script src="https://unpkg.com/blockly/blockly.min.js"></script>
   <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
   <script>
     // Ensure Blockly.JavaScript is available before loading custom blocks
     console.log('Blockly.JavaScript available:', !!window.Blockly.JavaScript);
@@ -58,32 +59,11 @@
       flex-direction: column;
     }
     
-    /* Blockly container with responsive sizing */
-    #blocklyDiv {
-      flex: 1 1 60%;
-      min-height: 400px;
-      width: 100%;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      margin-bottom: 16px;
-      background: white;
-      overflow: hidden;
-      position: relative;
-    }
+    /* Blockly container styling handled by Tailwind classes */
     
-    /* Mobile-specific Blockly optimizations */
+    /* Essential Blockly-specific optimizations (cannot be replaced by Tailwind) */
     @media (max-width: 768px) {
-      html {
-        font-size: 14px;
-      }
-      
-      #blocklyDiv {
-        min-height: 300px;
-        border-radius: 8px;
-        font-size: 12px !important;
-      }
-      
-      /* Blockly mobile optimizations */
+      /* Blockly internal elements - cannot use Tailwind classes */
       .blocklyDiv {
         font-size: 12px !important;
       }
@@ -120,159 +100,34 @@
       }
     }
     
-    @media (max-width: 640px) {
-      html {
-        font-size: 14px;
-      }
-      
-      #blocklyDiv {
-        min-height: 280px;
-      }
-      
-      .main-content-mobile {
-        padding: 4px !important;
-      }
-      
-      .header-mobile {
-        font-size: 1.25rem !important;
-        padding: 8px !important;
-      }
-    }
     
-    /* Header styling */
-    .header-mobile {
-      padding: 16px 32px;
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #334155;
-      background-color: #f8fafc;
-      letter-spacing: 0.025em;
-    }
+    /* React component base styles - use Tailwind classes in HTML instead */
     
-    /* Main content styling */
-    .main-content-mobile {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 0 32px 32px 32px;
-      min-height: 0;
-    }
-    
-    /* React component styles */
-    .data-visualization-panel, .chart-controls {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    
-    .data-visualization-panel h3, .chart-controls h4 {
-      margin: 0 0 12px 0;
-      color: #334155;
-    }
-    
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    
-    .load-sample-btn, .generate-btn {
-      background: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 16px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background-color 0.2s;
-    }
-    
-    .load-sample-btn:hover, .generate-btn:hover {
-      background: #2563eb;
-    }
-    
-    .load-sample-btn:disabled, .generate-btn:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-    }
-    
-    .control-group {
-      margin-bottom: 12px;
-    }
-    
-    .control-group label {
-      display: block;
-      margin-bottom: 4px;
-      font-weight: 500;
-      color: #334155;
-    }
-    
-    .control-group select {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    
-    .error-message {
-      background: #fef2f2;
-      color: #dc2626;
-      padding: 8px 12px;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      border-left: 4px solid #dc2626;
-    }
-    
+    /* Chart.js mobile responsiveness - cannot be handled by Tailwind */
     .chart-container {
-      margin-top: 16px;
+      position: relative;
       width: 100%;
-      overflow: hidden;
     }
     
-    .chart-info {
-      display: flex;
-      gap: 20px;
-      margin: 8px 0;
-      font-size: 14px;
-      color: #4b5563;
-    }
-    
-    .chart-config {
-      background: #f9fafb;
-      border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      padding: 12px;
-      font-size: 12px;
-      max-height: 288px;
-      overflow-y: auto;
-    }
-    
-    /* Enhanced mobile chart responsiveness */
     @media (max-width: 640px) {
+      .chart-container {
+        height: 300px !important;
+      }
+      
       .chart-container canvas {
         max-width: 100% !important;
         height: auto !important;
       }
-      
-      .chart-container {
-        position: relative;
-        height: 300px !important;
-        width: 100% !important;
-      }
     }
     
-    /* High contrast mode support */
+    /* High contrast mode support - for elements that need CSS overrides */
     @media (prefers-contrast: high) {
-      .data-visualization-panel, .chart-controls {
-        border: 2px solid #334155;
+      .bg-white {
+        border: 2px solid #334155 !important;
       }
       
-      .load-sample-btn, .generate-btn {
-        border: 2px solid #334155;
+      button {
+        border: 2px solid #334155 !important;
       }
     }
     
@@ -287,9 +142,11 @@
   </style>
 </head>
 <body>
-  <div class="header-mobile">Blockly Demo</div>
-  <div class="main-content-mobile">
-    <div id="blocklyDiv"></div>
+  <!-- React Header Component -->
+  <div id="header-root"></div>
+  
+  <div class="flex-1 flex flex-col px-8 pb-8 min-h-0 sm:p-1">
+    <div id="blocklyDiv" class="flex-1 min-h-96 md:min-h-80 sm:min-h-72 w-full rounded-xl sm:rounded-lg border border-slate-200 mb-4 bg-white overflow-hidden relative"></div>
     <xml id="toolbox" style="display: none">
       <category name="Logic" colour="210">
         <block type="controls_if"></block>
@@ -330,15 +187,14 @@
         </block>
       </category>
     </xml>
-    <div class="mb-3">
-      <button id="runButton" class="bg-blue-500 text-white border-none rounded-md px-4 py-2 mr-2 text-base cursor-pointer transition-colors hover:bg-blue-600">Run Code</button>
-      <button id="showCodeButton" class="bg-blue-500 text-white border-none rounded-md px-4 py-2 mr-2 text-base cursor-pointer transition-colors hover:bg-blue-600">Show Code</button>
-    </div>
-    <pre id="output" class="bg-slate-900 text-slate-200 p-3 min-h-10 rounded-md font-mono text-base mb-4 shadow-sm w-full mt-0"></pre>
+    <!-- React Components Mount Points -->
+    <div id="status-root"></div>
+    <div id="buttons-root"></div>
+    <div id="output-root"></div>
     
     <!-- React component containers -->
-    <div id="react-controls-container"></div>
-    <div id="react-chart-container"></div>
+    <div id="react-controls-container" class="bg-white border border-slate-200 rounded-lg p-4 mb-4"></div>
+    <div id="react-chart-container" class="bg-white border border-slate-200 rounded-lg p-4 mb-4"></div>
   </div>
   <script>
     // Enhanced workspace configuration with responsive settings
@@ -439,38 +295,59 @@
     window.addEventListener('beforeunload', cleanupWorkspace);
     window.addEventListener('pagehide', cleanupWorkspace);
 
-    const output = document.getElementById('output');
-
-    document.getElementById('runButton').onclick = function() {
-      output.textContent = '';
-      console.log('Run button clicked');
+    // Bridge functions for React components to call vanilla JS Blockly functions
+    window.executeBlocklyCode = function() {
+      if (!workspace) return;
+      
+      // Update React state - executing
+      if (window.reactSetExecuting) window.reactSetExecuting(true);
+      if (window.reactSetOutput) window.reactSetOutput('');
+      
+      console.log('Run button clicked via React');
+      
       try {
         console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
         console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
         console.log('Calling workspaceToCode...');
+        
         const code = Blockly.JavaScript.workspaceToCode(workspace);
         console.log('Generated code:', code);
+        
         if (!code.trim()) {
-          output.textContent = 'No code generated - make sure you have blocks in the workspace';
+          if (window.reactSetOutput) window.reactSetOutput('No code generated - make sure you have blocks in the workspace');
+          if (window.reactSetError) window.reactSetError(false);
+          if (window.reactSetExecuting) window.reactSetExecuting(false);
           return;
         }
+        
         // eslint-disable-next-line no-eval
         const result = eval(code);
         console.log('Execution result:', result);
-        if (result !== undefined) output.textContent = result;
+        
+        if (window.reactSetOutput) window.reactSetOutput(result !== undefined ? String(result) : 'Code executed successfully');
+        if (window.reactSetError) window.reactSetError(false);
       } catch (e) {
         console.error('Error details:', e);
-        output.textContent = 'Error: ' + e;
+        if (window.reactSetOutput) window.reactSetOutput(`Error: ${e.message}`);
+        if (window.reactSetError) window.reactSetError(true);
       }
+      
+      // Update React state - finished executing
+      if (window.reactSetExecuting) window.reactSetExecuting(false);
     };
 
-    document.getElementById('showCodeButton').onclick = function() {
-      console.log('Show code button clicked');
+    window.showBlocklyCode = function() {
+      if (!workspace) return;
+      
+      console.log('Show code button clicked via React');
       console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
       console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
+      
       const code = Blockly.JavaScript.workspaceToCode(workspace);
       console.log('Generated code:', code);
-      output.textContent = code || 'No code generated';
+      
+      if (window.reactSetOutput) window.reactSetOutput(code || 'No code generated');
+      if (window.reactSetError) window.reactSetError(false);
     };
 
     // External CSV upload handler - only add if element exists
