@@ -52,13 +52,38 @@ const DataVisualizationPanel = () => {
     if (!backendResult.config) return null;
     
     // The backend config should already be in Chart.js format
-    // but we can add any additional processing here if needed
+    // but we can add dark theme styling
     return {
       type: backendResult.chartType,
       data: backendResult.config.data,
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              color: '#e7ebff'
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#a9b4d0'
+            },
+            grid: {
+              color: '#2b3350'
+            }
+          },
+          y: {
+            ticks: {
+              color: '#a9b4d0'
+            },
+            grid: {
+              color: '#2b3350'
+            }
+          }
+        },
         ...backendResult.config.options
       }
     };
@@ -110,70 +135,43 @@ const DataVisualizationPanel = () => {
   }, []);
 
   return (
-    <div className="data-visualization-panel">
-      <div className="panel-header mb-4">
-        <h3 className="text-xl font-bold text-slate-800 mb-2">Data Visualization</h3>
-        <button 
-          onClick={loadSampleData}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium"
-        >
-          {loading ? 'Loading...' : 'Load Sample Chart'}
-        </button>
-      </div>
-      
+    <div className="w-full h-full">
       {error && (
-        <div className="error-message bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="absolute top-4 left-4 right-4 bg-[#2b1f1f] border border-[#4a2e2e] text-error px-3 py-2 rounded text-sm z-10">
           <strong>Error:</strong> {error}
         </div>
       )}
       
       {loading && (
-        <div className="loading-message bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
-          <strong>Loading:</strong> Generating chart...
+        <div className="absolute inset-0 bg-[#0f1324] bg-opacity-50 flex items-center justify-center z-10">
+          <div className="bg-panel border border-border rounded-lg p-4 flex items-center gap-3">
+            <div className="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full"></div>
+            <span className="text-text">Generating chart...</span>
+          </div>
         </div>
       )}
       
-      <div className="chart-container relative">
+      <div className="chart-container w-full h-full relative">
         <canvas 
           ref={canvasRef}
-          className="w-full h-96 max-h-96"
+          className="w-full h-full"
         />
         {!chartData && !loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded">
-            <p className="text-gray-500 text-center">
-              Select data and chart type from the controls above, then click "Generate Chart" to display visualization
-            </p>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-sm text-muted mb-2">
+                Visualization will appear here when blocks are executed
+              </div>
+              <button 
+                onClick={loadSampleData}
+                className="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 hover:bg-panel2 transition-colors"
+              >
+                Load Sample Chart
+              </button>
+            </div>
           </div>
         )}
       </div>
-      
-      {chartData && (
-        <div className="chart-info mt-4 p-4 bg-gray-50 rounded">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium text-gray-700">Chart Type:</span>
-              <span className="ml-2 text-gray-900 capitalize">{chartData.chartType}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Data Points:</span>
-              <span className="ml-2 text-gray-900">{chartData.metadata?.dataPoints || 0}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Generated:</span>
-              <span className="ml-2 text-gray-900">
-                {chartData.metadata?.generatedAt ? new Date(chartData.metadata.generatedAt).toLocaleTimeString() : 'N/A'}
-              </span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Columns:</span>
-              <span className="ml-2 text-gray-900">
-                {chartData.metadata?.columns?.join(', ') || 'N/A'}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
