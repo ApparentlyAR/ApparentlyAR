@@ -132,7 +132,7 @@ describe('API Endpoints', () => {
       
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toContain('text/html');
-      expect(response.text).toContain('Blockly Demo');
+      expect(response.text).toContain('ApparentlyAR');
     });
   });
 
