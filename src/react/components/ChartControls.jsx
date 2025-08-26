@@ -11,7 +11,11 @@ const ChartControls = ({ onChartGenerate }) => {
     { value: 'pie', label: 'Pie Chart' },
     { value: 'scatter', label: 'Scatter Plot' },
     { value: 'doughnut', label: 'Doughnut Chart' },
-    { value: 'area', label: 'Area Chart' }
+    { value: 'area', label: 'Area Chart' },
+    { value: 'histogram', label: 'Histogram' },
+    { value: 'boxplot', label: 'Box Plot' },
+    { value: 'heatmap', label: 'Heatmap' },
+    { value: 'radar', label: 'Radar Chart' }
   ];
 
   const dataTypes = [
