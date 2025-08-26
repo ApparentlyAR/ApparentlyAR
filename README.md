@@ -2,7 +2,7 @@
 
 A robust, well-tested backend server for the ApparentlyAR educational data visualization platform. This backend provides data processing, chart generation, and AR visualization APIs designed for students in grades 8-10 to explore data through block-based programming and augmented reality.
 
-## 🎯 Features
+## Features
 
 - **Data Processing**: Filter, sort, aggregate, and transform data
 - **Chart Generation**: Create various chart types (bar, line, scatter, pie, doughnut, area)
@@ -11,7 +11,7 @@ A robust, well-tested backend server for the ApparentlyAR educational data visua
 - **Comprehensive Testing**: 95%+ test coverage with 118 passing tests
 - **Sample Data**: Built-in datasets for educational demonstrations
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -37,9 +37,10 @@ npm start
 
 The server will be available at `http://localhost:3000`
 
-## 📚 API Documentation
+## API Documentation
 
 ### Base URL
+
 ```
 http://localhost:3000
 ```
@@ -47,15 +48,19 @@ http://localhost:3000
 ### Endpoints
 
 #### GET `/`
+
 Serves the main application page.
 
 #### GET `/api/test-data/:type`
+
 Provides sample datasets for development and testing.
 
 **Parameters:**
+
 - `type` (string): Dataset type - `students`, `weather`, or `sales`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -69,9 +74,11 @@ Provides sample datasets for development and testing.
 ```
 
 #### POST `/api/process-data`
+
 Processes data through a series of operations.
 
 **Request Body:**
+
 ```json
 {
   "data": [...],
@@ -89,6 +96,7 @@ Processes data through a series of operations.
 ```
 
 **Supported Operations:**
+
 - `filter`: Filter data based on conditions
 - `sort`: Sort data by column
 - `aggregate`: Aggregate data (sum, average, count, min, max)
@@ -97,9 +105,11 @@ Processes data through a series of operations.
 - `calculate`: Calculate new columns based on expressions
 
 #### POST `/api/generate-chart`
+
 Generates chart configuration for various chart types.
 
 **Request Body:**
+
 ```json
 {
   "data": [...],
@@ -113,6 +123,7 @@ Generates chart configuration for various chart types.
 ```
 
 **Supported Chart Types:**
+
 - `bar`: Bar charts with interactive zoom/pan and click events
 - `line`: Line charts with interactive features and hover effects
 - `scatter`: Scatter plots with zoom capabilities and point selection
@@ -126,7 +137,8 @@ Generates chart configuration for various chart types.
 
 **Chart-Specific Options:**
 
-*Histogram:*
+_Histogram:_
+
 ```json
 {
   "chartType": "histogram",
@@ -138,10 +150,11 @@ Generates chart configuration for various chart types.
 }
 ```
 
-*Box Plot:*
+_Box Plot:_
+
 ```json
 {
-  "chartType": "boxplot", 
+  "chartType": "boxplot",
   "options": {
     "valueColumn": "score",
     "groupColumn": "grade",
@@ -150,20 +163,22 @@ Generates chart configuration for various chart types.
 }
 ```
 
-*Heatmap:*
+_Heatmap:_
+
 ```json
 {
   "chartType": "heatmap",
   "options": {
     "xColumn": "month",
-    "yColumn": "region", 
+    "yColumn": "region",
     "valueColumn": "sales",
     "title": "Sales Heatmap"
   }
 }
 ```
 
-*Radar Chart:*
+_Radar Chart:_
+
 ```json
 {
   "chartType": "radar",
@@ -176,15 +191,18 @@ Generates chart configuration for various chart types.
 ```
 
 **Interactive Features:**
+
 - **Zoom & Pan**: Mouse wheel zoom, click-drag pan on bar, line, scatter, histogram charts
-- **Click Events**: Data point selection and logging for drill-down capabilities  
+- **Click Events**: Data point selection and logging for drill-down capabilities
 - **Hover Effects**: Enhanced tooltips and cursor changes on interactive elements
 - **Animations**: Smooth chart transitions with customizable easing
 
 #### POST `/api/ar-visualization`
+
 Generates AR-specific visualization data.
 
 **Request Body:**
+
 ```json
 {
   "data": [...],
@@ -193,9 +211,10 @@ Generates AR-specific visualization data.
 }
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Run Tests
+
 ```bash
 # Run all tests
 npm test
@@ -205,13 +224,16 @@ npm run test:coverage
 ```
 
 ### Test Coverage
+
 The backend maintains **95%+ test coverage** across:
+
 - **Statements**: 95.43%
 - **Functions**: 95.52%
 - **Lines**: 95.41%
 - **Branches**: 81.14%
 
 ### Test Structure
+
 ```
 tests/
 ├── backend/
@@ -223,30 +245,69 @@ tests/
 └── sum.test.js              # Basic functionality test
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-src/
-├── backend/
-│   ├── dataProcessor.js     # Data processing operations
-│   ├── chartGenerator.js    # Chart generation logic
-│   └── testData.js          # Sample datasets
-├── blocks/
-│   └── csv_import.js        # Frontend CSV import block
-server.js                    # Main Express server
-package.json                 # Dependencies and scripts
-jest.config.js              # Test configuration
+ApparentlyAR/
+├── server.js                          # Main Express server
+├── package.json                       # Dependencies and scripts
+├── jest.config.js                     # Jest test configuration
+├── webpack.config.js                  # Webpack build configuration
+├── LICENSE                            # Project license
+├── README.md                          # Project documentation
+├── frontend-test.html                 # Frontend testing page
+├── sampleui.html                      # Sample UI demonstration
+├── public/                            # Static assets and built files
+│   ├── blockly-demo.html             # Main application HTML
+│   ├── favicon.ico                    # Site icon
+│   ├── react-bundle.js               # Built React bundle
+│   ├── react-bundle.js.map           # Source maps
+│   └── react-bundle.js.LICENSE.txt   # Bundle licenses
+├── src/                               # Source code
+│   ├── backend/                       # Server-side modules
+│   │   ├── dataProcessor.js           # Data processing operations
+│   │   ├── chartGenerator.js          # Chart generation logic
+│   │   └── testData.js               # Sample datasets
+│   ├── react/                         # React frontend components
+│   │   ├── index.js                  # Main React application entry
+│   │   └── components/               # React UI components
+│   │       ├── AppHeader.jsx          # Application header
+│   │       ├── ButtonPanel.jsx        # Control buttons
+│   │       ├── ChartControls.jsx      # Chart configuration controls
+│   │       ├── DataVisualizationPanel.jsx # Main chart display
+│   │       ├── OutputDisplay.jsx      # Code output display
+│   │       └── StatusIndicator.jsx    # Execution status indicator
+│   ├── blocks/                        # Blockly custom blocks
+│   │   ├── csv_import.js             # CSV import block definition
+│   │   └── to_json.js                # JSON conversion block
+│   └── sum.js                         # Utility function (legacy)
+├── tests/                             # Test suites
+│   ├── backend/                       # Backend tests
+│   │   ├── api.test.js               # API endpoint tests
+│   │   ├── chartGenerator.test.js     # Chart generation tests
+│   │   ├── dataProcessor.test.js      # Data processing tests
+│   │   ├── server.test.js            # Server integration tests
+│   │   └── testData.test.js          # Sample data tests
+│   ├── csv_demo.test.js              # CSV demo functionality tests
+│   ├── csv_final.test.js             # CSV final implementation tests
+│   ├── csv_import.test.js            # CSV import block tests
+│   ├── csv_import_integration.test.js # CSV integration tests
+│   ├── csv_import_simple.test.js     # Basic CSV import tests
+│   └── sum.test.js                   # Basic utility tests
+└── node_modules/                      # Dependencies (auto-generated)
 ```
 
-## 🔧 Development
+## Development
 
 ### Code Quality
+
 - **JSDoc Comments**: Comprehensive documentation for all functions
 - **Error Handling**: Robust error handling with meaningful messages
 - **Input Validation**: Thorough validation of all inputs
 - **Consistent Formatting**: Clean, readable code structure
 
 ### Adding New Features
+
 1. Create feature branch: `git checkout -b feature/new-feature`
 2. Implement functionality with tests
 3. Ensure 100% test coverage for new code
@@ -254,44 +315,29 @@ jest.config.js              # Test configuration
 5. Submit pull request
 
 ### Code Style
+
 - Use meaningful variable and function names
 - Add JSDoc comments for all public functions
 - Handle errors gracefully
 - Write comprehensive tests
 - Follow existing code patterns
 
-## 📊 Sample Data
+## Sample Data
 
 The backend includes three sample datasets:
 
 ### Students Data
+
 Educational data with student information including names, ages, scores, and grades.
 
 ### Weather Data
+
 Monthly weather data with temperature, rainfall, and humidity for environmental analysis.
 
 ### Sales Data
+
 Business analytics data with product sales, revenue, and regional information.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Ensure all tests pass
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the ISC License.
-
-## 🆘 Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Check the API documentation
-- Review the test examples
 
 ---
 
-**Built with ❤️ for educational data visualization**
+**Built with ❤️ for DECO3801**
