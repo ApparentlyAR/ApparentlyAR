@@ -277,8 +277,128 @@ describe('ChartGenerator', () => {
     });
   });
 
+  describe('generateHistogramChart', () => {
+    const histogramData = [
+      { age: 25 }, { age: 30 }, { age: 22 }, { age: 35 },
+      { age: 28 }, { age: 32 }, { age: 26 }, { age: 29 }
+    ];
+
+    test('should generate histogram with default bins', async () => {
+      const result = await chartGenerator.generateHistogramChart(histogramData, {
+        valueColumn: 'age'
+      });
+
+      expect(result.type).toBe('bar');
+      expect(result.data.datasets[0].label).toBe('Frequency');
+      expect(result.data.labels).toHaveLength(10); // default bins
+      expect(result.options.scales.x.title.text).toBe('age');
+      expect(result.options.scales.y.title.text).toBe('Frequency');
+    });
+
+    test('should generate histogram with custom bins', async () => {
+      const result = await chartGenerator.generateHistogramChart(histogramData, {
+        valueColumn: 'age',
+        bins: 5,
+        title: 'Age Distribution'
+      });
+
+      expect(result.data.labels).toHaveLength(5);
+      expect(result.options.plugins.title.text).toBe('Age Distribution');
+    });
+  });
+
+  describe('generateBoxPlotChart', () => {
+    const boxPlotData = [
+      { grade: 'A', score: 95 }, { grade: 'A', score: 92 },
+      { grade: 'B', score: 85 }, { grade: 'B', score: 88 },
+      { grade: 'C', score: 75 }, { grade: 'C', score: 78 }
+    ];
+
+    test('should generate box plot with grouping', async () => {
+      const result = await chartGenerator.generateBoxPlotChart(boxPlotData, {
+        valueColumn: 'score',
+        groupColumn: 'grade'
+      });
+
+      expect(result.type).toBe('boxplot');
+      expect(result.data.labels).toEqual(['A', 'B', 'C']);
+      expect(result.data.datasets[0].data).toHaveLength(3);
+    });
+
+    test('should generate box plot without grouping', async () => {
+      const result = await chartGenerator.generateBoxPlotChart(boxPlotData, {
+        valueColumn: 'score'
+      });
+
+      expect(result.type).toBe('boxplot');
+      expect(result.data.labels).toEqual(['score']);
+      expect(result.data.datasets[0].data).toHaveLength(1);
+    });
+  });
+
+  describe('generateHeatmapChart', () => {
+    const heatmapData = [
+      { month: 'Jan', region: 'North', sales: 100 },
+      { month: 'Jan', region: 'South', sales: 120 },
+      { month: 'Feb', region: 'North', sales: 110 },
+      { month: 'Feb', region: 'South', sales: 130 }
+    ];
+
+    test('should generate heatmap chart', async () => {
+      const result = await chartGenerator.generateHeatmapChart(heatmapData, {
+        xColumn: 'month',
+        yColumn: 'region',
+        valueColumn: 'sales'
+      });
+
+      expect(result.type).toBe('scatter');
+      expect(result.data.datasets[0].data).toHaveLength(4);
+      expect(result.options.scales.x.title.text).toBe('month');
+      expect(result.options.scales.y.title.text).toBe('region');
+    });
+  });
+
+  describe('generateRadarChart', () => {
+    const radarData = [
+      { student: 'Alice', math: 90, science: 85, english: 95, history: 80 },
+      { student: 'Bob', math: 75, science: 90, english: 70, history: 85 }
+    ];
+
+    test('should generate radar chart', async () => {
+      const result = await chartGenerator.generateRadarChart(radarData, {
+        columns: ['math', 'science', 'english', 'history'],
+        labelColumn: 'student'
+      });
+
+      expect(result.type).toBe('radar');
+      expect(result.data.labels).toEqual(['math', 'science', 'english', 'history']);
+      expect(result.data.datasets).toHaveLength(2);
+      expect(result.data.datasets[0].label).toBe('Alice');
+      expect(result.data.datasets[1].label).toBe('Bob');
+    });
+
+    test('should auto-detect numeric columns for radar', async () => {
+      const result = await chartGenerator.generateRadarChart(radarData, {
+        labelColumn: 'student'
+      });
+
+      expect(result.type).toBe('radar');
+      expect(result.data.labels).toEqual(['math', 'science', 'english', 'history']);
+    });
+  });
+
+  describe('percentile utility', () => {
+    test('should calculate percentiles correctly', () => {
+      const sortedData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      
+      expect(chartGenerator.percentile(sortedData, 50)).toBe(5.5); // median
+      expect(chartGenerator.percentile(sortedData, 25)).toBe(3.25); // Q1
+      expect(chartGenerator.percentile(sortedData, 75)).toBe(7.75); // Q3
+    });
+  });
+
   describe('getSupportedChartTypes', () => {
-    test('should return all supported chart types', () => {
+    test('should return all supported chart types including new ones', () => {
       const types = chartGenerator.getSupportedChartTypes();
       
       expect(types).toContain('bar');
@@ -287,6 +407,10 @@ describe('ChartGenerator', () => {
       expect(types).toContain('pie');
       expect(types).toContain('doughnut');
       expect(types).toContain('area');
+      expect(types).toContain('histogram');
+      expect(types).toContain('boxplot');
+      expect(types).toContain('heatmap');
+      expect(types).toContain('radar');
     });
   });
 
@@ -406,6 +530,41 @@ describe('ChartGenerator', () => {
       expect(() => {
         chartGenerator.validateChartData(data, 'bar', { xColumn: 'x', yColumn: 'y' });
       }).toThrow('Missing required columns: x, y');
+    });
+
+    it('should validate histogram chart data', () => {
+      const data = [{ age: 25 }, { age: 30 }];
+      const result = chartGenerator.validateChartData(data, 'histogram', {
+        valueColumn: 'age'
+      });
+      expect(result).toBe(true);
+    });
+
+    it('should validate boxplot chart data', () => {
+      const data = [{ score: 85 }, { score: 90 }];
+      const result = chartGenerator.validateChartData(data, 'boxplot', {
+        valueColumn: 'score'
+      });
+      expect(result).toBe(true);
+    });
+
+    it('should validate heatmap chart data', () => {
+      const data = [{ x: 'A', y: 'B', value: 10 }];
+      const result = chartGenerator.validateChartData(data, 'heatmap', {
+        xColumn: 'x',
+        yColumn: 'y',
+        valueColumn: 'value'
+      });
+      expect(result).toBe(true);
+    });
+
+    it('should validate radar chart data', () => {
+      const data = [{ student: 'Alice', math: 90, science: 85 }];
+      const result = chartGenerator.validateChartData(data, 'radar', {
+        columns: ['math', 'science'],
+        labelColumn: 'student'
+      });
+      expect(result).toBe(true);
     });
   });
 
