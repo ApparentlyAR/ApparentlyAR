@@ -34,6 +34,13 @@ app.get('/', (req, res) => {
 });
 
 /**
+ * Serve the AR demo page
+ */
+app.get('/ar-demo', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ar-demo.html'));
+});
+
+/**
  * GET /api/test-data/:type
  * 
  * Provides sample datasets for development and testing
