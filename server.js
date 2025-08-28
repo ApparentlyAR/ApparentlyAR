@@ -41,13 +41,6 @@ app.get('/ar-demo', (req, res) => {
 });
 
 /**
- * Serve the fixed AR demo page with proper documentation
- */
-app.get('/ar-demo-fixed', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'ar-demo-fixed.html'));
-});
-
-/**
  * GET /api/test-data/:type
  * 
  * Provides sample datasets for development and testing
