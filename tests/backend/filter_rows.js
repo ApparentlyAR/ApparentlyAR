@@ -1,16 +1,16 @@
-// ----- define UI：一个输入数据、一个字段名、一个比较运算符、一个比较值 -----
+// ----- define UI: an input dataset, a field name, a comparison operator, and a comparison value -----
 Blockly.Blocks['filter_rows'] = {
   init: function () {
     this.appendValueInput('DATA')
         .setCheck(null)
-        .appendField('过滤行：数据');
+        .appendField('Filter rows: data');
 
     this.appendDummyInput()
-        .appendField('字段')
+        .appendField('Field')
         .appendField(new Blockly.FieldTextInput('score'), 'FIELD');
 
     this.appendDummyInput()
-        .appendField('条件')
+        .appendField('Condition')
         .appendField(new Blockly.FieldDropdown([
           ['=', 'eq'],
           ['≠', 'ne'],
@@ -18,33 +18,33 @@ Blockly.Blocks['filter_rows'] = {
           ['≥', 'ge'],
           ['<', 'lt'],
           ['≤', 'le'],
-          ['包含(文本)', 'includes'],
-          ['不包含(文本)', 'notIncludes'],
-          ['为空', 'isEmpty'],
-          ['非空', 'notEmpty']
+          ['Contains (text)', 'includes'],
+          ['Not contains (text)', 'notIncludes'],
+          ['Is empty', 'isEmpty'],
+          ['Not empty', 'notEmpty']
         ]), 'OP');
 
     this.appendValueInput('VALUE')
         .setCheck(null)
-        .appendField('比较值');
+        .appendField('Compare value');
 
     this.setInputsInline(false);
     this.setOutput(true, null);
-    this.setColour(20); // 与 Data 类别一致或自定义
-    this.setTooltip('对数组(对象)进行条件过滤，返回新数组');
+    this.setColour(20); // Same as Data category or custom
+    this.setTooltip('Filter an array of objects by condition, return a new array');
     this.setHelpUrl('');
   }
 };
 
-// ----- 代码生成：输出 JS 表达式（不加分号），遵循 Blockly 表达式惯例 -----
+// ----- code generator: output a JS expression (no semicolon), following Blockly expression convention -----
 Blockly.JavaScript['filter_rows'] = function (block) {
   const data = Blockly.JavaScript.valueToCode(block, 'DATA', Blockly.JavaScript.ORDER_NONE) || '[]';
   const field = block.getFieldValue('FIELD') || '';
   const op = block.getFieldValue('OP') || 'eq';
   const valueCode = Blockly.JavaScript.valueToCode(block, 'VALUE', Blockly.JavaScript.ORDER_NONE) || '""';
 
-  // 生成对每一项进行判断的表达式
-  // 注意：字段名用可选链与空值合并，避免 undefined 报错
+  // Generate predicate expression for each row
+  // Use optional chaining and nullish coalescing to avoid undefined errors
   let predicate;
   switch (op) {
     case 'eq':          predicate = `(row?.[${JSON.stringify(field)}] ?? null) == (${valueCode})`; break;
