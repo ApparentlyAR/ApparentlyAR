@@ -42,6 +42,7 @@
   </script>
   <script src="../src/blocks/csv_import.js"></script>
   <script src="../src/blocks/to_json.js"></script>
+  <script src="../src/blocks/filter_rows.js"></script>
   <script>
     // Check if CSV import generator was registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -337,6 +338,31 @@
             <block type="to_json">
               <value name="VALUE">
                 <block type="csv_import"></block>
+              </value>
+            </block>
+          </category>
+          <category name="Data" colour="20">
+            <block type="csv_import"></block>
+            <block type="to_json">
+              <value name="VALUE">
+                <block type="csv_import"></block>
+              </value>
+            </block>
+
+            <!-- 新增：过滤行 -->
+            <block type="filter_rows">
+              <value name="DATA">
+                <block type="to_json">
+                  <value name="VALUE">
+                    <block type="csv_import"></block>
+                  </value>
+                </block>
+              </value>
+              <!-- 例：默认比较值，供用户替换 -->
+              <value name="VALUE">
+                <block type="math_number">
+                  <field name="NUM">60</field>
+                </block>
               </value>
             </block>
           </category>
