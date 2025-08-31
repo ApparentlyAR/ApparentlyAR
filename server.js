@@ -47,12 +47,6 @@ app.get('/hybrid-ar', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'hybrid-ar-demo.html'));
 });
 
-/**
- * Serve the AR markers guide page
- */
-app.get('/markers-guide', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'markers-guide.html'));
-});
 
 /**
  * GET /api/test-data/:type

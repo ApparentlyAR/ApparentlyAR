@@ -26,13 +26,6 @@ describe('Hybrid AR System Tests', () => {
       expect(response.headers['content-type']).toContain('text/html');
     });
 
-    test('should serve markers guide at /markers-guide endpoint', async () => {
-      const response = await request(app)
-        .get('/markers-guide')
-        .expect(200);
-
-      expect(response.headers['content-type']).toContain('text/html');
-    });
     
   });
 
@@ -41,15 +34,42 @@ describe('Hybrid AR System Tests', () => {
     test('should have substantial hybrid AR implementation file', () => {
       expect(fs.existsSync(hybridArPath)).toBe(true);
       
+      // Check HTML file exists
       const stats = fs.statSync(hybridArPath);
-      const fileSizeKB = stats.size / 1024;
+      const htmlSizeKB = stats.size / 1024;
       
-      // File should be substantial (26KB+ as noted in original test)
-      expect(fileSizeKB).toBeGreaterThan(26);
+      // HTML file should be reasonable size (reduced since JS is now external)
+      expect(htmlSizeKB).toBeGreaterThan(5);
+      
+      // Check that AR module files exist and contribute to total implementation size
+      const arModulePaths = [
+        path.join(__dirname, '../../src/ar/coordinate-system.js'),
+        path.join(__dirname, '../../src/ar/gesture-detector.js'),
+        path.join(__dirname, '../../src/ar/chart-manager.js'),
+        path.join(__dirname, '../../src/ar/hand-tracking.js'),
+        path.join(__dirname, '../../src/ar/hybrid-ar-controller.js')
+      ];
+      
+      let totalSizeKB = htmlSizeKB;
+      arModulePaths.forEach(modulePath => {
+        expect(fs.existsSync(modulePath)).toBe(true);
+        const moduleStats = fs.statSync(modulePath);
+        totalSizeKB += moduleStats.size / 1024;
+      });
+      
+      // Total implementation should be substantial (26KB+ across all files)
+      expect(totalSizeKB).toBeGreaterThan(26);
     });
 
     test('should contain significant JavaScript implementation', () => {
-      const content = fs.readFileSync(hybridArPath, 'utf8');
+      // Check JavaScript constructs across all AR modules
+      const arModulePaths = [
+        path.join(__dirname, '../../src/ar/coordinate-system.js'),
+        path.join(__dirname, '../../src/ar/gesture-detector.js'),
+        path.join(__dirname, '../../src/ar/chart-manager.js'),
+        path.join(__dirname, '../../src/ar/hand-tracking.js'),
+        path.join(__dirname, '../../src/ar/hybrid-ar-controller.js')
+      ];
       
       // Count JavaScript constructs (functions, variables, etc.)
       const jsConstructs = [
@@ -64,12 +84,17 @@ describe('Hybrid AR System Tests', () => {
       ];
 
       let totalConstructs = 0;
-      jsConstructs.forEach(regex => {
-        const matches = content.match(regex);
-        totalConstructs += matches ? matches.length : 0;
+      arModulePaths.forEach(modulePath => {
+        if (fs.existsSync(modulePath)) {
+          const content = fs.readFileSync(modulePath, 'utf8');
+          jsConstructs.forEach(regex => {
+            const matches = content.match(regex);
+            totalConstructs += matches ? matches.length : 0;
+          });
+        }
       });
 
-      // Should contain 120+ JavaScript constructs as noted in original test
+      // Should contain 120+ JavaScript constructs across all AR modules
       expect(totalConstructs).toBeGreaterThan(120);
     });
     
@@ -129,12 +154,18 @@ describe('Hybrid AR System Tests', () => {
     });
 
     test('should implement MediaPipe hand tracking system', () => {
-      const content = fs.readFileSync(hybridArPath, 'utf8');
+      // Check HTML for MediaPipe dependencies
+      const htmlContent = fs.readFileSync(hybridArPath, 'utf8');
+      expect(htmlContent).toContain('MediaPipe');
       
-      expect(content).toContain('MediaPipe');
-      expect(content).toContain('Hands');
-      expect(content).toContain('onResults');
-      expect(content).toContain('landmarks');
+      // Check hand-tracking.js module for implementation details
+      const handTrackingPath = path.join(__dirname, '../../src/ar/hand-tracking.js');
+      expect(fs.existsSync(handTrackingPath)).toBe(true);
+      
+      const handTrackingContent = fs.readFileSync(handTrackingPath, 'utf8');
+      expect(handTrackingContent).toContain('Hands');
+      expect(handTrackingContent).toContain('onResults');
+      expect(handTrackingContent).toContain('landmarks');
     });
 
     test('should have shared video feed architecture', () => {
@@ -207,9 +238,12 @@ describe('Hybrid AR System Tests', () => {
   describe('Performance Features Verification', () => {
     
     test('should implement frame skipping for performance', () => {
-      const content = fs.readFileSync(hybridArPath, 'utf8');
+      // Check hand-tracking.js module for frame skipping implementation
+      const handTrackingPath = path.join(__dirname, '../../src/ar/hand-tracking.js');
+      expect(fs.existsSync(handTrackingPath)).toBe(true);
       
-      expect(content).toMatch(/(frame.*skip|skip.*frame)/i);
+      const handTrackingContent = fs.readFileSync(handTrackingPath, 'utf8');
+      expect(handTrackingContent).toMatch(/(frame.*skip|skip.*frame)/i);
     });
 
     test('should include processing time monitoring', () => {
@@ -241,11 +275,29 @@ describe('Hybrid AR System Tests', () => {
   describe('Error Handling Verification', () => {
     
     test('should implement robust error handling', () => {
-      const content = fs.readFileSync(hybridArPath, 'utf8');
+      // Check across all AR modules for error handling
+      const arModulePaths = [
+        path.join(__dirname, '../../src/ar/hand-tracking.js'),
+        path.join(__dirname, '../../src/ar/hybrid-ar-controller.js'),
+        path.join(__dirname, '../../src/ar/chart-manager.js')
+      ];
       
-      expect(content).toContain('try');
-      expect(content).toContain('catch');
-      expect(content).toContain('error');
+      let foundTry = false;
+      let foundCatch = false;
+      let foundError = false;
+      
+      arModulePaths.forEach(modulePath => {
+        if (fs.existsSync(modulePath)) {
+          const content = fs.readFileSync(modulePath, 'utf8');
+          if (content.includes('try')) foundTry = true;
+          if (content.includes('catch')) foundCatch = true;
+          if (content.includes('error')) foundError = true;
+        }
+      });
+      
+      expect(foundTry).toBe(true);
+      expect(foundCatch).toBe(true);
+      expect(foundError).toBe(true);
     });
 
     test('should include status feedback mechanisms', () => {
@@ -268,10 +320,14 @@ describe('Hybrid AR System Tests', () => {
     });
 
     test('should implement coordinate system mapping', () => {
-      const content = fs.readFileSync(hybridArPath, 'utf8');
+      // Check coordinate-system.js module for coordinate mapping implementation
+      const coordinatePath = path.join(__dirname, '../../src/ar/coordinate-system.js');
+      expect(fs.existsSync(coordinatePath)).toBe(true);
       
-      expect(content).toMatch(/(coordinate|mapping)/i);
-      expect(content).toMatch(/(screen.*world|world.*screen)/i);
+      const coordinateContent = fs.readFileSync(coordinatePath, 'utf8');
+      expect(coordinateContent).toMatch(/(coordinate|mapping)/i);
+      expect(coordinateContent).toMatch(/(screen.*world|world.*screen)/i);
+      expect(coordinateContent).toContain('screenToWorld');
     });
 
     test('should optimize chart texture management', () => {
