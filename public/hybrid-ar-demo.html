@@ -276,6 +276,24 @@
       <button id="clear-charts">Clear Hand Charts</button>
     </div>
     
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="enable-chart-limit" style="width: auto; margin-right: 8px;">
+        Enable Chart Limit
+      </label>
+    </div>
+    
+    <div class="control-group" id="limit-settings" style="display: none;">
+      <label for="max-charts">Max Charts:</label>
+      <input type="number" id="max-charts" value="5" min="1" max="20" style="width: 60px; display: inline-block; margin-right: 10px;">
+      
+      <label for="limit-behavior" style="margin-top: 8px;">When limit reached:</label>
+      <select id="limit-behavior">
+        <option value="block">Block new charts</option>
+        <option value="replace">Replace oldest chart</option>
+      </select>
+    </div>
+    
     <div class="stats">
       <h3>Hand-Placed Charts</h3>
       <div id="chart-list" class="chart-list">
@@ -350,6 +368,15 @@
     
     /** @type {boolean} Pinch state */
     let isPinching = false;
+    
+    /** @type {boolean} Chart limit enabled state */
+    let chartLimitEnabled = false;
+    
+    /** @type {number} Maximum number of charts allowed */
+    let maxCharts = 5;
+    
+    /** @type {string} Behavior when limit reached: 'block' or 'replace' */
+    let limitBehavior = 'block';
 
     /**
      * Sample datasets for chart generation
@@ -703,11 +730,55 @@
     }
 
     /**
+     * Remove the oldest chart (FIFO replacement)
+     */
+    function removeOldestChart() {
+      if (handCharts.length === 0) return;
+      
+      const oldestChart = handCharts[0]; // First chart is oldest
+      
+      // Remove entity from scene
+      oldestChart.entity.remove();
+      
+      // Remove canvas from assets
+      if (oldestChart.canvas && oldestChart.canvas.parentNode) {
+        oldestChart.canvas.parentNode.removeChild(oldestChart.canvas);
+      }
+      
+      // Destroy Chart.js instance
+      if (oldestChart.chart) {
+        oldestChart.chart.destroy();
+      }
+      
+      // Remove from handCharts array
+      handCharts.shift(); // Remove first element (oldest)
+      
+      console.log(`Removed oldest chart: ${oldestChart.type} (${oldestChart.dataset})`);
+    }
+
+    /**
      * Place chart at hand position
      */
     function placeChartAtHand(landmarks) {
       const now = Date.now();
       if (now - lastPlacedAt < PLACE_COOLDOWN_MS) return;
+      
+      // Check chart limit if enabled
+      if (chartLimitEnabled && handCharts.length >= maxCharts) {
+        if (limitBehavior === 'block') {
+          // Block placement and show feedback
+          updateStatus(`Chart limit reached (${handCharts.length}/${maxCharts})`, 'error');
+          setTimeout(() => {
+            if (handsActive) {
+              updateStatus('Hand tracking active - make fist to place, pinch to move', 'detecting');
+            }
+          }, 2000);
+          return;
+        } else if (limitBehavior === 'replace') {
+          // Remove oldest chart (FIFO)
+          removeOldestChart();
+        }
+      }
       
       const palmCenter = landmarks[9];
       const canvas = document.getElementById('hand-overlay');
@@ -936,8 +1007,23 @@
         ).join('');
       }
       
-      // Update chart count
-      document.getElementById('chart-count').textContent = handCharts.length;
+      // Update chart count with limit display
+      const chartCountEl = document.getElementById('chart-count');
+      if (chartLimitEnabled) {
+        chartCountEl.textContent = `${handCharts.length}/${maxCharts}`;
+        
+        // Color coding based on limit proximity
+        if (handCharts.length >= maxCharts) {
+          chartCountEl.style.color = '#ff8a8a'; // Error red
+        } else if (handCharts.length >= maxCharts * 0.8) {
+          chartCountEl.style.color = '#ffce73'; // Warning yellow
+        } else {
+          chartCountEl.style.color = '#8ff0a4'; // OK green
+        }
+      } else {
+        chartCountEl.textContent = handCharts.length;
+        chartCountEl.style.color = ''; // Reset to default
+      }
     }
 
     /**
@@ -964,6 +1050,12 @@
     async function init() {
       try {
         updateStatus('Initializing hybrid AR...', 'detecting');
+        
+        // Load chart limit settings from localStorage
+        loadChartLimitSettings();
+        
+        // Setup chart limit controls
+        setupChartLimitControls();
         
         // Wait for AR.js to initialize and start camera
         await waitForArjsInit();
@@ -1024,6 +1116,86 @@
         markerStatus.textContent = 'Ready for markers';
         markerStatus.className = 'status ready';
       }
+    }
+
+    /**
+     * Load chart limit settings from localStorage
+     */
+    function loadChartLimitSettings() {
+      try {
+        const enableLimit = localStorage.getItem('chartLimitEnabled');
+        const maxChartsStored = localStorage.getItem('maxCharts');
+        const limitBehaviorStored = localStorage.getItem('limitBehavior');
+        
+        if (enableLimit !== null) {
+          chartLimitEnabled = enableLimit === 'true';
+          document.getElementById('enable-chart-limit').checked = chartLimitEnabled;
+          document.getElementById('limit-settings').style.display = chartLimitEnabled ? 'block' : 'none';
+        }
+        
+        if (maxChartsStored !== null) {
+          maxCharts = parseInt(maxChartsStored);
+          document.getElementById('max-charts').value = maxCharts;
+        }
+        
+        if (limitBehaviorStored !== null) {
+          limitBehavior = limitBehaviorStored;
+          document.getElementById('limit-behavior').value = limitBehavior;
+        }
+      } catch (error) {
+        console.warn('Failed to load chart limit settings from localStorage:', error);
+      }
+    }
+
+    /**
+     * Save chart limit settings to localStorage
+     */
+    function saveChartLimitSettings() {
+      try {
+        localStorage.setItem('chartLimitEnabled', chartLimitEnabled.toString());
+        localStorage.setItem('maxCharts', maxCharts.toString());
+        localStorage.setItem('limitBehavior', limitBehavior);
+      } catch (error) {
+        console.warn('Failed to save chart limit settings to localStorage:', error);
+      }
+    }
+
+    /**
+     * Setup chart limit controls and event listeners
+     */
+    function setupChartLimitControls() {
+      const enableLimitCheckbox = document.getElementById('enable-chart-limit');
+      const limitSettings = document.getElementById('limit-settings');
+      const maxChartsInput = document.getElementById('max-charts');
+      const limitBehaviorSelect = document.getElementById('limit-behavior');
+      
+      // Enable/disable chart limit
+      enableLimitCheckbox.addEventListener('change', (e) => {
+        chartLimitEnabled = e.target.checked;
+        limitSettings.style.display = chartLimitEnabled ? 'block' : 'none';
+        updateChartList(); // Update display
+        saveChartLimitSettings();
+        
+        console.log(`Chart limit ${chartLimitEnabled ? 'enabled' : 'disabled'}`);
+      });
+      
+      // Update max charts
+      maxChartsInput.addEventListener('input', (e) => {
+        const newMax = parseInt(e.target.value);
+        if (newMax >= 1 && newMax <= 20) {
+          maxCharts = newMax;
+          updateChartList(); // Update display
+          saveChartLimitSettings();
+          console.log(`Max charts set to: ${maxCharts}`);
+        }
+      });
+      
+      // Update limit behavior
+      limitBehaviorSelect.addEventListener('change', (e) => {
+        limitBehavior = e.target.value;
+        saveChartLimitSettings();
+        console.log(`Limit behavior set to: ${limitBehavior}`);
+      });
     }
 
     // Event Listeners
