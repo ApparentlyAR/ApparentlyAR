@@ -615,7 +615,7 @@
       const canvas = document.getElementById('hand-overlay');
       
       const x = (1 - palmCenter.x) * canvas.width;
-      const y = (1 - palmCenter.y) * canvas.height;
+      const y = palmCenter.y * canvas.height; // Remove Y inversion - MediaPipe Y matches screen Y
       
       if (!isPinching) {
         // Start pinching - try to select a chart
@@ -713,7 +713,7 @@
       const canvas = document.getElementById('hand-overlay');
       
       const screenX = (1 - palmCenter.x) * canvas.width;
-      const screenY = (1 - palmCenter.y) * canvas.height;
+      const screenY = palmCenter.y * canvas.height; // Remove Y inversion - MediaPipe Y matches screen Y
       
       createChart(screenX, screenY);
       lastPlacedAt = now;
@@ -783,10 +783,10 @@
       const camera = scene.camera;
       
       if (!camera) {
-        // Fallback to simplified conversion with corrected Y-axis
+        // Fallback to simplified conversion 
         const normalizedX = (screenX / canvas.width - 0.5) * 2;
-        // Fix Y-axis: when hand moves up (screenY decreases), chart should move up (worldY increases)
-        const normalizedY = (screenY / canvas.height - 0.5) * -2; // Inverted Y mapping
+        // Screen Y increases downward, world Y increases upward - need inversion
+        const normalizedY = (0.5 - screenY / canvas.height) * 2;
         const worldX = normalizedX * 4;
         const worldY = normalizedY * 3;
         const worldZ = -3;
@@ -795,8 +795,8 @@
       
       // Normalize screen coordinates to NDC (-1 to 1)  
       const ndcX = (screenX / canvas.width) * 2 - 1;
-      // Fix Y-axis mapping: screen Y increases downward, NDC Y increases upward
-      const ndcY = ((canvas.height - screenY) / canvas.height) * 2 - 1;
+      // Screen Y increases downward, NDC Y increases upward
+      const ndcY = -((screenY / canvas.height) * 2 - 1);
       
       // Create a ray from camera through screen point
       const vector = new THREE.Vector3(ndcX, ndcY, -1);
