@@ -41,6 +41,14 @@ app.get('/ar-demo', (req, res) => {
 });
 
 /**
+ * Serve the hybrid AR demo page (AR.js markers + MediaPipe hands)
+ */
+app.get('/hybrid-ar', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'hybrid-ar-demo.html'));
+});
+
+
+/**
  * GET /api/test-data/:type
  * 
  * Provides sample datasets for development and testing

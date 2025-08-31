@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>ApparentlyAR - Hybrid AR Demo (Markers + Hand Tracking)</title>
+
+  <!-- AR.js + A-Frame for marker detection -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+  <!-- MediaPipe Hands for hand tracking -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248252/drawing_utils.js"></script>
+
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      overflow: hidden;
+    }
+    
+    /* AR scene takes full screen */
+    a-scene {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    
+    /* Hand overlay canvas */
+    #hand-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 2;
+    }
+    
+    /* Controls panel */
+    .controls-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+      background: rgba(42, 42, 42, 0.95);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      z-index: 3;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .controls-panel h2 {
+      margin-top: 0;
+      color: #4CAF50;
+      font-size: 18px;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    .control-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .control-group select,
+    .control-group input,
+    .control-group button {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #555;
+      border-radius: 4px;
+      background: #333;
+      color: white;
+      font-size: 14px;
+    }
+    
+    .control-group button {
+      background: #4CAF50;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .control-group button:hover {
+      background: #45a049;
+    }
+    
+    .control-group button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    
+    .status.ready { background: #4CAF50; }
+    .status.detecting { background: #2196F3; }
+    .status.error { background: #f44336; }
+    
+    .stats {
+      background: #333;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    
+    .stats h3 {
+      margin-top: 0;
+      color: #4CAF50;
+      font-size: 14px;
+    }
+    
+    .chart-list {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .chart-item {
+      background: #444;
+      padding: 6px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .chart-item:hover {
+      background: #555;
+    }
+    
+    .chart-item.selected {
+      background: #4CAF50;
+    }
+    
+    .back-button {
+      background: #666 !important;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- AR.js A-Frame Scene -->
+  <a-scene 
+    embedded 
+    arjs="sourceType: webcam; sourceWidth:1280; sourceHeight:960; displayWidth: 1280; displayHeight: 960; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3_HAMMING63;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+    
+    <!-- Assets for chart textures -->
+    <a-assets>
+      <canvas id="chart-texture-canvas" width="400" height="300"></canvas>
+    </a-assets>
+    
+    <!-- Marker-based objects from Multi-AR-Example -->
+    
+    <!-- Marker 0: Red rotating cube -->
+    <a-marker type="barcode" value="0">
+      <a-box
+        position="0 0 0"
+        material="color: red; opacity: 0.8"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000"
+        scale="0.8 0.8 0.8">
+      </a-box>
+    </a-marker>
+
+    <!-- Marker 1: Blue spinning sphere -->
+    <a-marker type="barcode" value="1">
+      <a-sphere
+        position="0 0 0"
+        material="color: blue; opacity: 0.9"
+        animation="property: rotation; to: 360 0 360; loop: true; dur: 3000"
+        radius="0.6">
+      </a-sphere>
+    </a-marker>
+
+    <!-- Marker 2: Green oscillating cylinder -->
+    <a-marker type="barcode" value="2">
+      <a-cylinder
+        position="0 0 0"
+        material="color: green; opacity: 0.7"
+        animation="property: position; to: 0 -0.5 0; loop: true; dur: 2000; dir: alternate"
+        radius="0.4"
+        height="1.2">
+      </a-cylinder>
+    </a-marker>
+
+    <!-- Marker 3: Yellow pulsing octahedron -->
+    <a-marker type="barcode" value="3">
+      <a-octahedron
+        position="0 0 0"
+        material="color: yellow; opacity: 0.8"
+        animation="property: scale; to: 1.2 1.2 1.2; loop: true; dur: 1500; dir: alternate"
+        radius="0.5">
+      </a-octahedron>
+    </a-marker>
+    
+    <!-- Container for hand-controlled charts -->
+    <a-entity id="hand-charts"></a-entity>
+    
+    <!-- Camera -->
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <!-- Hand landmarks overlay -->
+  <canvas id="hand-overlay"></canvas>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <button class="back-button" onclick="window.location.href='/'">
+      ← Back to Main
+    </button>
+    
+    <h2>Hybrid AR Controls</h2>
+    
+    <div class="control-group">
+      <div id="status" class="status">Initializing...</div>
+    </div>
+    
+    <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Marker Detection</h3>
+      <div id="marker-status" class="status ready">Ready for markers</div>
+    </div>
+    
+    <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Hand Tracking</h3>
+      <button id="start-hands">Start Hand Tracking</button>
+      <button id="stop-hands" disabled>Stop Hand Tracking</button>
+    </div>
+    
+    <div class="control-group">
+      <label for="chart-type">Chart Type (Hand Controls):</label>
+      <select id="chart-type">
+        <option value="bar">Bar Chart</option>
+        <option value="line">Line Chart</option>
+        <option value="pie">Pie Chart</option>
+        <option value="scatter">Scatter Plot</option>
+      </select>
+    </div>
+    
+    <div class="control-group">
+      <label for="sample-data">Sample Data:</label>
+      <select id="sample-data">
+        <option value="students">Student Grades</option>
+        <option value="weather">Weather Data</option>
+        <option value="sales">Sales Data</option>
+      </select>
+    </div>
+    
+    <div class="control-group">
+      <button id="clear-charts">Clear Hand Charts</button>
+    </div>
+    
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="enable-chart-limit" style="width: auto; margin-right: 8px;">
+        Enable Chart Limit
+      </label>
+    </div>
+    
+    <div class="control-group" id="limit-settings" style="display: none;">
+      <label for="max-charts">Max Charts:</label>
+      <input type="number" id="max-charts" value="5" min="1" max="20" style="width: 60px; display: inline-block; margin-right: 10px;">
+      
+      <label for="limit-behavior" style="margin-top: 8px;">When limit reached:</label>
+      <select id="limit-behavior">
+        <option value="block">Block new charts</option>
+        <option value="replace">Replace oldest chart</option>
+      </select>
+    </div>
+    
+    <div class="stats">
+      <h3>Hand-Placed Charts</h3>
+      <div id="chart-list" class="chart-list">
+        <div class="chart-item">No charts placed yet</div>
+      </div>
+    </div>
+    
+    <div class="stats">
+      <h3>Instructions</h3>
+      <p style="font-size: 11px; margin: 5px 0;">
+        <strong>Markers:</strong> Show barcode markers 0-3 for 3D objects<br>
+        <strong>Hands:</strong> Make fist to place charts, pinch to move them
+      </p>
+    </div>
+    
+    <div class="stats">
+      <h3>Performance</h3>
+      <div id="performance-stats" style="font-size: 11px;">
+        <div>Process time: <span id="process-time">-</span>ms</div>
+        <div>Video resolution: <span id="video-resolution">-</span></div>
+        <div>Charts placed: <span id="chart-count">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AR JavaScript modules -->
+  <script src="../src/ar/coordinate-system.js"></script>
+  <script src="../src/ar/gesture-detector.js"></script>
+  <script src="../src/ar/chart-manager.js"></script>
+  <script src="../src/ar/hand-tracking.js"></script>
+  <script src="../src/ar/hybrid-ar-controller.js"></script>
+</body>
+</html>
