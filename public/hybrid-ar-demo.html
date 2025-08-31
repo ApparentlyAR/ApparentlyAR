@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>ApparentlyAR - Hybrid AR Demo (Markers + Hand Tracking)</title>
+
+  <!-- AR.js + A-Frame for marker detection -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+  <!-- MediaPipe Hands for hand tracking -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248252/drawing_utils.js"></script>
+
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      overflow: hidden;
+    }
+    
+    /* AR scene takes full screen */
+    a-scene {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    
+    /* Hand overlay canvas */
+    #hand-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 2;
+    }
+    
+    /* Controls panel */
+    .controls-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+      background: rgba(42, 42, 42, 0.95);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      z-index: 3;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .controls-panel h2 {
+      margin-top: 0;
+      color: #4CAF50;
+      font-size: 18px;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    .control-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .control-group select,
+    .control-group input,
+    .control-group button {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #555;
+      border-radius: 4px;
+      background: #333;
+      color: white;
+      font-size: 14px;
+    }
+    
+    .control-group button {
+      background: #4CAF50;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .control-group button:hover {
+      background: #45a049;
+    }
+    
+    .control-group button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    
+    .status.ready { background: #4CAF50; }
+    .status.detecting { background: #2196F3; }
+    .status.error { background: #f44336; }
+    
+    .stats {
+      background: #333;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    
+    .stats h3 {
+      margin-top: 0;
+      color: #4CAF50;
+      font-size: 14px;
+    }
+    
+    .chart-list {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .chart-item {
+      background: #444;
+      padding: 6px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .chart-item:hover {
+      background: #555;
+    }
+    
+    .chart-item.selected {
+      background: #4CAF50;
+    }
+    
+    .back-button {
+      background: #666 !important;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- AR.js A-Frame Scene -->
+  <a-scene 
+    embedded 
+    arjs="sourceType: webcam; sourceWidth:1280; sourceHeight:960; displayWidth: 1280; displayHeight: 960; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3_HAMMING63;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+    
+    <!-- Assets for chart textures -->
+    <a-assets>
+      <canvas id="chart-texture-canvas" width="400" height="300"></canvas>
+    </a-assets>
+    
+    <!-- Marker-based objects from Multi-AR-Example -->
+    
+    <!-- Marker 0: Red rotating cube -->
+    <a-marker type="barcode" value="0">
+      <a-box
+        position="0 0 0"
+        material="color: red; opacity: 0.8"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000"
+        scale="0.8 0.8 0.8">
+      </a-box>
+    </a-marker>
+
+    <!-- Marker 1: Blue spinning sphere -->
+    <a-marker type="barcode" value="1">
+      <a-sphere
+        position="0 0 0"
+        material="color: blue; opacity: 0.9"
+        animation="property: rotation; to: 360 0 360; loop: true; dur: 3000"
+        radius="0.6">
+      </a-sphere>
+    </a-marker>
+
+    <!-- Marker 2: Green oscillating cylinder -->
+    <a-marker type="barcode" value="2">
+      <a-cylinder
+        position="0 0 0"
+        material="color: green; opacity: 0.7"
+        animation="property: position; to: 0 -0.5 0; loop: true; dur: 2000; dir: alternate"
+        radius="0.4"
+        height="1.2">
+      </a-cylinder>
+    </a-marker>
+
+    <!-- Marker 3: Yellow pulsing octahedron -->
+    <a-marker type="barcode" value="3">
+      <a-octahedron
+        position="0 0 0"
+        material="color: yellow; opacity: 0.8"
+        animation="property: scale; to: 1.2 1.2 1.2; loop: true; dur: 1500; dir: alternate"
+        radius="0.5">
+      </a-octahedron>
+    </a-marker>
+    
+    <!-- Container for hand-controlled charts -->
+    <a-entity id="hand-charts"></a-entity>
+    
+    <!-- Camera -->
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <!-- Hand landmarks overlay -->
+  <canvas id="hand-overlay"></canvas>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <button class="back-button" onclick="window.location.href='/'">
+      ← Back to Main
+    </button>
+    
+    <h2>Hybrid AR Controls</h2>
+    
+    <div class="control-group">
+      <div id="status" class="status">Initializing...</div>
+    </div>
+    
+    <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Marker Detection</h3>
+      <div id="marker-status" class="status ready">Ready for markers</div>
+    </div>
+    
+    <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Hand Tracking</h3>
+      <button id="start-hands">Start Hand Tracking</button>
+      <button id="stop-hands" disabled>Stop Hand Tracking</button>
+    </div>
+    
+    <div class="control-group">
+      <label for="chart-type">Chart Type (Hand Controls):</label>
+      <select id="chart-type">
+        <option value="bar">Bar Chart</option>
+        <option value="line">Line Chart</option>
+        <option value="pie">Pie Chart</option>
+        <option value="scatter">Scatter Plot</option>
+      </select>
+    </div>
+    
+    <div class="control-group">
+      <label for="sample-data">Sample Data:</label>
+      <select id="sample-data">
+        <option value="students">Student Grades</option>
+        <option value="weather">Weather Data</option>
+        <option value="sales">Sales Data</option>
+      </select>
+    </div>
+    
+    <div class="control-group">
+      <button id="clear-charts">Clear Hand Charts</button>
+    </div>
+    
+    <div class="stats">
+      <h3>Hand-Placed Charts</h3>
+      <div id="chart-list" class="chart-list">
+        <div class="chart-item">No charts placed yet</div>
+      </div>
+    </div>
+    
+    <div class="stats">
+      <h3>Instructions</h3>
+      <p style="font-size: 11px; margin: 5px 0;">
+        <strong>Markers:</strong> Show barcode markers 0-3 for 3D objects<br>
+        <strong>Hands:</strong> Make fist to place charts, pinch to move them
+      </p>
+    </div>
+    
+    <div class="stats">
+      <h3>Performance</h3>
+      <div id="performance-stats" style="font-size: 11px;">
+        <div>Process time: <span id="process-time">-</span>ms</div>
+        <div>Video resolution: <span id="video-resolution">-</span></div>
+        <div>Charts placed: <span id="chart-count">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Hybrid AR Demo - AR.js Markers + MediaPipe Hand Tracking
+     * 
+     * Combines marker-based AR objects with hand gesture chart controls
+     * on a shared video feed for educational data visualization.
+     * 
+     * @author ApparentlyAR Team
+     * @version 1.0.0
+     */
+
+    // ===== Global State =====
+    
+    /** @type {MediaPipe.Hands} MediaPipe Hands instance */
+    let hands;
+    
+    /** @type {MediaPipe.Camera} MediaPipe Camera instance */
+    let mpCamera;
+    
+    /** @type {boolean} Hand detection active state */
+    let handsActive = false;
+    
+    /** @type {boolean} Processing gate for MediaPipe */
+    let processingHands = false;
+    
+    /** @type {Array<Object>} Hand-placed chart objects */
+    let handCharts = [];
+    
+    /** @type {number} Last chart placement timestamp */
+    let lastPlacedAt = 0;
+    
+    /** @type {number} Cooldown between chart placements */
+    const PLACE_COOLDOWN_MS = 1000;
+    
+    /** @type {Object} Pinch detection thresholds */
+    const PINCH_THRESHOLD = 0.05;
+    
+    /** @type {number} Frame skip for performance (process every Nth frame) */
+    let frameSkipCounter = 0;
+    const FRAME_SKIP_RATE = 2; // Process every 2nd frame
+    
+    /** @type {number} Performance monitoring */
+    let lastProcessTime = 0;
+    
+    /** @type {Object|null} Currently selected chart */
+    let selectedChart = null;
+    
+    /** @type {boolean} Pinch state */
+    let isPinching = false;
+
+    /**
+     * Sample datasets for chart generation
+     */
+    const sampleData = {
+      students: [
+        { name: 'Alice', age: 25, score: 85, grade: 'A' },
+        { name: 'Bob', age: 22, score: 92, grade: 'A' },
+        { name: 'Charlie', age: 28, score: 78, grade: 'B' },
+        { name: 'Diana', age: 24, score: 95, grade: 'A' },
+        { name: 'Eve', age: 26, score: 88, grade: 'A' }
+      ],
+      weather: [
+        { month: 'Jan', temperature: 15, rainfall: 80, humidity: 65 },
+        { month: 'Feb', temperature: 17, rainfall: 70, humidity: 60 },
+        { month: 'Mar', temperature: 20, rainfall: 85, humidity: 70 },
+        { month: 'Apr', temperature: 23, rainfall: 90, humidity: 75 },
+        { month: 'May', temperature: 26, rainfall: 100, humidity: 80 }
+      ],
+      sales: [
+        { product: 'Laptop', sales: 120, revenue: 144000, region: 'North' },
+        { product: 'Phone', sales: 200, revenue: 120000, region: 'North' },
+        { product: 'Tablet', sales: 80, revenue: 64000, region: 'North' },
+        { product: 'Laptop', sales: 150, revenue: 180000, region: 'South' },
+        { product: 'Phone', sales: 180, revenue: 108000, region: 'South' }
+      ]
+    };
+
+    /**
+     * Initialize MediaPipe Hands for hand landmark detection
+     */
+    async function initializeHands() {
+      try {
+        hands = new Hands({
+          locateFile: (file) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`
+        });
+
+        hands.setOptions({
+          selfieMode: true,
+          maxNumHands: 2,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onHandResults);
+        updateStatus('Hand tracking initialized', 'ready');
+        
+      } catch (error) {
+        console.error('Failed to initialize hands:', error);
+        updateStatus('Hand tracking initialization failed', 'error');
+      }
+    }
+
+    /**
+     * Wait for AR.js video element to be available
+     */
+    function waitForVideo(timeout = 5000) {
+      return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        
+        const checkVideo = () => {
+          const video = document.querySelector('video');
+          if (video && video.videoWidth > 0) {
+            resolve(video);
+          } else if (Date.now() - startTime > timeout) {
+            reject(new Error('Timeout waiting for AR.js video'));
+          } else {
+            setTimeout(checkVideo, 100);
+          }
+        };
+        
+        checkVideo();
+      });
+    }
+
+    /**
+     * Setup canvas overlay for hand landmarks
+     */
+    function setupHandOverlay() {
+      const canvas = document.getElementById('hand-overlay');
+      const video = document.querySelector('video');
+      
+      if (video && video.videoWidth > 0) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      } else {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+    }
+
+    /**
+     * Start hand tracking with shared video feed
+     */
+    async function startHandTracking() {
+      try {
+        // Wait for AR.js to initialize and create video element
+        const video = await waitForVideo();
+        
+        setupHandOverlay();
+        window.addEventListener('resize', setupHandOverlay);
+
+        // Use requestAnimationFrame for processing instead of Camera class
+        // to avoid conflicts with AR.js video handling
+        const processFrame = async () => {
+          if (handsActive && !processingHands && video.videoWidth > 0) {
+            // Frame skipping for performance
+            frameSkipCounter++;
+            if (frameSkipCounter % FRAME_SKIP_RATE === 0) {
+              processingHands = true;
+              const startTime = performance.now();
+              
+              try {
+                await hands.send({ image: video });
+                lastProcessTime = performance.now() - startTime;
+                
+                // Update performance stats
+                document.getElementById('process-time').textContent = lastProcessTime.toFixed(1);
+                document.getElementById('video-resolution').textContent = `${video.videoWidth}x${video.videoHeight}`;
+              } catch (e) {
+                console.warn('MediaPipe processing error:', e);
+                updateStatus('Hand tracking error - retrying...', 'error');
+              }
+              
+              processingHands = false;
+            }
+          }
+          
+          if (handsActive) {
+            requestAnimationFrame(processFrame);
+          }
+        };
+
+        handsActive = true;
+        processFrame();
+        
+        document.getElementById('start-hands').disabled = true;
+        document.getElementById('stop-hands').disabled = false;
+        
+        updateStatus('Hand tracking active - make fist to place, pinch to move', 'detecting');
+        
+      } catch (error) {
+        console.error('Failed to start hand tracking:', error);
+        updateStatus('Failed to start hand tracking: ' + error.message, 'error');
+      }
+    }
+
+    /**
+     * Stop hand tracking
+     */
+    function stopHandTracking() {
+      handsActive = false;
+      
+      document.getElementById('start-hands').disabled = false;
+      document.getElementById('stop-hands').disabled = true;
+      
+      // Clear hand overlay
+      const canvas = document.getElementById('hand-overlay');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      updateStatus('Hand tracking stopped', 'ready');
+    }
+
+    /**
+     * Process hand detection results
+     */
+    function onHandResults(results) {
+      const canvas = document.getElementById('hand-overlay');
+      const ctx = canvas.getContext('2d');
+      
+      // Clear previous frame
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      let handDetected = false;
+      
+      if (results.multiHandLandmarks && results.multiHandedness) {
+        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+          const landmarks = results.multiHandLandmarks[i];
+          const handedness = results.multiHandedness[i].label;
+          
+          drawHandLandmarks(ctx, landmarks);
+          handDetected = true;
+          
+          // Process gestures
+          if (isPinchGesture(landmarks, handedness)) {
+            handlePinchGesture(landmarks);
+          } else if (isClosedPalm(landmarks, handedness)) {
+            placeChartAtHand(landmarks);
+          }
+        }
+      }
+      
+      // Release chart if no hands detected
+      if (!handDetected && isPinching) {
+        releaseChart();
+      }
+    }
+
+    /**
+     * Draw hand landmarks on overlay canvas
+     */
+    function drawHandLandmarks(ctx, landmarks) {
+      ctx.strokeStyle = '#00FF00';
+      ctx.lineWidth = 2;
+      ctx.fillStyle = '#FF0000';
+      
+      // Draw landmarks
+      for (let i = 0; i < landmarks.length; i++) {
+        const x = (1 - landmarks[i].x) * ctx.canvas.width;
+        const y = landmarks[i].y * ctx.canvas.height;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      
+      // Draw connections
+      const connections = [
+        [0, 1], [1, 2], [2, 3], [3, 4],
+        [0, 5], [5, 6], [6, 7], [7, 8],
+        [0, 9], [9, 10], [10, 11], [11, 12],
+        [0, 13], [13, 14], [14, 15], [15, 16],
+        [0, 17], [17, 18], [18, 19], [19, 20]
+      ];
+      
+      ctx.beginPath();
+      for (const [start, end] of connections) {
+        const startX = (1 - landmarks[start].x) * ctx.canvas.width;
+        const startY = landmarks[start].y * ctx.canvas.height;
+        const endX = (1 - landmarks[end].x) * ctx.canvas.width;
+        const endY = landmarks[end].y * ctx.canvas.height;
+        
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+      }
+      ctx.stroke();
+    }
+
+    /**
+     * Detect pinch gesture
+     */
+    function isPinchGesture(landmarks, handedness = 'Right') {
+      const thumbTip = landmarks[4];
+      const indexTip = landmarks[8];
+      
+      const distance = Math.sqrt(
+        Math.pow(thumbTip.x - indexTip.x, 2) +
+        Math.pow(thumbTip.y - indexTip.y, 2) +
+        Math.pow(thumbTip.z - indexTip.z, 2)
+      );
+      
+      return distance < PINCH_THRESHOLD;
+    }
+
+    /**
+     * Handle pinch gesture for chart manipulation
+     */
+    function handlePinchGesture(landmarks) {
+      const palmCenter = landmarks[9];
+      const canvas = document.getElementById('hand-overlay');
+      
+      const x = (1 - palmCenter.x) * canvas.width;
+      const y = (1 - palmCenter.y) * canvas.height;
+      
+      if (!isPinching) {
+        // Start pinching - try to select a chart
+        const chart = findChartAtPosition(x, y);
+        if (chart) {
+          selectedChart = chart;
+          isPinching = true;
+          console.log(`Selected chart: ${chart.type} at (${x}, ${y})`);
+        }
+      } else if (selectedChart) {
+        // Move the selected chart
+        moveChart(selectedChart, x, y);
+      }
+    }
+
+    /**
+     * Find chart at screen position
+     */
+    function findChartAtPosition(x, y) {
+      // Convert screen coordinates to world coordinates
+      // This is a simplified implementation
+      for (let i = handCharts.length - 1; i >= 0; i--) {
+        const chart = handCharts[i];
+        // Check if point is within chart bounds (simplified)
+        if (Math.abs(chart.screenX - x) < 100 && Math.abs(chart.screenY - y) < 75) {
+          return chart;
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Move chart to new position
+     */
+    function moveChart(chart, x, y) {
+      chart.screenX = x;
+      chart.screenY = y;
+      
+      // Convert to world coordinates and update A-Frame entity
+      const worldPos = screenToWorld(x, y);
+      chart.entity.setAttribute('position', worldPos);
+      
+      // Visual feedback
+      chart.entity.setAttribute('scale', '1.2 1.2 1.2');
+    }
+
+    /**
+     * Release selected chart
+     */
+    function releaseChart() {
+      if (selectedChart) {
+        selectedChart.entity.setAttribute('scale', '1 1 1');
+        selectedChart = null;
+      }
+      isPinching = false;
+    }
+
+    /**
+     * Detect closed palm (fist) gesture
+     */
+    function isClosedPalm(landmarks, handedness = 'Right') {
+      const fingerTips = [4, 8, 12, 16, 20];
+      const fingerMcps = [3, 6, 10, 14, 18];
+      
+      let extendedFingers = 0;
+      
+      for (let i = 0; i < fingerTips.length; i++) {
+        const tip = landmarks[fingerTips[i]];
+        const mcp = landmarks[fingerMcps[i]];
+        
+        if (i === 0) {
+          // Thumb
+          if (handedness === 'Right' ? tip.x > mcp.x : tip.x < mcp.x) {
+            extendedFingers++;
+          }
+        } else {
+          // Other fingers
+          if (tip.y < mcp.y) {
+            extendedFingers++;
+          }
+        }
+      }
+      
+      return extendedFingers <= 1;
+    }
+
+    /**
+     * Place chart at hand position
+     */
+    function placeChartAtHand(landmarks) {
+      const now = Date.now();
+      if (now - lastPlacedAt < PLACE_COOLDOWN_MS) return;
+      
+      const palmCenter = landmarks[9];
+      const canvas = document.getElementById('hand-overlay');
+      
+      const screenX = (1 - palmCenter.x) * canvas.width;
+      const screenY = (1 - palmCenter.y) * canvas.height;
+      
+      createChart(screenX, screenY);
+      lastPlacedAt = now;
+    }
+
+    /**
+     * Create chart as A-Frame entity
+     */
+    function createChart(screenX, screenY) {
+      const chartType = document.getElementById('chart-type').value;
+      const datasetName = document.getElementById('sample-data').value;
+      
+      // Create unique canvas for this chart
+      const canvas = document.createElement('canvas');
+      const chartId = 'hand-chart-' + Date.now();
+      canvas.width = 400;
+      canvas.height = 300;
+      canvas.id = chartId + '-canvas';
+      
+      // Generate chart texture
+      const chart = generateChart(canvas, chartType, sampleData[datasetName]);
+      
+      // Add canvas to assets
+      const assets = document.querySelector('a-assets');
+      assets.appendChild(canvas);
+      
+      // Create A-Frame entity
+      const entity = document.createElement('a-plane');
+      
+      entity.setAttribute('id', chartId);
+      entity.setAttribute('width', '2');
+      entity.setAttribute('height', '1.5');
+      entity.setAttribute('material', `src: #${canvas.id}; transparent: true`);
+      
+      // Convert screen coordinates to world coordinates
+      const worldPos = screenToWorld(screenX, screenY);
+      entity.setAttribute('position', worldPos);
+      
+      // Add to scene
+      document.getElementById('hand-charts').appendChild(entity);
+      
+      // Store chart data
+      const chartObj = {
+        id: chartId,
+        entity: entity,
+        chart: chart,
+        canvas: canvas,
+        type: chartType,
+        dataset: datasetName,
+        screenX: screenX,
+        screenY: screenY
+      };
+      
+      handCharts.push(chartObj);
+      updateChartList();
+      
+      console.log(`Chart placed: ${chartType} with ${datasetName} data at world position ${worldPos}`);
+    }
+
+    /**
+     * Convert screen coordinates to A-Frame world coordinates
+     * Uses camera projection matrix for accurate mapping
+     */
+    function screenToWorld(screenX, screenY) {
+      const canvas = document.getElementById('hand-overlay');
+      const scene = document.querySelector('a-scene');
+      const camera = scene.camera;
+      
+      if (!camera) {
+        // Fallback to simplified conversion with corrected Y-axis
+        const normalizedX = (screenX / canvas.width - 0.5) * 2;
+        // Fix Y-axis: when hand moves up (screenY decreases), chart should move up (worldY increases)
+        const normalizedY = (screenY / canvas.height - 0.5) * -2; // Inverted Y mapping
+        const worldX = normalizedX * 4;
+        const worldY = normalizedY * 3;
+        const worldZ = -3;
+        return `${worldX} ${worldY} ${worldZ}`;
+      }
+      
+      // Normalize screen coordinates to NDC (-1 to 1)  
+      const ndcX = (screenX / canvas.width) * 2 - 1;
+      // Fix Y-axis mapping: screen Y increases downward, NDC Y increases upward
+      const ndcY = ((canvas.height - screenY) / canvas.height) * 2 - 1;
+      
+      // Create a ray from camera through screen point
+      const vector = new THREE.Vector3(ndcX, ndcY, -1);
+      vector.unproject(camera);
+      
+      // Calculate world position at specific distance from camera
+      const direction = vector.sub(camera.position).normalize();
+      const distance = 3; // Distance from camera
+      const worldPos = camera.position.clone().add(direction.multiplyScalar(distance));
+      
+      return `${worldPos.x} ${worldPos.y} ${worldPos.z}`;
+    }
+
+    /**
+     * Generate Chart.js chart
+     */
+    function generateChart(canvas, type, data) {
+      const ctx = canvas.getContext('2d');
+      
+      let chartConfig = {
+        type: type,
+        data: {},
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            legend: { display: true },
+            title: { display: true, text: `${type.toUpperCase()} Chart` }
+          }
+        }
+      };
+      
+      // Configure data based on type and dataset
+      if (type === 'bar' || type === 'line') {
+        if (data === sampleData.students) {
+          chartConfig.data = {
+            labels: data.map(d => d.name),
+            datasets: [{
+              label: 'Scores',
+              data: data.map(d => d.score),
+              backgroundColor: 'rgba(76, 175, 80, 0.8)',
+              borderColor: 'rgba(76, 175, 80, 1)',
+              borderWidth: 2
+            }]
+          };
+        } else if (data === sampleData.weather) {
+          chartConfig.data = {
+            labels: data.map(d => d.month),
+            datasets: [{
+              label: 'Temperature (°C)',
+              data: data.map(d => d.temperature),
+              backgroundColor: 'rgba(33, 150, 243, 0.8)',
+              borderColor: 'rgba(33, 150, 243, 1)',
+              borderWidth: 2
+            }]
+          };
+        } else if (data === sampleData.sales) {
+          chartConfig.data = {
+            labels: data.map(d => d.product),
+            datasets: [{
+              label: 'Sales',
+              data: data.map(d => d.sales),
+              backgroundColor: 'rgba(255, 193, 7, 0.8)',
+              borderColor: 'rgba(255, 193, 7, 1)',
+              borderWidth: 2
+            }]
+          };
+        }
+      } else if (type === 'pie') {
+        if (data === sampleData.students) {
+          chartConfig.data = {
+            labels: data.map(d => d.name),
+            datasets: [{
+              data: data.map(d => d.score),
+              backgroundColor: [
+                'rgba(76, 175, 80, 0.8)',
+                'rgba(33, 150, 243, 0.8)',
+                'rgba(255, 193, 7, 0.8)',
+                'rgba(244, 67, 54, 0.8)',
+                'rgba(156, 39, 176, 0.8)'
+              ]
+            }]
+          };
+        }
+      } else if (type === 'scatter') {
+        if (data === sampleData.students) {
+          chartConfig.data = {
+            datasets: [{
+              label: 'Age vs Score',
+              data: data.map(d => ({ x: d.age, y: d.score })),
+              backgroundColor: 'rgba(76, 175, 80, 0.8)'
+            }]
+          };
+        }
+      }
+      
+      return new Chart(ctx, chartConfig);
+    }
+
+    /**
+     * Clear all hand-placed charts
+     */
+    function clearHandCharts() {
+      handCharts.forEach(chartObj => {
+        // Remove entity from scene
+        chartObj.entity.remove();
+        
+        // Remove canvas from assets
+        if (chartObj.canvas && chartObj.canvas.parentNode) {
+          chartObj.canvas.parentNode.removeChild(chartObj.canvas);
+        }
+        
+        // Destroy Chart.js instance
+        if (chartObj.chart) {
+          chartObj.chart.destroy();
+        }
+      });
+      
+      handCharts = [];
+      selectedChart = null;
+      isPinching = false;
+      updateChartList();
+    }
+
+    /**
+     * Update chart list UI
+     */
+    function updateChartList() {
+      const listEl = document.getElementById('chart-list');
+      if (handCharts.length === 0) {
+        listEl.innerHTML = '<div class="chart-item">No charts placed yet</div>';
+      } else {
+        listEl.innerHTML = handCharts.map(chart => 
+          `<div class="chart-item" onclick="selectChart('${chart.id}', this)">
+             ${chart.type.toUpperCase()} - ${chart.dataset}
+           </div>`
+        ).join('');
+      }
+      
+      // Update chart count
+      document.getElementById('chart-count').textContent = handCharts.length;
+    }
+
+    /**
+     * Select chart in UI
+     */
+    function selectChart(id, el) {
+      document.querySelectorAll('.chart-item').forEach(item => 
+        item.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    /**
+     * Update status display
+     */
+    function updateStatus(message, type) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+    }
+
+    /**
+     * Initialize the hybrid AR system
+     */
+    async function init() {
+      try {
+        updateStatus('Initializing hybrid AR...', 'detecting');
+        
+        // Wait for AR.js to initialize and start camera
+        await waitForArjsInit();
+        
+        // Initialize MediaPipe
+        await initializeHands();
+        
+        updateStatus('Hybrid AR ready - markers active, start hand tracking when ready', 'ready');
+        
+      } catch (error) {
+        console.error('Initialization error:', error);
+        updateStatus('Initialization failed: ' + error.message, 'error');
+      }
+    }
+
+    /**
+     * Wait for AR.js to fully initialize
+     */
+    function waitForArjsInit(timeout = 10000) {
+      return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        
+        const checkInit = () => {
+          const video = document.querySelector('video');
+          const scene = document.querySelector('a-scene');
+          
+          if (video && scene && scene.hasLoaded && video.videoWidth > 0) {
+            resolve();
+          } else if (Date.now() - startTime > timeout) {
+            reject(new Error('Timeout waiting for AR.js initialization'));
+          } else {
+            setTimeout(checkInit, 200);
+          }
+        };
+        
+        checkInit();
+      });
+    }
+
+    /**
+     * Monitor marker detection status
+     */
+    function monitorMarkers() {
+      const markers = document.querySelectorAll('a-marker');
+      let visibleMarkers = 0;
+      
+      markers.forEach(marker => {
+        if (marker.object3D && marker.object3D.visible) {
+          visibleMarkers++;
+        }
+      });
+      
+      const markerStatus = document.getElementById('marker-status');
+      if (visibleMarkers > 0) {
+        markerStatus.textContent = `${visibleMarkers} marker(s) detected`;
+        markerStatus.className = 'status detecting';
+      } else {
+        markerStatus.textContent = 'Ready for markers';
+        markerStatus.className = 'status ready';
+      }
+    }
+
+    // Event Listeners
+    document.getElementById('start-hands').addEventListener('click', startHandTracking);
+    document.getElementById('stop-hands').addEventListener('click', stopHandTracking);
+    document.getElementById('clear-charts').addEventListener('click', clearHandCharts);
+
+    // Monitor marker detection periodically
+    setInterval(monitorMarkers, 500);
+
+    // Initialize when page loads
+    window.addEventListener('load', init);
+
+  </script>
+</body>
+</html>
