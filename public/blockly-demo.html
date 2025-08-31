@@ -696,6 +696,9 @@
         
         if (window.reactSetOutput) window.reactSetOutput(result !== undefined ? String(result) : 'Code executed successfully');
         if (window.reactSetError) window.reactSetError(false);
+        
+        // Dispatch event for automatic visualization of CSV data
+        window.dispatchEvent(new CustomEvent('blocklyExecuted'));
       } catch (e) {
         console.error('Error details:', e);
         if (window.reactSetOutput) window.reactSetOutput(`Error: ${e.message}`);
