@@ -21,27 +21,48 @@ const ChartControls = ({ onChartGenerate }) => {
   const dataTypes = [
     { value: 'students', label: 'Students Data' },
     { value: 'weather', label: 'Weather Data' },
-    { value: 'sales', label: 'Sales Data' }
+    { value: 'sales', label: 'Sales Data' },
+    { value: 'block', label: 'Block Data' }
   ];
 
   const handleGenerateChart = async () => {
     setLoading(true);
     
     try {
-      // Fetch sample data
-      const dataResponse = await fetch(`/api/test-data/${dataType}`);
-      const dataResult = await dataResponse.json();
-      
-      if (!dataResult.success) throw new Error('Failed to fetch data');
-      
-      // Determine chart options based on data type
+      let data = null;
       let options = {};
-      if (dataType === 'students') {
-        options = { xColumn: 'name', yColumn: 'score', title: 'Student Scores' };
-      } else if (dataType === 'weather') {
-        options = { xColumn: 'month', yColumn: 'temperature', title: 'Monthly Temperature' };
-      } else if (dataType === 'sales') {
-        options = { xColumn: 'product', yColumn: 'revenue', title: 'Product Revenue' };
+      
+      // Handle different data sources
+      if (dataType === 'block') {
+        // Use CSV data from Blockly
+        data = window.Blockly?.CsvImportData?.data || null;
+        if (!data) {
+          throw new Error('No CSV data available. Please import a CSV file using the CSV import block.');
+        }
+        
+        // Set default options for CSV data
+        const columns = Object.keys(data[0] || {});
+        options = { 
+          xColumn: columns[0] || 'x', 
+          yColumn: columns[1] || 'y', 
+          title: 'CSV Data Visualization' 
+        };
+      } else {
+        // Fetch sample data
+        const dataResponse = await fetch(`/api/test-data/${dataType}`);
+        const dataResult = await dataResponse.json();
+        
+        if (!dataResult.success) throw new Error('Failed to fetch data');
+        data = dataResult.data;
+        
+        // Determine chart options based on data type
+        if (dataType === 'students') {
+          options = { xColumn: 'name', yColumn: 'score', title: 'Student Scores' };
+        } else if (dataType === 'weather') {
+          options = { xColumn: 'month', yColumn: 'temperature', title: 'Monthly Temperature' };
+        } else if (dataType === 'sales') {
+          options = { xColumn: 'product', yColumn: 'revenue', title: 'Product Revenue' };
+        }
       }
       
       // Generate chart
@@ -49,7 +70,7 @@ const ChartControls = ({ onChartGenerate }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          data: dataResult.data,
+          data: data,
           chartType: chartType,
           options: options
         })

@@ -125,6 +125,33 @@ const DataVisualizationPanel = () => {
     };
   }, []);
 
+  // Listen for Blockly execution to automatically visualize CSV data
+  useEffect(() => {
+    const handleBlocklyExecution = () => {
+      // Check if we have CSV data from Blockly and auto-visualize it
+      const csvData = window.Blockly?.CsvImportData?.data;
+      if (csvData && csvData.length > 0) {
+        // Generate a default chart with the CSV data
+        const columns = Object.keys(csvData[0] || {});
+        const options = { 
+          xColumn: columns[0] || 'x', 
+          yColumn: columns[1] || 'y', 
+          title: 'CSV Data Visualization' 
+        };
+        
+        // Generate a bar chart by default
+        generateChart(csvData, 'bar', options);
+      }
+    };
+
+    // Listen for the custom event that's dispatched when Blockly code is executed
+    window.addEventListener('blocklyExecuted', handleBlocklyExecution);
+    
+    return () => {
+      window.removeEventListener('blocklyExecuted', handleBlocklyExecution);
+    };
+  }, []);
+
   // Cleanup chart on unmount
   useEffect(() => {
     return () => {
