@@ -1,15 +1,33 @@
-# ApparentlyAR Backend
+# ApparentlyAR
 
-A robust, well-tested backend server for the ApparentlyAR educational data visualization platform. This backend provides data processing, chart generation, and AR visualization APIs designed for students in grades 8-10 to explore data through block-based programming and augmented reality.
+A comprehensive educational data visualization platform that combines block-based programming with cutting-edge Augmented Reality technology. Designed for students in grades 8-10 to explore and visualize data through hands-on, creative learning experiences.
+
+## Markers
+
+Markers can be viewed and downloaded [here](https://github.com/nicolocarpignoli/artoolkit-barcode-markers-collection/tree/master/3x3_hamming_6_3)
 
 ## Features
 
-- **Data Processing**: Filter, sort, aggregate, and transform data
-- **Chart Generation**: Create various chart types (bar, line, scatter, pie, doughnut, area)
-- **AR Visualization**: Generate AR-specific visualization data
-- **RESTful APIs**: Clean, well-documented API endpoints
-- **Comprehensive Testing**: 95%+ test coverage with 118 passing tests
-- **Sample Data**: Built-in datasets for educational demonstrations
+### Core Platform
+
+- **Block-Based Programming**: Drag-and-drop interface using Blockly for accessible data manipulation
+- **Data Processing**: Filter, sort, aggregate, and transform data with visual programming blocks
+- **Chart Generation**: Create various chart types (bar, line, scatter, pie, doughnut, area, histogram, box plot, heatmap, radar)
+- **RESTful APIs**: Clean, well-documented API endpoints for data processing and visualization
+
+### Augmented Reality Experiences
+
+- **Hand Tracking AR**: MediaPipe-powered gesture recognition for intuitive chart manipulation
+- **Marker-Based AR**: AR.js fiducial markers for precise chart positioning
+- **Hybrid AR**: Combined marker detection and hand tracking for enhanced interaction
+- **3D Visualizations**: Immersive data exploration in augmented reality environments
+
+### Advanced Features
+
+- **Modular Architecture**: Clean separation of concerns with reusable AR modules
+- **Real-Time Processing**: Optimized performance with frame-skipping and efficient rendering
+- **Interactive Charts**: Zoom, pan, click events, and hover effects for enhanced data exploration
+- **Comprehensive Testing**: 95%+ test coverage with 190+ passing tests
 
 ## Quick Start
 
@@ -37,6 +55,34 @@ npm start
 
 The server will be available at `http://localhost:3000`
 
+### Available Interfaces
+
+- **Main Application**: `http://localhost:3000/` - Block-based programming interface
+- **Hand Tracking AR**: `http://localhost:3000/ar-demo` - MediaPipe hand gesture controls
+- **Hybrid AR Demo**: `http://localhost:3000/hybrid-ar` - Combined markers + hand tracking
+
+## Architecture Overview
+
+### Modular JavaScript Structure
+
+The platform uses a clean, modular architecture with AR functionality separated into reusable modules:
+
+```
+src/ar/
+├── coordinate-system.js      # Screen-to-world coordinate conversion
+├── gesture-detector.js       # MediaPipe hand gesture recognition
+├── chart-manager.js          # Chart creation and lifecycle management
+├── hand-tracking.js          # MediaPipe integration and video processing
+└── hybrid-ar-controller.js  # Main controller orchestrating all subsystems
+```
+
+### Key Benefits
+
+- **Maintainable**: Each module has a single responsibility
+- **Testable**: Individual components can be unit tested
+- **Reusable**: AR modules can be imported into other projects
+- **Debuggable**: Easier to isolate and fix issues in specific areas
+
 ## API Documentation
 
 ### Base URL
@@ -49,7 +95,15 @@ http://localhost:3000
 
 #### GET `/`
 
-Serves the main application page.
+Serves the main block-based programming interface.
+
+#### GET `/ar-demo`
+
+Serves the hand tracking AR demonstration page.
+
+#### GET `/hybrid-ar`
+
+Serves the hybrid AR demo combining marker detection with hand tracking.
 
 #### GET `/api/test-data/:type`
 
@@ -237,12 +291,22 @@ The backend maintains **95%+ test coverage** across:
 ```
 tests/
 ├── backend/
-│   ├── api.test.js          # API endpoint tests
-│   ├── dataProcessor.test.js # Data processing tests
-│   ├── chartGenerator.test.js # Chart generation tests
-│   ├── server.test.js        # Server integration tests
-│   └── testData.test.js      # Sample data tests
-└── sum.test.js              # Basic functionality test
+│   ├── api.test.js              # API endpoint tests
+│   ├── chartGenerator.test.js   # Chart generation tests
+│   ├── dataProcessor.test.js    # Data processing tests
+│   ├── server.test.js           # Server integration tests
+│   └── testData.test.js         # Sample data tests
+├── frontend/
+│   ├── chartGeneration.test.js  # Chart generation frontend tests
+│   ├── errorHandling.test.js    # Error handling tests
+│   ├── eventCommunication.test.js # Event system tests
+│   └── hybridAR.test.js         # Hybrid AR system tests
+├── csv_demo.test.js             # CSV demo functionality tests
+├── csv_final.test.js            # CSV final implementation tests
+├── csv_import.test.js           # CSV import block tests
+├── csv_import_integration.test.js # CSV integration tests
+├── csv_import_simple.test.js    # Basic CSV import tests
+└── sum.test.js                  # Basic functionality test
 ```
 
 ## Project Structure
@@ -259,6 +323,8 @@ ApparentlyAR/
 ├── sampleui.html                      # Sample UI demonstration
 ├── public/                            # Static assets and built files
 │   ├── blockly-demo.html             # Main application HTML
+│   ├── ar-demo.html                  # Hand tracking AR interface
+│   ├── hybrid-ar-demo.html           # Hybrid AR demo interface
 │   ├── favicon.ico                    # Site icon
 │   ├── react-bundle.js               # Built React bundle
 │   ├── react-bundle.js.map           # Source maps
@@ -268,6 +334,12 @@ ApparentlyAR/
 │   │   ├── dataProcessor.js           # Data processing operations
 │   │   ├── chartGenerator.js          # Chart generation logic
 │   │   └── testData.js               # Sample datasets
+│   ├── ar/                            # Augmented Reality modules
+│   │   ├── coordinate-system.js       # Screen-to-world coordinate conversion
+│   │   ├── gesture-detector.js        # MediaPipe hand gesture recognition
+│   │   ├── chart-manager.js           # Chart creation and lifecycle management
+│   │   ├── hand-tracking.js           # MediaPipe integration and processing
+│   │   └── hybrid-ar-controller.js    # Main AR controller orchestration
 │   ├── react/                         # React frontend components
 │   │   ├── index.js                  # Main React application entry
 │   │   └── components/               # React UI components
@@ -288,6 +360,11 @@ ApparentlyAR/
 │   │   ├── dataProcessor.test.js      # Data processing tests
 │   │   ├── server.test.js            # Server integration tests
 │   │   └── testData.test.js          # Sample data tests
+│   ├── frontend/                      # Frontend and AR tests
+│   │   ├── chartGeneration.test.js    # Chart generation frontend tests
+│   │   ├── errorHandling.test.js      # Error handling tests
+│   │   ├── eventCommunication.test.js # Event system tests
+│   │   └── hybridAR.test.js          # Hybrid AR system tests
 │   ├── csv_demo.test.js              # CSV demo functionality tests
 │   ├── csv_final.test.js             # CSV final implementation tests
 │   ├── csv_import.test.js            # CSV import block tests
