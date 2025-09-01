@@ -33,16 +33,20 @@
   </script>
   <script src="https://unpkg.com/blockly/blockly.min.js"></script>
   <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <script src="/blockly/msg/js/en.js"></script>
   <script>
     // Ensure Blockly.JavaScript is available before loading custom blocks
     console.log('Blockly.JavaScript available:', !!window.Blockly.JavaScript);
     console.log('Available JavaScript generators before CSV import:', Object.keys(window.Blockly.JavaScript || {}));
   </script>
-  <script src="../src/blocks/csv_import.js"></script>
-  <script src="../src/blocks/to_json.js"></script>
-  <script src="../src/blocks/filter_rows.js"></script>
+  <script src="/blocks/csv_import.block.js"></script>
+  <script src="/blocks/to_json.block.js"></script>
+  <script src="/blocks/filter_rows.block.js"></script>
+
+  <script src="/generators/csv_import.gen.js"></script>
+  <script src="/generators/to_json.gen.js"></script>
+  <script src="/generators/filter_rows.gen.js"></script>
+  
   <script>
     // Check if CSV import generator was registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -333,23 +337,19 @@
           </category>
           <category name="Variables" colour="330" custom="VARIABLE"></category>
           <category name="Functions" colour="290" custom="PROCEDURE"></category>
+
           <category name="Data" colour="20">
+  <!-- 1) 导入 CSV -->
             <block type="csv_import"></block>
-            <block type="to_json">
-              <value name="VALUE">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-          </category>
-          <category name="Data" colour="20">
-            <block type="csv_import"></block>
+
+            <!-- 2) CSV -> JSON（数组） -->
             <block type="to_json">
               <value name="VALUE">
                 <block type="csv_import"></block>
               </value>
             </block>
 
-            <!-- 新增：过滤行 -->
+            <!-- 3) 过滤：把 to_json 的结果接到 DATA，右侧填比较值 -->
             <block type="filter_rows">
               <value name="DATA">
                 <block type="to_json">
@@ -358,7 +358,6 @@
                   </value>
                 </block>
               </value>
-              <!-- 例：默认比较值，供用户替换 -->
               <value name="VALUE">
                 <block type="math_number">
                   <field name="NUM">60</field>
@@ -366,6 +365,8 @@
               </value>
             </block>
           </category>
+
+
         </xml>
     </aside>
 

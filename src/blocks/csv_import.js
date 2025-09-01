@@ -1,191 +1,60 @@
-// === CSV Import Block Definition ===
-Blockly.defineBlocksWithJsonArray([
-  {
-    "type": "csv_import",
-    "message0": "import CSV %1 %2",
-    "args0": [
-      {
-        "type": "field_label",
-        "name": "CSV_FILENAME",
-        "text": "No file chosen"
-      },
-      {
-        "type": "field_file_button",
-        "name": "CSV_UPLOAD"
-      }
-    ],
-    "output": "Dataset",
-    "colour": 230,
-    "tooltip": "Import a CSV file as a dataset.",
-    "helpUrl": ""
-  }
-]);
-
-// Custom Blockly field for file upload
+// ---------- 1) 注册自定义字段（必须在定义 block 之前） ----------
 class FieldFileButton extends Blockly.Field {
   constructor(value, validator) {
-    super(value, validator);
-    this.button_ = null;
-    this.fileInput_ = null;
-    this.filename_ = 'No file chosen';
+    super(value || 'Upload', validator);
     this._dialogOpen = false;
   }
-
-  static fromJson(options) {
+  static fromJson(options) {           // 允许 JSON/程序式两种用法
     return new FieldFileButton(options['value']);
   }
-
   showEditor_() {
-    if (this._dialogOpen) {
-      return;
-    }
+    if (this._dialogOpen) return;
     this._dialogOpen = true;
-    // Always create a fresh input per open to avoid stale listeners
-    this.fileInput_ = document.createElement('input');
-    this.fileInput_.type = 'file';
-    this.fileInput_.accept = '.csv,text/csv';
-    this.fileInput_.style.display = 'none';
-    this.fileInput_.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        this.filename_ = file.name;
-        if (this.sourceBlock_ && this.sourceBlock_.getField('CSV_FILENAME')) {
-          this.sourceBlock_.getField('CSV_FILENAME').setValue(file.name);
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,text/csv';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.onchange = () => {
+      const file = input.files && input.files[0];
+      if (!file) { cleanup(); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        // 把文件名显示到标签上，把文本挂在 block 实例上备用
+        const block = this.getSourceBlock();
+        if (block) {
+          block.csv_filename = file.name;
+          block.csv_text = String(reader.result || '');
+          block.setFieldValue(file.name, 'CSV_FILENAME');
         }
-        this.render_();
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          Papa.parse(event.target.result, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-              Blockly.CsvImportData.data = results.data;
-              Blockly.CsvImportData.filename = file.name;
-              this._dialogOpen = false;
-            }
-          });
-        };
-        reader.readAsText(file);
-      } else {
-        this._dialogOpen = false;
-      }
-    }, { once: true });
-    this.fileInput_.value = '';
-    this.fileInput_.click();
-    // Safety reset in case 'change' doesn't fire (cancel)
-    setTimeout(() => { this._dialogOpen = false; }, 800);
-  }
-
-  // Render only the plus button
-  render_() {
-    super.render_();
-    if (this.button_) {
-      this.button_.remove();
-    }
-    
-    // Don't render the button if a file has been uploaded
-    if (this.filename_ !== 'No file chosen') {
-      return;
-    }
-    
-    const group = this.getSvgRoot();
-    if (group) {
-      this.button_ = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-      this.button_.setAttribute('width', 24);
-      this.button_.setAttribute('height', 24);
-      this.button_.setAttribute('x', 0);
-      this.button_.setAttribute('y', 0);
-      const html = document.createElement('div');
-      html.style.width = '24px';
-      html.style.height = '24px';
-      html.innerHTML = `<button style="height:24px;width:24px;border-radius:50%;border:none;background:#2d8cf0;color:white;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>`;
-      const btn = html.querySelector('button');
-      const stopAll = (e) => {
-        e.preventDefault();
-        if (typeof e.stopPropagation === 'function') e.stopPropagation();
-        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        cleanup();
       };
-      btn.addEventListener('mousedown', stopAll);
-      btn.addEventListener('touchstart', stopAll, { passive: false });
-      btn.addEventListener('click', (e) => {
-        // We open the editor ourselves and stop further handling to avoid duplicates
-        stopAll(e);
-        this.showEditor_();
-      });
-      this.button_.appendChild(html);
-      group.appendChild(this.button_);
-    }
-  }
+      reader.onerror = cleanup;
+      reader.readAsText(file);
+    };
 
-  getDisplayText_() {
-    return ''; // Return empty string to prevent default text rendering
+    const cleanup = () => {
+      this._dialogOpen = false;
+      if (input && input.parentNode) input.parentNode.removeChild(input);
+    };
+
+    input.click();
   }
 }
-
+// v10+ 用 fieldRegistry
 Blockly.fieldRegistry.register('field_file_button', FieldFileButton);
 
-Blockly.CsvImportData = {
-  data: null,
-  filename: null
-};
-
-// Register a no-op extension for compatibility with tests and future hooks
-if (typeof Blockly !== 'undefined' && Blockly.Extensions && typeof Blockly.Extensions.register === 'function') {
-  Blockly.Extensions.register('csv_import_extension', function() {
-    // Intentionally left blank; FieldFileButton handles interaction.
-  });
-}
-
-// JavaScript generator for the csv_import block using multiple registration methods
-function registerCsvImportGenerator() {
-  const generator = function() {
-    console.log('CSV import JavaScript generator called');
-    // Generate code to return the parsed CSV data  
-    const code = 'Blockly.CsvImportData.data';
-    console.log('Generated code:', code);
-    return [code, Blockly.JavaScript.ORDER_ATOMIC];
-  };
-
-  if (typeof Blockly !== 'undefined' && Blockly.JavaScript) {
-    // Method 1: Robust assignment (non-writable to avoid accidental clobbering)
-    try {
-      Object.defineProperty(Blockly.JavaScript, 'csv_import', { value: generator, configurable: true });
-    } catch (_) {
-      Blockly.JavaScript['csv_import'] = generator;
-    }
-    
-    // Method 2: Using forBlock (if available)
-    if (Blockly.JavaScript.forBlock) {
-      try {
-        Object.defineProperty(Blockly.JavaScript.forBlock, 'csv_import', { value: generator, configurable: true });
-      } catch (_) {
-        Blockly.JavaScript.forBlock['csv_import'] = generator;
-      }
-    }
-    
-    // Also mirror onto window.Blockly if present (test/browser parity)
-    if (typeof window !== 'undefined' && window.Blockly && window.Blockly.JavaScript) {
-      try {
-        Object.defineProperty(window.Blockly.JavaScript, 'csv_import', { value: generator, configurable: true });
-      } catch (_) {
-        window.Blockly.JavaScript['csv_import'] = generator;
-      }
-    }
-    
-    console.log('CSV import JavaScript generator registered successfully');
-    
-    // Verify registration immediately
-    console.log('Immediate verification - csv_import generator exists:', !!Blockly.JavaScript['csv_import']);
-    
-    // Also register on the prototype if it exists
-    if (Blockly.JavaScript.prototype) {
-      Blockly.JavaScript.prototype['csv_import'] = generator;
-    }
-    
-  } else {
-    console.error('Blockly.JavaScript not available when trying to register csv_import generator');
+// ---------- 2) 定义 csv_import 积木（程序式，避免 JSON 未注册字段时报错） ----------
+Blockly.Blocks['csv_import'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('import CSV')
+      .appendField(new Blockly.FieldLabel('No file chosen'), 'CSV_FILENAME')
+      .appendField(new FieldFileButton('Upload'), 'CSV_UPLOAD');
+    this.setOutput(true, 'Dataset');
+    this.setColour(20);
+    this.setTooltip('Import a CSV file as a dataset.');
   }
-}
-
-// Register immediately and avoid re-registration timers (prevents jest flakiness)
-registerCsvImportGenerator(); 
+};
