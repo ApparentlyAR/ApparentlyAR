@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApparentlyAR – Login</title>
+    <link rel="stylesheet" href="login.css" />
+</head>
+
+<body>
+    <!-- React akan mount ke sini -->
+    <div id="react-login-root"></div>
+
+    <!-- React entry script -->
+    <script type="module">
+        import React from "react";
+        import { createRoot } from "react-dom/client";
+        import Login from "../src/react/pages/Login.jsx"; // sesuaikan path kalau perlu
+
+        const container = document.getElementById("react-login-root");
+        if (container) {
+            createRoot(container).render(<Login />);
+        }
+    </script>
+</body>
+
+</html>

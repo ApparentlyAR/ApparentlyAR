@@ -7,6 +7,10 @@ import AppHeader from './components/AppHeader';
 import ButtonPanel from './components/ButtonPanel';
 import OutputDisplay from './components/OutputDisplay';
 import StatusIndicator from './components/StatusIndicator';
+// tambahan by najla :) import React Router to enable navigation
+import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
+// tambahan by najla :) import Login page
+import Login from "./pages/Login";
 
 // Main App component that manages all UI components
 const InterfaceComponents = () => {
@@ -30,6 +34,7 @@ const InterfaceComponents = () => {
 
   return (
     <>
+      <h1 style={{color: 'blue'}}>InterfaceComponents Test Heading</h1>
       {headerRoot && createPortal(<AppHeader />, headerRoot)}
       {statusRoot && createPortal(
         <StatusIndicator 
@@ -55,12 +60,31 @@ const InterfaceComponents = () => {
   );
 };
 
+// tambahan by najla :) wrapper component for routing between login page and main interface
+function AppRouter() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* tambahan by najla :) when path is "/" redirect to /login */}
+        <Route path="/" element={<Navigate to="/login" />} />
+        {/* tambahan by najla :) login page */}
+        <Route path="/login" element={<Login />} />
+        {/* tambahan by najla :) main interface page shown after login */}
+        <Route path="/main" element={<InterfaceComponents />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+
 // Initialize React components when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-  // Mount the new interface components
-  const interfaceRoot = document.createElement('div');
-  const root = createRoot(interfaceRoot);
-  root.render(<InterfaceComponents />);
+  // Mount the React app to the root div in index.html
+  const interfaceRoot = document.getElementById('root');
+  if (interfaceRoot) {
+    const root = createRoot(interfaceRoot);
+    root.render(<AppRouter />);
+  }
 
   // Mount existing DataVisualizationPanel if container exists
   const chartContainer = document.getElementById('react-chart-container');
