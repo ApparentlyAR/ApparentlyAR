@@ -31,6 +31,17 @@ module.exports = {
         TextEncoder: TextEncoder,
         TextDecoder: TextDecoder,
       }
+    },
+    {
+      displayName: 'ar-modules',
+      testEnvironment: 'node', 
+      testMatch: [
+        '**/tests/ar/**/*.test.js'
+      ],
+      setupFilesAfterEnv: [],
+      collectCoverageFrom: [
+        'src/ar/**/*.js'
+      ]
     }
   ],
   
@@ -43,6 +54,8 @@ module.exports = {
   // Coverage collection settings
   collectCoverageFrom: [
     'src/backend/**/*.js',
+    'src/ar/**/*.js',
+    'src/blocks/**/*.js',
     'server.js',
     '!**/node_modules/**',
     '!**/tests/**'
@@ -64,5 +77,15 @@ module.exports = {
   
   // Test setup and configuration
   setupFilesAfterEnv: [],
-  testTimeout: 10000
+  testTimeout: 10000,
+  
+  // Clear all timers after each test to prevent timeout issues
+  clearMocks: true,
+  
+  // Force exit after tests to prevent hanging
+  forceExit: true,
+  
+  // Memory management
+  maxWorkers: 1,
+  workerIdleMemoryLimit: '512MB'
 };

@@ -119,12 +119,14 @@ class HybridARController {
     });
     
     const markerStatus = document.getElementById('marker-status');
-    if (visibleMarkers > 0) {
-      markerStatus.textContent = `${visibleMarkers} marker(s) detected`;
-      markerStatus.className = 'status detecting';
-    } else {
-      markerStatus.textContent = 'Ready for markers';
-      markerStatus.className = 'status ready';
+    if (markerStatus) {
+      if (visibleMarkers > 0) {
+        markerStatus.textContent = `${visibleMarkers} marker(s) detected`;
+        markerStatus.className = 'status detecting';
+      } else {
+        markerStatus.textContent = 'Ready for markers';
+        markerStatus.className = 'status ready';
+      }
     }
   }
 
@@ -187,42 +189,48 @@ class HybridARController {
     const limitBehaviorSelect = document.getElementById('limit-behavior');
     
     // Enable/disable chart limit
-    enableLimitCheckbox.addEventListener('change', (e) => {
-      const enabled = e.target.checked;
-      const maxCharts = parseInt(maxChartsInput.value) || 5;
-      const behavior = limitBehaviorSelect.value || 'block';
-      
-      this.chartManager.setChartLimit(enabled, maxCharts, behavior);
-      limitSettings.style.display = enabled ? 'block' : 'none';
-      this.saveChartLimitSettings();
-      
-      console.log(`Chart limit ${enabled ? 'enabled' : 'disabled'}`);
-    });
+    if (enableLimitCheckbox) {
+      enableLimitCheckbox.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        const maxCharts = parseInt(maxChartsInput.value) || 5;
+        const behavior = limitBehaviorSelect.value || 'block';
+        
+        this.chartManager.setChartLimit(enabled, maxCharts, behavior);
+        if (limitSettings) limitSettings.style.display = enabled ? 'block' : 'none';
+        this.saveChartLimitSettings();
+        
+        console.log(`Chart limit ${enabled ? 'enabled' : 'disabled'}`);
+      });
+    }
     
     // Update max charts
-    maxChartsInput.addEventListener('input', (e) => {
-      const newMax = parseInt(e.target.value);
-      if (newMax >= 1 && newMax <= 20) {
-        this.chartManager.setChartLimit(
-          this.chartManager.chartLimitEnabled,
-          newMax,
-          this.chartManager.limitBehavior
-        );
-        this.saveChartLimitSettings();
-        console.log(`Max charts set to: ${newMax}`);
-      }
-    });
+    if (maxChartsInput) {
+      maxChartsInput.addEventListener('input', (e) => {
+        const newMax = parseInt(e.target.value);
+        if (newMax >= 1 && newMax <= 20) {
+          this.chartManager.setChartLimit(
+            this.chartManager.chartLimitEnabled,
+            newMax,
+            this.chartManager.limitBehavior
+          );
+          this.saveChartLimitSettings();
+          console.log(`Max charts set to: ${newMax}`);
+        }
+      });
+    }
     
     // Update limit behavior
-    limitBehaviorSelect.addEventListener('change', (e) => {
-      this.chartManager.setChartLimit(
-        this.chartManager.chartLimitEnabled,
-        this.chartManager.maxCharts,
-        e.target.value
-      );
-      this.saveChartLimitSettings();
-      console.log(`Limit behavior set to: ${e.target.value}`);
-    });
+    if (limitBehaviorSelect) {
+      limitBehaviorSelect.addEventListener('change', (e) => {
+        this.chartManager.setChartLimit(
+          this.chartManager.chartLimitEnabled,
+          this.chartManager.maxCharts,
+          e.target.value
+        );
+        this.saveChartLimitSettings();
+        console.log(`Limit behavior set to: ${e.target.value}`);
+      });
+    }
   }
 
   /**
@@ -245,8 +253,10 @@ class HybridARController {
    */
   updateStatus(message, type) {
     const statusEl = document.getElementById('status');
-    statusEl.textContent = message;
-    statusEl.className = `status ${type}`;
+    if (statusEl) {
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+    }
   }
 
   /**

@@ -93,6 +93,8 @@ class HandTracking {
     const canvas = document.getElementById('hand-overlay');
     const video = document.querySelector('video');
     
+    if (!canvas) return;
+    
     if (video && video.videoWidth > 0) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -128,8 +130,10 @@ class HandTracking {
               this.lastProcessTime = performance.now() - startTime;
               
               // Update performance stats
-              document.getElementById('process-time').textContent = this.lastProcessTime.toFixed(1);
-              document.getElementById('video-resolution').textContent = `${video.videoWidth}x${video.videoHeight}`;
+              const processTimeEl = document.getElementById('process-time');
+              const videoResolutionEl = document.getElementById('video-resolution');
+              if (processTimeEl) processTimeEl.textContent = this.lastProcessTime.toFixed(1);
+              if (videoResolutionEl) videoResolutionEl.textContent = `${video.videoWidth}x${video.videoHeight}`;
             } catch (e) {
               console.warn('MediaPipe processing error:', e);
               this.updateStatus('Hand tracking error - retrying...', 'error');
@@ -147,8 +151,10 @@ class HandTracking {
       this.handsActive = true;
       processFrame();
       
-      document.getElementById('start-hands').disabled = true;
-      document.getElementById('stop-hands').disabled = false;
+      const startButton = document.getElementById('start-hands');
+      const stopButton = document.getElementById('stop-hands');
+      if (startButton) startButton.disabled = true;
+      if (stopButton) stopButton.disabled = false;
       
       this.updateStatus('Hand tracking active - make fist to place, pinch to move', 'detecting');
       
@@ -164,13 +170,19 @@ class HandTracking {
   stop() {
     this.handsActive = false;
     
-    document.getElementById('start-hands').disabled = false;
-    document.getElementById('stop-hands').disabled = true;
+    const startButton = document.getElementById('start-hands');
+    const stopButton = document.getElementById('stop-hands');
+    if (startButton) startButton.disabled = false;
+    if (stopButton) stopButton.disabled = true;
     
     // Clear hand overlay
     const canvas = document.getElementById('hand-overlay');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (canvas && canvas.getContext) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
     
     // Reset gesture state
     this.gestureDetector.reset();
@@ -185,7 +197,10 @@ class HandTracking {
    */
   onHandResults(results) {
     const canvas = document.getElementById('hand-overlay');
+    if (!canvas) return;
+    
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
     // Clear previous frame
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -200,13 +215,42 @@ class HandTracking {
         this.gestureDetector.drawHandLandmarks(ctx, landmarks);
         handDetected = true;
         
-        // Process gestures
+        // Process gestures in priority order
         if (this.gestureDetector.isPinchGesture(landmarks, handedness)) {
           this.gestureDetector.handlePinchGesture(
             landmarks, 
             this.chartManager.getCharts(), 
             this.chartManager.coordinateSystem
           );
+        } else if (this.gestureDetector.isPeaceGesture(landmarks, handedness)) {
+          this.gestureDetector.handlePeaceGesture(
+            landmarks,
+            this.chartManager.getCharts(),
+            this.chartManager.coordinateSystem
+          );
+        } else if (this.gestureDetector.isThumbsUpGesture(landmarks, handedness)) {
+          this.gestureDetector.handleScaleGesture(
+            landmarks,
+            this.chartManager.getCharts(),
+            this.chartManager.coordinateSystem,
+            true
+          );
+        } else if (this.gestureDetector.isThumbsDownGesture(landmarks, handedness)) {
+          this.gestureDetector.handleScaleGesture(
+            landmarks,
+            this.chartManager.getCharts(),
+            this.chartManager.coordinateSystem,
+            false
+          );
+        } else if (this.gestureDetector.isPointGesture(landmarks, handedness)) {
+          this.gestureDetector.handlePointGesture(
+            landmarks,
+            this.chartManager.getCharts(),
+            this.chartManager.coordinateSystem,
+            this.chartManager
+          );
+        } else if (this.gestureDetector.isOpenHandGesture(landmarks, handedness)) {
+          this.handleOpenHandGesture(landmarks, i);
         } else if (this.gestureDetector.isClosedPalm(landmarks, handedness)) {
           this.chartManager.placeChartAtHand(landmarks, this.updateStatus);
         }
@@ -217,6 +261,111 @@ class HandTracking {
     if (!handDetected && this.gestureDetector.isPinching) {
       this.gestureDetector.releaseChart();
     }
+  }
+
+  /**
+   * Handle open hand gesture for chart grouping preparation
+   * 
+   * @param {Array} landmarks - MediaPipe hand landmarks
+   * @param {number} handIndex - Index of current hand
+   */
+  handleOpenHandGesture(landmarks, handIndex) {
+    const palmCenter = landmarks[9];
+    const canvas = document.getElementById('hand-overlay');
+    
+    const x = (1 - palmCenter.x) * canvas.width;
+    const y = palmCenter.y * canvas.height;
+    
+    // Store hand position for potential grouping
+    if (!this.handPositions) this.handPositions = {};
+    this.handPositions[handIndex] = { x, y, timestamp: Date.now() };
+    
+    // Check for two-hand grouping gesture
+    this.checkForGroupingGesture();
+  }
+
+  /**
+   * Check if two hands are performing grouping gesture
+   */
+  checkForGroupingGesture() {
+    if (!this.handPositions) return;
+    
+    const handIndices = Object.keys(this.handPositions);
+    const now = Date.now();
+    
+    // Remove stale hand positions
+    handIndices.forEach(index => {
+      if (now - this.handPositions[index].timestamp > 1000) {
+        delete this.handPositions[index];
+      }
+    });
+    
+    const activeHands = Object.keys(this.handPositions);
+    if (activeHands.length >= 2) {
+      this.performChartGrouping();
+    }
+  }
+
+  /**
+   * Perform chart grouping with two-hand gesture
+   */
+  performChartGrouping() {
+    const handPositions = Object.values(this.handPositions);
+    const charts = this.chartManager.getCharts();
+    
+    // Find charts near each hand position
+    const chartsNearHands = handPositions.map(handPos => {
+      return this.chartManager.coordinateSystem.findChartAtPosition(
+        handPos.x, 
+        handPos.y, 
+        charts
+      );
+    }).filter(chart => chart !== null);
+    
+    if (chartsNearHands.length >= 2) {
+      this.createChartGroup(chartsNearHands);
+    }
+  }
+
+  /**
+   * Create a visual group of charts
+   * 
+   * @param {Array} charts - Charts to group
+   */
+  createChartGroup(charts) {
+    const groupId = 'group-' + Date.now();
+    
+    // Calculate group center
+    const centerX = charts.reduce((sum, chart) => sum + chart.screenX, 0) / charts.length;
+    const centerY = charts.reduce((sum, chart) => sum + chart.screenY, 0) / charts.length;
+    
+    // Mark charts as grouped
+    charts.forEach((chart, index) => {
+      chart.groupId = groupId;
+      chart.groupIndex = index;
+      
+      // Add visual grouping indicator
+      chart.entity.setAttribute('animation__group', {
+        property: 'scale',
+        from: '1 1 1',
+        to: '1.1 1.1 1.1',
+        dur: 200,
+        direction: 'alternate'
+      });
+      
+      // Add subtle glow effect
+      chart.entity.setAttribute('material', {
+        src: `#${chart.canvas.id}`,
+        transparent: true,
+        shader: 'flat',
+        emissive: '#333333'
+      });
+    });
+    
+    this.updateStatus(`Grouped ${charts.length} charts`, 'ready');
+    
+    // Clear hand positions after grouping
+    this.handPositions = {};
   }
 
   /**

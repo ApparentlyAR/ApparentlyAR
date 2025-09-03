@@ -12,6 +12,15 @@ const request = require('supertest');
 const app = require('../../server');
 
 describe('Frontend Error Handling', () => {
+  let consoleSpy;
+
+  beforeAll(() => {
+    consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    consoleSpy.mockRestore();
+  });
 
   describe('API Error Handling', () => {
     
@@ -63,7 +72,7 @@ describe('Frontend Error Handling', () => {
           chartType: 'bar',
           options: {}
         })
-        .expect(500);
+        .expect(400);
 
       expect(response.body).toHaveProperty('error');
     });

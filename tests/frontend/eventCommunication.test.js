@@ -37,6 +37,7 @@ describe('Frontend Event Communication', () => {
   });
 
   afterEach(() => {
+    jest.clearAllTimers();
     dom.window.close();
     delete global.window;
     delete global.document;

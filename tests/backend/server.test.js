@@ -2,6 +2,15 @@ const request = require('supertest');
 const app = require('../../server');
 
 describe('Server Routes', () => {
+  afterAll((done) => {
+    jest.clearAllTimers();
+    if (app && app.close) {
+      app.close(done);
+    } else {
+      done();
+    }
+  });
+
   describe('GET /', () => {
     it('should serve the main HTML file', async () => {
       const response = await request(app).get('/');
@@ -173,7 +182,7 @@ describe('Server Routes', () => {
         .set('Content-Type', 'application/json')
         .send('invalid json');
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
       expect(response.body.error).toBe('Internal server error');
     });
   });

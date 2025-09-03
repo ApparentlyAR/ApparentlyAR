@@ -126,6 +126,11 @@ describe('API Endpoints', () => {
     { name: 'Charlie', age: 28, score: 78, grade: 'B' }
   ];
 
+  afterAll((done) => {
+    jest.clearAllTimers();
+    done();
+  });
+
   describe('GET /', () => {
     test('should serve the main HTML page', async () => {
       const response = await request(app).get('/');
@@ -469,6 +474,8 @@ describe('API Endpoints', () => {
     });
 
     test('should handle malformed JSON', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
       const response = await request(app)
         .post('/api/process-data')
         .send('invalid json')
@@ -476,6 +483,8 @@ describe('API Endpoints', () => {
 
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('Internal server error');
+      
+      consoleSpy.mockRestore();
     });
   });
 });

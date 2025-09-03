@@ -69,8 +69,8 @@ class ChartManager {
     oldestChart.entity.remove();
     
     // Remove canvas from assets
-    if (oldestChart.canvas && oldestChart.canvas.parentNode) {
-      oldestChart.canvas.parentNode.removeChild(oldestChart.canvas);
+    if (oldestChart.canvas) {
+      oldestChart.canvas.remove();
     }
     
     // Destroy Chart.js instance
@@ -126,8 +126,10 @@ class ChartManager {
    * @param {number} screenY - Screen Y coordinate
    */
   createChart(screenX, screenY) {
-    const chartType = document.getElementById('chart-type').value;
-    const datasetName = document.getElementById('sample-data').value;
+    const chartTypeEl = document.getElementById('chart-type');
+    const datasetEl = document.getElementById('sample-data');
+    const chartType = chartTypeEl ? chartTypeEl.value : 'bar';
+    const datasetName = datasetEl ? datasetEl.value : 'students';
     
     // Create unique canvas for this chart
     const canvas = document.createElement('canvas');
@@ -141,22 +143,29 @@ class ChartManager {
     
     // Add canvas to assets
     const assets = document.querySelector('a-assets');
-    assets.appendChild(canvas);
+    if (assets) {
+      assets.appendChild(canvas);
+    }
     
     // Create A-Frame entity
     const entity = document.createElement('a-plane');
     
-    entity.setAttribute('id', chartId);
-    entity.setAttribute('width', '2');
-    entity.setAttribute('height', '1.5');
-    entity.setAttribute('material', `src: #${canvas.id}; transparent: true`);
-    
     // Convert screen coordinates to world coordinates
     const worldPos = this.coordinateSystem.screenToWorld(screenX, screenY);
-    entity.setAttribute('position', worldPos);
+    
+    if (entity.setAttribute) {
+      entity.setAttribute('id', chartId);
+      entity.setAttribute('width', '2');
+      entity.setAttribute('height', '1.5');
+      entity.setAttribute('material', `src: #${canvas.id}; transparent: true`);
+      entity.setAttribute('position', worldPos);
+    }
     
     // Add to scene
-    document.getElementById('hand-charts').appendChild(entity);
+    const handChartsContainer = document.getElementById('hand-charts');
+    if (handChartsContainer) {
+      handChartsContainer.appendChild(entity);
+    }
     
     // Store chart data
     const chartObj = {
@@ -187,21 +196,24 @@ class ChartManager {
   generateChart(canvas, type, data) {
     const ctx = canvas.getContext('2d');
     
+    // Ensure type is defined with fallback
+    const chartType = type || 'bar';
+    
     let chartConfig = {
-      type: type,
+      type: chartType,
       data: {},
       options: {
         responsive: false,
         animation: false,
         plugins: {
           legend: { display: true },
-          title: { display: true, text: `${type.toUpperCase()} Chart` }
+          title: { display: true, text: `${chartType.toUpperCase()} Chart` }
         }
       }
     };
     
     // Configure data based on type and dataset
-    if (type === 'bar' || type === 'line') {
+    if (chartType === 'bar' || chartType === 'line') {
       if (data === this.sampleData.students) {
         chartConfig.data = {
           labels: data.map(d => d.name),
@@ -236,7 +248,7 @@ class ChartManager {
           }]
         };
       }
-    } else if (type === 'pie') {
+    } else if (chartType === 'pie') {
       if (data === this.sampleData.students) {
         chartConfig.data = {
           labels: data.map(d => d.name),
@@ -252,7 +264,7 @@ class ChartManager {
           }]
         };
       }
-    } else if (type === 'scatter') {
+    } else if (chartType === 'scatter') {
       if (data === this.sampleData.students) {
         chartConfig.data = {
           datasets: [{
@@ -272,17 +284,21 @@ class ChartManager {
    */
   clearHandCharts() {
     this.handCharts.forEach(chartObj => {
-      // Remove entity from scene
-      chartObj.entity.remove();
-      
-      // Remove canvas from assets
-      if (chartObj.canvas && chartObj.canvas.parentNode) {
-        chartObj.canvas.parentNode.removeChild(chartObj.canvas);
-      }
-      
-      // Destroy Chart.js instance
-      if (chartObj.chart) {
-        chartObj.chart.destroy();
+      try {
+        // Remove entity from scene
+        chartObj.entity.remove();
+        
+        // Remove canvas from assets
+        if (chartObj.canvas) {
+          chartObj.canvas.remove();
+        }
+        
+        // Destroy Chart.js instance
+        if (chartObj.chart) {
+          chartObj.chart.destroy();
+        }
+      } catch (error) {
+        console.error('Error clearing chart:', error);
       }
     });
     
@@ -295,6 +311,7 @@ class ChartManager {
    */
   updateChartList() {
     const listEl = document.getElementById('chart-list');
+    if (!listEl) return;
     
     // Clear existing content safely
     while (listEl.firstChild) {
@@ -318,20 +335,26 @@ class ChartManager {
     
     // Update chart count with limit display
     const chartCountEl = document.getElementById('chart-count');
-    if (this.chartLimitEnabled) {
-      chartCountEl.textContent = `${this.handCharts.length}/${this.maxCharts}`;
-      
-      // Color coding based on limit proximity
-      if (this.handCharts.length >= this.maxCharts) {
-        chartCountEl.style.color = '#ff8a8a'; // Error red
-      } else if (this.handCharts.length >= this.maxCharts * 0.8) {
-        chartCountEl.style.color = '#ffce73'; // Warning yellow
+    if (chartCountEl) {
+      if (this.chartLimitEnabled) {
+        chartCountEl.textContent = `${this.handCharts.length}/${this.maxCharts}`;
+        
+        // Color coding based on limit proximity
+        if (chartCountEl.style) {
+          if (this.handCharts.length >= this.maxCharts) {
+            chartCountEl.style.color = '#ff8a8a'; // Error red
+          } else if (this.handCharts.length >= this.maxCharts * 0.8) {
+            chartCountEl.style.color = '#ffce73'; // Warning yellow
+          } else {
+            chartCountEl.style.color = '#8ff0a4'; // OK green
+          }
+        }
       } else {
-        chartCountEl.style.color = '#8ff0a4'; // OK green
+        chartCountEl.textContent = this.handCharts.length;
+        if (chartCountEl.style) {
+          chartCountEl.style.color = ''; // Reset to default
+        }
       }
-    } else {
-      chartCountEl.textContent = this.handCharts.length;
-      chartCountEl.style.color = ''; // Reset to default
     }
   }
 

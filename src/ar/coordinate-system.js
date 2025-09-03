@@ -72,6 +72,50 @@ class CoordinateSystem {
     }
     return null;
   }
+
+  /**
+   * Snap position to grid
+   * 
+   * @param {number} x - Screen X coordinate
+   * @param {number} y - Screen Y coordinate
+   * @param {number} gridSize - Grid size in pixels
+   * @returns {Object} Snapped coordinates {x, y}
+   */
+  snapToGrid(x, y, gridSize = 50) {
+    return {
+      x: Math.round(x / gridSize) * gridSize,
+      y: Math.round(y / gridSize) * gridSize
+    };
+  }
+
+  /**
+   * Calculate distance between two points
+   * 
+   * @param {Object} point1 - {x, y} coordinates
+   * @param {Object} point2 - {x, y} coordinates
+   * @returns {number} Distance between points
+   */
+  calculateDistance(point1, point2) {
+    return Math.sqrt(
+      Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2)
+    );
+  }
+
+  /**
+   * Check if two charts are close enough to group
+   * 
+   * @param {Object} chart1 - First chart object
+   * @param {Object} chart2 - Second chart object
+   * @param {number} threshold - Distance threshold for grouping
+   * @returns {boolean} True if charts can be grouped
+   */
+  canGroupCharts(chart1, chart2, threshold = 150) {
+    const distance = this.calculateDistance(
+      { x: chart1.screenX, y: chart1.screenY },
+      { x: chart2.screenX, y: chart2.screenY }
+    );
+    return distance < threshold;
+  }
 }
 
 // Export for use in other modules
