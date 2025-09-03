@@ -30,6 +30,11 @@ class FieldFileButton extends Blockly.Field {
     this.filename_ = 'No file chosen';
     this._dialogOpen = false;
   }
+  
+  // Mark field as serializable to prevent warnings
+  static get SERIALIZABLE() {
+    return true;
+  }
 
   static fromJson(options) {
     return new FieldFileButton(options['value']);
@@ -61,6 +66,12 @@ class FieldFileButton extends Blockly.Field {
             complete: (results) => {
               Blockly.CsvImportData.data = results.data;
               Blockly.CsvImportData.filename = file.name;
+              
+              // NEW: Display data in panel immediately and update column registry
+              if (window.BlockUtils && window.BlockUtils.updateDataPanel) {
+                window.BlockUtils.updateDataPanel(results.data);
+              }
+              
               this._dialogOpen = false;
             }
           });
