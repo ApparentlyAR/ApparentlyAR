@@ -295,14 +295,25 @@ class ChartManager {
    */
   updateChartList() {
     const listEl = document.getElementById('chart-list');
+    
+    // Clear existing content safely
+    while (listEl.firstChild) {
+      listEl.removeChild(listEl.firstChild);
+    }
+    
     if (this.handCharts.length === 0) {
-      listEl.innerHTML = '<div class="chart-item">No charts placed yet</div>';
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'chart-item';
+      emptyDiv.textContent = 'No charts placed yet';
+      listEl.appendChild(emptyDiv);
     } else {
-      listEl.innerHTML = this.handCharts.map(chart => 
-        `<div class="chart-item" onclick="selectChart('${chart.id}', this)">
-           ${chart.type.toUpperCase()} - ${chart.dataset}
-         </div>`
-      ).join('');
+      this.handCharts.forEach(chart => {
+        const chartDiv = document.createElement('div');
+        chartDiv.className = 'chart-item';
+        chartDiv.textContent = `${chart.type.toUpperCase()} - ${chart.dataset}`;
+        chartDiv.onclick = () => selectChart(chart.id, chartDiv);
+        listEl.appendChild(chartDiv);
+      });
     }
     
     // Update chart count with limit display

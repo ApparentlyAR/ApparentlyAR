@@ -283,8 +283,8 @@ class DataProcessor {
           calculatedValue = calculatedValue.replace(regex, row[col]);
         });
         
-        // Evaluate the expression
-        const result = eval(calculatedValue);
+        // Safe evaluation using Function constructor with restricted scope
+        const result = this._safeEvaluateExpression(calculatedValue);
         
         return {
           ...row,
@@ -297,6 +297,150 @@ class DataProcessor {
         };
       }
     });
+  }
+
+  /**
+   * Safely evaluate mathematical expressions without eval()
+   * 
+   * @param {string} expression - Mathematical expression to evaluate
+   * @returns {number} Calculated result
+   * @private
+   */
+  _safeEvaluateExpression(expression) {
+    // Convert to string and trim
+    expression = String(expression).trim();
+    
+    // Whitelist of allowed mathematical operations and numbers
+    const allowedPattern = /^[0-9+\-*/.() ]+$/;
+    
+    // Check if expression contains only allowed characters
+    if (!allowedPattern.test(expression)) {
+      throw new Error('Invalid characters in expression');
+    }
+    
+    // Additional validation: check for suspicious patterns
+    const suspiciousPatterns = [
+      /eval/i,
+      /function/i,
+      /return/i,
+      /import/i,
+      /require/i,
+      /process/i,
+      /global/i,
+      /window/i,
+      /document/i,
+      /constructor/i,
+      /__proto__/i,
+      /prototype/i,
+      /this/i,
+      /console/i,
+      /alert/i,
+      /prompt/i,
+      /confirm/i
+    ];
+    
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(expression)) {
+        throw new Error('Potentially unsafe expression');
+      }
+    }
+    
+    // Validate parentheses are balanced
+    let balance = 0;
+    for (const char of expression) {
+      if (char === '(') balance++;
+      if (char === ')') balance--;
+      if (balance < 0) throw new Error('Unbalanced parentheses');
+    }
+    if (balance !== 0) throw new Error('Unbalanced parentheses');
+    
+    // Simple arithmetic parser instead of Function constructor
+    try {
+      return this._parseArithmetic(expression);
+    } catch (error) {
+      throw new Error('Expression evaluation failed: ' + error.message);
+    }
+  }
+
+  /**
+   * Parse and evaluate simple arithmetic expressions safely
+   * 
+   * @param {string} expr - Expression to parse
+   * @returns {number} Result
+   * @private
+   */
+  _parseArithmetic(expr) {
+    // Remove spaces
+    expr = expr.replace(/\s+/g, '');
+    
+    // Handle parentheses recursively
+    while (expr.includes('(')) {
+      const start = expr.lastIndexOf('(');
+      const end = expr.indexOf(')', start);
+      if (end === -1) throw new Error('Unmatched parentheses');
+      
+      const innerExpr = expr.slice(start + 1, end);
+      const innerResult = this._parseArithmetic(innerExpr);
+      expr = expr.slice(0, start) + innerResult + expr.slice(end + 1);
+    }
+    
+    // Parse operations in order: *, /, +, -
+    return this._evaluateExpression(expr);
+  }
+
+  /**
+   * Evaluate arithmetic expression without parentheses
+   * 
+   * @param {string} expr - Expression to evaluate
+   * @returns {number} Result
+   * @private
+   */
+  _evaluateExpression(expr) {
+    // Handle multiplication and division first
+    let tokens = expr.split(/([+\-])/).filter(t => t !== '');
+    
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].includes('*') || tokens[i].includes('/')) {
+        tokens[i] = String(this._evaluateMultDiv(tokens[i]));
+      }
+    }
+    
+    // Handle addition and subtraction
+    let result = parseFloat(tokens[0]);
+    for (let i = 1; i < tokens.length; i += 2) {
+      const operator = tokens[i];
+      const operand = parseFloat(tokens[i + 1]);
+      
+      if (operator === '+') result += operand;
+      else if (operator === '-') result -= operand;
+    }
+    
+    return result;
+  }
+
+  /**
+   * Evaluate multiplication and division
+   * 
+   * @param {string} expr - Expression with * and /
+   * @returns {number} Result
+   * @private
+   */
+  _evaluateMultDiv(expr) {
+    const tokens = expr.split(/([*\/])/).filter(t => t !== '');
+    let result = parseFloat(tokens[0]);
+    
+    for (let i = 1; i < tokens.length; i += 2) {
+      const operator = tokens[i];
+      const operand = parseFloat(tokens[i + 1]);
+      
+      if (operator === '*') result *= operand;
+      else if (operator === '/') {
+        if (operand === 0) throw new Error('Division by zero');
+        result /= operand;
+      }
+    }
+    
+    return result;
   }
 
   /**

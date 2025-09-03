@@ -98,7 +98,11 @@ class FieldFileButton extends Blockly.Field {
       const html = document.createElement('div');
       html.style.width = '24px';
       html.style.height = '24px';
-      html.innerHTML = `<button style="height:24px;width:24px;border-radius:50%;border:none;background:#2d8cf0;color:white;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>`;
+      // Create button element securely without innerHTML
+      const button = document.createElement('button');
+      button.textContent = '+';
+      button.style.cssText = 'height:24px;width:24px;border-radius:50%;border:none;background:#2d8cf0;color:white;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+      html.appendChild(button);
       const btn = html.querySelector('button');
       const stopAll = (e) => {
         e.preventDefault();
