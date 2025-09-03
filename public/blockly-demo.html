@@ -687,7 +687,6 @@
 
     // Bridge functions for React components to call vanilla JS Blockly functions
     window.executeBlocklyCode = function() {
-      window.ensureGenerators();
       if (!workspace) return;
       
       // Update React state - executing
