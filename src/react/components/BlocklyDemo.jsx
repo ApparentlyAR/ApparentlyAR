@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
+import { Bar, Line, Pie } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
 
 const BlocklyDemo = () => {
   // Refs
@@ -14,6 +19,12 @@ const BlocklyDemo = () => {
   const [output, setOutput] = useState('');
   const [blocksWidth, setBlocksWidth] = useState(320);
   const [dataWidth, setDataWidth] = useState(360);
+  const [visualizationData, setVisualizationData] = useState(null);
+  const [visualizationType, setVisualizationType] = useState('table');
+  const [selectedDataset, setSelectedDataset] = useState('students');
+  const [selectedChartType, setSelectedChartType] = useState('bar');
+  const [displayedDataset, setDisplayedDataset] = useState('students'); // Track currently displayed dataset
+  const [csvFilename, setCsvFilename] = useState(null); // Track CSV filename when displayed
   
   // Constants
   const minBlocksWidth = 250;
@@ -37,46 +48,130 @@ const BlocklyDemo = () => {
     }
     
     // Initialize Blockly workspace
-    workspaceRef.current = Blockly.inject(blocklyDivRef.current, {
-      toolbox: document.getElementById('toolbox'),
-      grid: { 
-        spacing: 20, 
-        length: 3, 
-        colour: '#2b3350', 
-        snap: true 
-      },
-      zoom: { 
-        controls: true, 
-        wheel: true, 
-        startScale: 0.8, 
-        maxScale: 2, 
-        minScale: 0.3, 
-        scaleSpeed: 1.2 
-      },
-      move: { 
-        scrollbars: true, 
-        drag: true, 
-        wheel: true 
-      },
-      trashcan: true,
-      theme: {
-        base: Blockly.Themes.Dark,
-        componentStyles: {
-          workspaceBackgroundColour: '#0f1324',
-          toolboxBackgroundColour: '#171c2b',
-          toolboxForegroundColour: '#e7ebff',
-          flyoutBackgroundColour: '#171c2b',
-          flyoutForegroundColour: '#e7ebff',
-          flyoutOpacity: 0.8,
-          scrollbarColour: '#2b3350',
-          insertionMarkerColour: '#6ea8fe',
-          insertionMarkerOpacity: 0.3
+    const initWorkspace = () => {
+      workspaceRef.current = Blockly.inject(blocklyDivRef.current, {
+        toolbox: document.getElementById('toolbox'),
+        grid: { 
+          spacing: 20, 
+          length: 3, 
+          colour: '#2b3350', 
+          snap: true 
+        },
+        zoom: { 
+          controls: true, 
+          wheel: true, 
+          startScale: 0.8, 
+          maxScale: 2, 
+          minScale: 0.3, 
+          scaleSpeed: 1.2 
+        },
+        move: { 
+          scrollbars: {
+            horizontal: true,
+            vertical: true
+          },
+          drag: true, 
+          wheel: true 
+        },
+        trashcan: true,
+        theme: {
+          base: Blockly.Themes.Dark,
+          componentStyles: {
+            workspaceBackgroundColour: '#0f1324',
+            toolboxBackgroundColour: '#171c2b',
+            toolboxForegroundColour: '#e7ebff',
+            flyoutBackgroundColour: '#171c2b',
+            flyoutForegroundColour: '#e7ebff',
+            flyoutOpacity: 0.8,
+            scrollbarColour: '#2b3350',
+            insertionMarkerColour: '#6ea8fe',
+            insertionMarkerOpacity: 0.3
+          }
+        },
+        scrollbar: true
+      });
+      
+      // Verify custom blocks are registered and refresh toolbox
+      setTimeout(() => {
+        console.log('Checking if custom blocks are registered:');
+        console.log('csv_import block registered:', !!Blockly.Blocks['csv_import']);
+        console.log('to_json block registered:', !!Blockly.Blocks['to_json']);
+        console.log('Available blocks:', Object.keys(Blockly.Blocks || {}));
+        
+        // Check if generators are registered
+        console.log('csv_import generator registered:', !!Blockly.JavaScript['csv_import']);
+        console.log('to_json generator registered:', !!Blockly.JavaScript['to_json']);
+        
+        // Force refresh toolbox if custom blocks are available
+        if (workspaceRef.current && Blockly.Blocks['csv_import'] && Blockly.Blocks['to_json']) {
+          try {
+            // Update toolbox to ensure custom blocks are visible
+            workspaceRef.current.updateToolbox(document.getElementById('toolbox'));
+            console.log('Toolbox updated successfully');
+          } catch (error) {
+            console.warn('Toolbox update error:', error);
+          }
+        } else {
+          console.warn('Custom blocks not available, will check again in 500ms');
+          // Try one more time after a delay
+          setTimeout(() => {
+            if (workspaceRef.current && Blockly.Blocks['csv_import'] && Blockly.Blocks['to_json']) {
+              try {
+                workspaceRef.current.updateToolbox(document.getElementById('toolbox'));
+                console.log('Toolbox updated on second attempt');
+              } catch (error) {
+                console.warn('Toolbox update error on second attempt:', error);
+              }
+            }
+          }, 500);
         }
-      }
-    });
+      }, 100);
+    };
+    
+    // Check if custom blocks are already loaded, otherwise wait for them
+    if (Blockly.Blocks['csv_import'] && Blockly.Blocks['to_json']) {
+      // Custom blocks already loaded, initialize workspace immediately
+      initWorkspace();
+    } else {
+      // Wait for custom blocks to be loaded
+      console.log('Waiting for custom blocks to load...');
+      let attempts = 0;
+      const maxAttempts = 20; // Wait up to 2 seconds
+      
+      const checkBlocks = () => {
+        attempts++;
+        if (Blockly.Blocks['csv_import'] && Blockly.Blocks['to_json']) {
+          console.log('Custom blocks loaded, initializing workspace');
+          initWorkspace();
+        } else if (attempts < maxAttempts) {
+          console.log(`Custom blocks not loaded yet, checking again in 100ms (attempt ${attempts}/${maxAttempts})`);
+          setTimeout(checkBlocks, 100);
+        } else {
+          console.warn('Custom blocks failed to load within timeout, initializing workspace anyway');
+          initWorkspace();
+        }
+      };
+      
+      // Start checking for blocks
+      setTimeout(checkBlocks, 100);
+    }
     
     // Mobile device detection
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    
+    // Improved workspace configuration for scroll handling
+    if (workspaceRef.current) {
+      // Disable flyout scrollbars to prevent double scrollbars
+      const toolbox = workspaceRef.current.getToolbox();
+      if (toolbox && toolbox.getFlyout()) {
+        const flyout = toolbox.getFlyout();
+        // Hide flyout scrollbars
+        const flyoutSvg = flyout.svgGroup_;
+        if (flyoutSvg) {
+          flyoutSvg.style.overflow = 'hidden';
+        }
+      }
+    }
     
     // Initial resize with mobile detection
     setTimeout(() => {
@@ -112,6 +207,26 @@ const BlocklyDemo = () => {
     if (workspaceRef.current && blocklyDivRef.current) {
       try {
         Blockly.svgResize(workspaceRef.current);
+        
+        // Fix for scroll issues - reapply workspace configuration
+        if (workspaceRef.current) {
+          // Ensure proper scrollbar configuration
+          const metrics = workspaceRef.current.getMetrics();
+          if (metrics) {
+            // This helps reset any scrollbar issues
+            workspaceRef.current.scrollbar && workspaceRef.current.scrollbar.resize();
+          }
+          
+          // Re-hide flyout scrollbars if needed
+          const toolbox = workspaceRef.current.getToolbox();
+          if (toolbox && toolbox.getFlyout()) {
+            const flyout = toolbox.getFlyout();
+            const flyoutSvg = flyout.svgGroup_;
+            if (flyoutSvg) {
+              flyoutSvg.style.overflow = 'hidden';
+            }
+          }
+        }
       } catch (error) {
         console.warn('Resize error:', error);
       }
@@ -154,6 +269,14 @@ const BlocklyDemo = () => {
       setOutput(result !== undefined ? String(result) : 'Code executed successfully');
       setIsError(false);
       
+      // Check if we have CSV data to visualize
+      if (Blockly.CsvImportData && Blockly.CsvImportData.data) {
+        setVisualizationData(Blockly.CsvImportData.data);
+        setVisualizationType('table');
+        setDisplayedDataset('block');
+        setCsvFilename(Blockly.CsvImportData.filename || null);
+      }
+      
       // Dispatch event for automatic visualization of CSV data
       window.dispatchEvent(new CustomEvent('blocklyExecuted'));
     } catch (e) {
@@ -180,6 +303,272 @@ const BlocklyDemo = () => {
     setIsError(false);
   }, []);
   
+  // Generate chart from selected dataset
+  const handleGenerateChart = useCallback(() => {
+    // Handle "block data" option - use data from Blockly execution
+    if (selectedDataset === 'block') {
+      if (Blockly.CsvImportData && Blockly.CsvImportData.data) {
+        setVisualizationData(Blockly.CsvImportData.data);
+        setVisualizationType(selectedChartType);
+        setDisplayedDataset('block');
+        setCsvFilename(Blockly.CsvImportData.filename || null);
+        setOutput(`Loaded block data with ${Blockly.CsvImportData.data.length} records`);
+      } else {
+        setOutput('No block data available. Please import CSV data first.');
+        setIsError(true);
+        return;
+      }
+    } else {
+      // Fetch data from backend API for other datasets
+      setOutput(`Generating ${selectedChartType} chart for ${selectedDataset} data...`);
+      
+      fetch(`/api/test-data/${selectedDataset}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.data) {
+            setVisualizationData(data.data);
+            setVisualizationType(selectedChartType);
+            setDisplayedDataset(selectedDataset);
+            setCsvFilename(null); // Clear CSV filename when showing other datasets
+            setOutput(`Loaded ${selectedDataset} data with ${data.data.length} records`);
+          } else {
+            setOutput(`Failed to load ${selectedDataset} data`);
+            setIsError(true);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
+          setOutput(`Error loading ${selectedDataset} data: ${error.message}`);
+          setIsError(true);
+        });
+    }
+  }, [selectedDataset, selectedChartType]);
+  
+  // Render chart based on selected chart type and data
+  const renderChart = useCallback(() => {
+    if (!visualizationData || visualizationData.length === 0) {
+      return (
+        <div className="text-sm text-muted">
+          No data available to visualize
+        </div>
+      );
+    }
+    
+    // Get the first few rows for display
+    const displayData = visualizationData.slice(0, 20); // Limit to 20 rows for better visualization
+    
+    // Get column names
+    const columns = Object.keys(displayData[0]);
+    
+    // For table view, show the data in a table
+    if (selectedChartType === 'table') {
+      return (
+        <div className="w-full h-full overflow-auto">
+          <div className="bg-panel rounded-lg border border-border overflow-hidden">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-panel2">
+                <tr>
+                  {columns.map((header) => (
+                    <th 
+                      key={header} 
+                      className="px-4 py-2 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {displayData.map((row, rowIndex) => (
+                  <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-panel' : 'bg-panel2'}>
+                    {columns.map((column) => (
+                      <td 
+                        key={column} 
+                        className="px-4 py-2 text-sm text-text whitespace-nowrap"
+                      >
+                        {String(row[column])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {visualizationData.length > 20 && (
+              <div className="px-4 py-2 text-sm text-muted border-t border-border">
+                Showing 20 of {visualizationData.length} rows
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    
+    // For chart views, prepare chart data
+    // We'll use the first column as labels and the second column as values for simplicity
+    if (columns.length < 2) {
+      return (
+        <div className="text-sm text-muted">
+          Not enough columns to create a chart. Need at least 2 columns.
+        </div>
+      );
+    }
+    
+    const labels = displayData.map(row => row[columns[0]]);
+    const dataValues = displayData.map(row => {
+      const value = row[columns[1]];
+      // Try to convert to number, if it fails, return 0
+      const numValue = Number(value);
+      return isNaN(numValue) ? 0 : numValue;
+    });
+    
+    const chartData = {
+      labels: labels,
+      datasets: [
+        {
+          label: columns[1],
+          data: dataValues,
+          backgroundColor: 'rgba(110, 168, 254, 0.6)',
+          borderColor: 'rgba(110, 168, 254, 1)',
+          borderWidth: 1,
+        },
+      ],
+    };
+    
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: '#e7ebff',
+          },
+        },
+        title: {
+          display: true,
+          text: `${selectedChartType.charAt(0).toUpperCase() + selectedChartType.slice(1)} Chart: ${columns[0]} vs ${columns[1]}`,
+          color: '#e7ebff',
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#a9b4d0',
+          },
+          grid: {
+            color: '#2b3350',
+          },
+        },
+        y: {
+          ticks: {
+            color: '#a9b4d0',
+          },
+          grid: {
+            color: '#2b3350',
+          },
+        },
+      },
+    };
+    
+    // Render different chart types
+    switch (selectedChartType) {
+      case 'bar':
+        return (
+          <div className="w-full h-full">
+            <Bar data={chartData} options={chartOptions} />
+          </div>
+        );
+      case 'line':
+        return (
+          <div className="w-full h-full">
+            <Line data={chartData} options={chartOptions} />
+          </div>
+        );
+      case 'pie':
+        // For pie charts, we need to aggregate data
+        const aggregatedData = {};
+        displayData.forEach(row => {
+          const label = row[columns[0]];
+          const value = Number(row[columns[1]]) || 0;
+          if (aggregatedData[label]) {
+            aggregatedData[label] += value;
+          } else {
+            aggregatedData[label] = value;
+          }
+        });
+        
+        const pieChartData = {
+          labels: Object.keys(aggregatedData),
+          datasets: [
+            {
+              data: Object.values(aggregatedData),
+              backgroundColor: [
+                'rgba(110, 168, 254, 0.6)',
+                'rgba(126, 230, 200, 0.6)',
+                'rgba(255, 206, 115, 0.6)',
+                'rgba(255, 138, 138, 0.6)',
+                'rgba(143, 240, 164, 0.6)',
+                'rgba(170, 140, 255, 0.6)',
+                'rgba(255, 159, 64, 0.6)',
+                'rgba(153, 102, 255, 0.6)',
+                'rgba(255, 99, 132, 0.6)',
+                'rgba(54, 162, 235, 0.6)',
+              ],
+              borderColor: [
+                'rgba(110, 168, 254, 1)',
+                'rgba(126, 230, 200, 1)',
+                'rgba(255, 206, 115, 1)',
+                'rgba(255, 138, 138, 1)',
+                'rgba(143, 240, 164, 1)',
+                'rgba(170, 140, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+              ],
+              borderWidth: 1,
+            },
+          ],
+        };
+        
+        const pieChartOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#e7ebff',
+              },
+            },
+            title: {
+              display: true,
+              text: `Pie Chart: ${columns[0]} vs ${columns[1]}`,
+              color: '#e7ebff',
+            },
+          },
+        };
+        
+        return (
+          <div className="w-full h-full">
+            <Pie data={pieChartData} options={pieChartOptions} />
+          </div>
+        );
+      default:
+        return (
+          <div className="text-center">
+            <div className="text-sm text-muted mb-2">
+              {selectedChartType.charAt(0).toUpperCase() + selectedChartType.slice(1)} Chart
+            </div>
+            <div className="text-xs text-muted">
+              Chart visualization for {selectedChartType} will be implemented in the full version
+            </div>
+            <div className="mt-4 text-xs text-muted">
+              Data has {visualizationData.length} records with columns: {columns.join(', ')}
+            </div>
+          </div>
+        );
+    }
+  }, [visualizationData, selectedChartType]);
+  
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -198,6 +587,19 @@ const BlocklyDemo = () => {
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [executeBlocklyCode, showBlocklyCode, isExecuting]);
   
+  // Periodically check for data updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Check if we have CSV data to visualize
+      if (Blockly.CsvImportData && Blockly.CsvImportData.data && !visualizationData) {
+        setVisualizationData(Blockly.CsvImportData.data);
+        setVisualizationType('table');
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [visualizationData]);
+  
   // Initialize Blockly on mount
   useEffect(() => {
     initBlockly();
@@ -208,9 +610,44 @@ const BlocklyDemo = () => {
       setTimeout(debouncedResize, 300);
     });
     
+    // Listen for Blockly execution events
+    const handleBlocklyExecuted = () => {
+      // Check if we have CSV data to visualize
+      if (Blockly.CsvImportData && Blockly.CsvImportData.data) {
+        setVisualizationData(Blockly.CsvImportData.data);
+        setVisualizationType('table');
+      }
+    };
+    
+    window.addEventListener('blocklyExecuted', handleBlocklyExecuted);
+    
+    // Additional scroll fix after initialization
+    setTimeout(() => {
+      // Apply scroll fixes after Blockly is fully initialized
+      if (workspaceRef.current) {
+        try {
+          // Force refresh of scrollbars
+          workspaceRef.current.scrollbar && workspaceRef.current.scrollbar.resize();
+          
+          // Hide flyout scrollbars
+          const toolbox = workspaceRef.current.getToolbox();
+          if (toolbox && toolbox.getFlyout()) {
+            const flyout = toolbox.getFlyout();
+            const flyoutSvg = flyout.svgGroup_;
+            if (flyoutSvg) {
+              flyoutSvg.style.overflow = 'hidden';
+            }
+          }
+        } catch (error) {
+          console.warn('Scroll fix error:', error);
+        }
+      }
+    }, 500);
+    
     return () => {
       window.removeEventListener('resize', debouncedResize);
       window.removeEventListener('orientationchange', debouncedResize);
+      window.removeEventListener('blocklyExecuted', handleBlocklyExecuted);
       
       // Cleanup workspace
       if (workspaceRef.current) {
@@ -507,6 +944,8 @@ const BlocklyDemo = () => {
                 >Dataset</span>
                 <select 
                   className="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 disabled:opacity-50"
+                  value={selectedDataset}
+                  onChange={(e) => setSelectedDataset(e.target.value)}
                 >
                   <option value="students">Students Data</option>
                   <option value="weather">Weather Data</option>
@@ -521,6 +960,8 @@ const BlocklyDemo = () => {
                 >Type</span>
                 <select 
                   className="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 disabled:opacity-50"
+                  value={selectedChartType}
+                  onChange={(e) => setSelectedChartType(e.target.value)}
                 >
                   <option value="bar">Bar Chart</option>
                   <option value="line">Line Chart</option>
@@ -537,13 +978,13 @@ const BlocklyDemo = () => {
               
               <button 
                 className="rounded-lg border border-[#2a4bff] bg-gradient-to-b from-[#2a4bff] to-[#2140d9] text-white text-sm px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleGenerateChart}
               >
                 Generate Chart
               </button>
             </div>
           </div>
           
-          {/* Visualization Container */}
           <div
             className="relative m-3 rounded-2xl border border-border overflow-hidden"
             style={{
@@ -551,10 +992,31 @@ const BlocklyDemo = () => {
             }}
           >
             {/* Chart Component */}
-            <div id="react-chart-container" className="w-full h-full min-h-[400px] grid place-items-center text-muted">
-              <div className="text-sm text-muted">
-                Visualization will appear here when blocks are executed
-              </div>
+            <div id="react-chart-container" className="w-full h-full min-h-[400px] p-4">
+              {visualizationData ? (
+                <div className="w-full h-full flex flex-col">
+                  <h3 className="text-lg font-semibold mb-2 text-text">
+                    {displayedDataset === 'block' && csvFilename 
+                      ? csvFilename 
+                      : displayedDataset === 'students' 
+                        ? 'Student Data' 
+                        : displayedDataset === 'weather' 
+                          ? 'Weather Data' 
+                          : displayedDataset === 'sales' 
+                            ? 'Sales Data' 
+                            : 'Visualization Data'}
+                  </h3>
+                  <div className="flex-1 flex items-center justify-center">
+                    {renderChart()}
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full grid place-items-center text-muted">
+                  <div className="text-sm text-muted">
+                    Visualization will appear here when blocks are executed or data is loaded
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -571,9 +1033,59 @@ const BlocklyDemo = () => {
           </div>
           
           <div className="overflow-auto p-2">
-            <div className="text-sm text-muted text-center py-8">
-              Data will appear here when imported via blocks
-            </div>
+            {Blockly.CsvImportData && Blockly.CsvImportData.data ? (
+              <div className="bg-panel2 rounded-lg border border-border overflow-hidden">
+                <div className="px-3 py-2 border-b border-border bg-panel">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-text">
+                      {Blockly.CsvImportData.filename || 'Imported Data'}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {Blockly.CsvImportData.data.length} rows
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-auto max-h-60">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-panel">
+                      <tr>
+                        {Blockly.CsvImportData.data.length > 0 && Object.keys(Blockly.CsvImportData.data[0]).map((header) => (
+                          <th 
+                            key={header} 
+                            className="px-3 py-2 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                          >
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {Blockly.CsvImportData.data.slice(0, 10).map((row, rowIndex) => (
+                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-panel' : 'bg-panel2'}>
+                          {Object.values(row).map((cell, cellIndex) => (
+                            <td 
+                              key={cellIndex} 
+                              className="px-3 py-2 text-xs text-text whitespace-nowrap"
+                            >
+                              {String(cell)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {Blockly.CsvImportData.data.length > 10 && (
+                    <div className="px-3 py-2 text-xs text-muted border-t border-border">
+                      Showing 10 of {Blockly.CsvImportData.data.length} rows
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted text-center py-8">
+                Data will appear here when imported via blocks
+              </div>
+            )}
           </div>
         </aside>
         
@@ -671,6 +1183,33 @@ const BlocklyDemo = () => {
         
         .blocklyText {
           fill: #e7ebff !important;
+        }
+        
+        /* Fixes for scroll issues */
+        .blocklyFlyout {
+          overflow: hidden !important;
+        }
+        
+        .blocklyFlyoutScrollbar {
+          display: none !important;
+        }
+        
+        .blocklySvg {
+          display: block;
+        }
+        
+        .blocklyToolboxDiv::-webkit-scrollbar {
+          display: none;
+        }
+        
+        .blocklyToolboxDiv {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
+        /* Ensure proper sizing */
+        .blocklyWorkspace {
+          overflow: hidden !important;
         }
         
         /* Chart.js mobile responsiveness */
