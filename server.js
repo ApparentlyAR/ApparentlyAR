@@ -11,6 +11,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const bodyParser = require('body-parser');
 
 // Import backend modules
 const dataProcessor = require('./src/backend/dataProcessor');
@@ -25,9 +26,38 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/src', express.static('src'));
+app.use(bodyParser.json());
 
 /**
- * Serve the main application page
+ * Serve the Login application page
+ */
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+/**
+ * Serve the Teacher Dashboard application page
+ */
+app.get('/teacher-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'teacher-dashboard.html'));
+});
+
+/**
+ * Serve the Teacher Create a Project Dashboard application page
+ */
+app.get('/create-project', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'create-project.html'));
+});
+
+/**
+ * Serve the View Project application page
+ */
+app.get('/view-project', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'view-project.html'));
+});
+
+/**
+ * Serve the Blockly application page
  */
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'blockly-demo.html'));
@@ -167,6 +197,53 @@ app.post('/api/ar-visualization', async (req, res) => {
     console.error('AR visualization error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+/**
+ * Temporary in-memory storage for projects -Najla
+ */
+let projects = [];
+
+/**
+ * Endpoint to save a new project -Najla
+ */
+app.post('/api/projects', (req, res) => {
+    const { name, description } = req.body;
+    const newProject = { id: Date.now(), name, description, status: 'Active' };
+    projects.push(newProject);
+    res.status(201).json(newProject);
+});
+
+/**
+ * Endpoint to fetch all projects -Najla
+ */
+app.get('/api/projects', (req, res) => {
+    res.json(projects);
+});
+
+/**
+ * Endpoint to fetch a single project by ID -Najla
+ */
+app.get('/api/projects/:id', (req, res) => {
+    const project = projects.find(p => p.id === parseInt(req.params.id));
+    if (project) {
+        res.json(project);
+    } else {
+        res.status(404).json({ error: 'Project not found' });
+    }
+});
+
+/**
+ * Endpoint to update a project by ID -Najla
+ */
+app.put('/api/projects/:id', (req, res) => {
+    const projectIndex = projects.findIndex(p => p.id === parseInt(req.params.id));
+    if (projectIndex !== -1) {
+        projects[projectIndex] = { ...projects[projectIndex], ...req.body };
+        res.json(projects[projectIndex]);
+    } else {
+        res.status(404).json({ error: 'Project not found' });
+    }
 });
 
 /**
