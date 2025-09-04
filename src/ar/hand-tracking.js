@@ -178,7 +178,7 @@ class HandTracking {
     // Clear hand overlay
     const canvas = document.getElementById('hand-overlay');
     if (canvas && canvas.getContext) {
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
@@ -199,7 +199,7 @@ class HandTracking {
     const canvas = document.getElementById('hand-overlay');
     if (!canvas) return;
     
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     
     // Clear previous frame
@@ -215,13 +215,15 @@ class HandTracking {
         this.gestureDetector.drawHandLandmarks(ctx, landmarks);
         handDetected = true;
         
-        // Process gestures in priority order
+        // Process gestures in priority order - fist moved up for chart creation
         if (this.gestureDetector.isPinchGesture(landmarks, handedness)) {
           this.gestureDetector.handlePinchGesture(
             landmarks, 
             this.chartManager.getCharts(), 
             this.chartManager.coordinateSystem
           );
+        } else if (this.gestureDetector.isClosedPalm(landmarks, handedness)) {
+          this.chartManager.placeChartAtHand(landmarks, this.updateStatus);
         } else if (this.gestureDetector.isPeaceGesture(landmarks, handedness)) {
           this.gestureDetector.handlePeaceGesture(
             landmarks,
@@ -251,8 +253,6 @@ class HandTracking {
           );
         } else if (this.gestureDetector.isOpenHandGesture(landmarks, handedness)) {
           this.handleOpenHandGesture(landmarks, i);
-        } else if (this.gestureDetector.isClosedPalm(landmarks, handedness)) {
-          this.chartManager.placeChartAtHand(landmarks, this.updateStatus);
         }
       }
     }

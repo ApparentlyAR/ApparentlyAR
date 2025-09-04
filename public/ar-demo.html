@@ -275,6 +275,7 @@
         canvas: document.getElementById('ar-canvas'), 
         alpha: true 
       });
+      renderer.useLegacyLights = false;
       renderer.setSize(640, 480);
 
       animate();
@@ -310,7 +311,7 @@
      */
         function onHandResults(results) {
       const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -618,7 +619,7 @@
      * @since 1.0.0
      */
     function generateChart(canvas, type, data) {
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       
       let chartConfig = {
         type: type,

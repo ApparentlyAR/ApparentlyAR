@@ -91,11 +91,17 @@ class ChartManager {
    * @param {Function} updateStatus - Status update callback
    */
   placeChartAtHand(landmarks, updateStatus) {
+    console.log('📊 placeChartAtHand called!');
+    
     const now = Date.now();
-    if (now - this.lastPlacedAt < this.PLACE_COOLDOWN_MS) return;
+    if (now - this.lastPlacedAt < this.PLACE_COOLDOWN_MS) {
+      console.log(`⏰ Cooldown active, ${this.PLACE_COOLDOWN_MS - (now - this.lastPlacedAt)}ms remaining`);
+      return;
+    }
     
     // Check chart limit if enabled
     if (this.chartLimitEnabled && this.handCharts.length >= this.maxCharts) {
+      console.log(`📈 Chart limit reached: ${this.handCharts.length}/${this.maxCharts}`);
       if (this.limitBehavior === 'block') {
         // Block placement and show feedback
         updateStatus(`Chart limit reached (${this.handCharts.length}/${this.maxCharts})`, 'error');
@@ -115,6 +121,8 @@ class ChartManager {
     const screenX = (1 - palmCenter.x) * canvas.width;
     const screenY = palmCenter.y * canvas.height; // Remove Y inversion - MediaPipe Y matches screen Y
     
+    console.log(`📍 Creating chart at screen coordinates: (${screenX.toFixed(1)}, ${screenY.toFixed(1)})`);
+    
     this.createChart(screenX, screenY);
     this.lastPlacedAt = now;
   }
@@ -126,10 +134,14 @@ class ChartManager {
    * @param {number} screenY - Screen Y coordinate
    */
   createChart(screenX, screenY) {
+    console.log('🎨 createChart called with coordinates:', screenX, screenY);
+    
     const chartTypeEl = document.getElementById('chart-type');
     const datasetEl = document.getElementById('sample-data');
     const chartType = chartTypeEl ? chartTypeEl.value : 'bar';
     const datasetName = datasetEl ? datasetEl.value : 'students';
+    
+    console.log(`📊 Chart config: type=${chartType}, dataset=${datasetName}`);
     
     // Create unique canvas for this chart
     const canvas = document.createElement('canvas');
@@ -138,20 +150,28 @@ class ChartManager {
     canvas.height = 300;
     canvas.id = chartId + '-canvas';
     
+    console.log(`🖼️ Created canvas: ${canvas.id}`);
+    
     // Generate chart texture
     const chart = this.generateChart(canvas, chartType, this.sampleData[datasetName]);
+    console.log(`📈 Generated Chart.js instance:`, !!chart);
     
     // Add canvas to assets
     const assets = document.querySelector('a-assets');
     if (assets) {
       assets.appendChild(canvas);
+      console.log(`✅ Added canvas to a-assets`);
+    } else {
+      console.error('❌ Could not find a-assets element');
     }
     
     // Create A-Frame entity
     const entity = document.createElement('a-plane');
+    console.log(`🎭 Created a-plane entity`);
     
     // Convert screen coordinates to world coordinates
     const worldPos = this.coordinateSystem.screenToWorld(screenX, screenY);
+    console.log(`🌍 World position: ${worldPos}`);
     
     if (entity.setAttribute) {
       entity.setAttribute('id', chartId);
@@ -159,12 +179,18 @@ class ChartManager {
       entity.setAttribute('height', '1.5');
       entity.setAttribute('material', `src: #${canvas.id}; transparent: true`);
       entity.setAttribute('position', worldPos);
+      console.log(`✅ Set entity attributes`);
+    } else {
+      console.error('❌ Entity setAttribute not available');
     }
     
     // Add to scene
     const handChartsContainer = document.getElementById('hand-charts');
     if (handChartsContainer) {
       handChartsContainer.appendChild(entity);
+      console.log(`✅ Added entity to hand-charts container`);
+    } else {
+      console.error('❌ Could not find hand-charts container');
     }
     
     // Store chart data
@@ -182,7 +208,8 @@ class ChartManager {
     this.handCharts.push(chartObj);
     this.updateChartList();
     
-    console.log(`Chart placed: ${chartType} with ${datasetName} data at world position ${worldPos}`);
+    console.log(`✅ Chart created successfully: ${chartType} with ${datasetName} data at world position ${worldPos}`);
+    console.log(`📊 Total charts now: ${this.handCharts.length}`);
   }
 
   /**
@@ -194,7 +221,7 @@ class ChartManager {
    * @returns {Chart} Chart.js instance
    */
   generateChart(canvas, type, data) {
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     
     // Ensure type is defined with fallback
     const chartType = type || 'bar';

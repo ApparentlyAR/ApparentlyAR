@@ -190,7 +190,12 @@ class GestureDetector {
       }
     }
     
-    return extendedFingers <= 1;
+    const isFist = extendedFingers <= 1;
+    if (isFist) {
+      console.log(`🤜 Fist detected! Extended fingers: ${extendedFingers}, handedness: ${handedness}`);
+    }
+    
+    return isFist;
   }
 
   /**
