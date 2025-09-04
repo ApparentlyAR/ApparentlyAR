@@ -1,4 +1,4 @@
-# ApparentlyAR
+# ApparentlyAR Yes
 
 A comprehensive educational data visualization platform that combines block-based programming with cutting-edge Augmented Reality technology. Designed for students in grades 8-10 to explore and visualize data through hands-on, creative learning experiences.
 
