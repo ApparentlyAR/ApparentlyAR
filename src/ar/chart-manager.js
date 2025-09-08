@@ -120,7 +120,7 @@ class ChartManager {
   }
 
   /**
-   * Create chart as A-Frame entity
+   * Create chart as A-Frame entity with unified coordinate system
    * 
    * @param {number} screenX - Screen X coordinate
    * @param {number} screenY - Screen Y coordinate
@@ -153,7 +153,22 @@ class ChartManager {
     
     // Convert screen coordinates to world coordinates
     const worldPos = this.coordinateSystem.screenToWorld(screenX, screenY);
-    entity.setAttribute('position', worldPos);
+    
+    // Use unified coordinate system for intelligent placement
+    const handPosition = {
+      x: parseFloat(worldPos.split(' ')[0]),
+      y: parseFloat(worldPos.split(' ')[1]),
+      z: parseFloat(worldPos.split(' ')[2])
+    };
+    
+    const placementInfo = this.coordinateSystem.placeChartRelativeToMarker(
+      handPosition, 
+      { type: chartType, dataset: datasetName }
+    );
+    
+    // Set position based on placement strategy
+    const finalPosition = `${placementInfo.position.x} ${placementInfo.position.y} ${placementInfo.position.z}`;
+    entity.setAttribute('position', finalPosition);
     
     // Add to scene
     document.getElementById('hand-charts').appendChild(entity);
@@ -167,13 +182,28 @@ class ChartManager {
       type: chartType,
       dataset: datasetName,
       screenX: screenX,
-      screenY: screenY
+      screenY: screenY,
+      placementInfo: placementInfo
     };
     
     this.handCharts.push(chartObj);
+    
+    // Register in unified coordinate system
+    this.coordinateSystem.registerHandChart(chartId, placementInfo.position, {
+      type: chartType,
+      dataset: datasetName
+    });
+    
     this.updateChartList();
     
-    console.log(`Chart placed: ${chartType} with ${datasetName} data at world position ${worldPos}`);
+    // Log placement strategy
+    if (placementInfo.placementType === 'marker-relative') {
+      console.log(`Chart placed relative to marker ${placementInfo.markerId} (distance: ${placementInfo.markerDistance.toFixed(2)})`);
+    } else {
+      console.log(`Chart placed in free space`);
+    }
+    
+    console.log(`Chart placed: ${chartType} with ${datasetName} data at world position ${finalPosition}`);
   }
 
   /**

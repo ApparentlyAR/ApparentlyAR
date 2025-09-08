@@ -4,6 +4,8 @@
  * Main controller for the hybrid AR system that combines AR.js marker detection
  * with MediaPipe hand tracking for educational data visualization.
  * 
+ * @author ApparentlyAR Team
+ * @version 1.0.0
  */
 
 class HybridARController {
@@ -31,6 +33,9 @@ class HybridARController {
 
   /**
    * Initialize the hybrid AR system
+   * 
+   * @returns {Promise<void>} Initialization promise
+   * @throws {Error} If initialization fails
    */
   async init() {
     try {
@@ -85,6 +90,8 @@ class HybridARController {
 
   /**
    * Start hand tracking
+   * 
+   * @returns {Promise<void>} Hand tracking start promise
    */
   async startHandTracking() {
     await this.handTracking.start();
@@ -106,7 +113,7 @@ class HybridARController {
   }
 
   /**
-   * Monitor marker detection status
+   * Monitor marker detection status and register positions
    */
   monitorMarkers() {
     const markers = document.querySelectorAll('a-marker');
@@ -115,6 +122,15 @@ class HybridARController {
     markers.forEach(marker => {
       if (marker.object3D && marker.object3D.visible) {
         visibleMarkers++;
+        
+        // Register marker position in unified coordinate system
+        const position = marker.object3D.position;
+        const rotation = marker.object3D.rotation;
+        this.coordinateSystem.registerMarker(
+          marker.getAttribute('value'),
+          { x: position.x, y: position.y, z: position.z },
+          { x: rotation.x, y: rotation.y, z: rotation.z }
+        );
       }
     });
     
@@ -122,9 +138,32 @@ class HybridARController {
     if (visibleMarkers > 0) {
       markerStatus.textContent = `${visibleMarkers} marker(s) detected`;
       markerStatus.className = 'status detecting';
+      
+      // Update spatial analysis
+      this.updateSpatialAnalysis();
     } else {
       markerStatus.textContent = 'Ready for markers';
       markerStatus.className = 'status ready';
+    }
+  }
+
+  /**
+   * Update spatial analysis display
+   * 
+   * @returns {void}
+   */
+  updateSpatialAnalysis() {
+    const analysis = this.coordinateSystem.getSpatialAnalysis();
+    const analysisElement = document.getElementById('spatial-analysis');
+    
+    if (analysisElement) {
+      analysisElement.innerHTML = `
+        <div>Total Objects: ${analysis.totalObjects}</div>
+        <div>Markers: ${analysis.markerCount}</div>
+        <div>Charts: ${analysis.chartCount}</div>
+        <div>Avg Distance: ${analysis.averageDistance.toFixed(2)}</div>
+        <div>Density: ${analysis.spatialDensity.toFixed(3)}</div>
+      `;
     }
   }
 
