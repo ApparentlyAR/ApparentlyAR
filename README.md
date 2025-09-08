@@ -53,13 +53,15 @@ npm run dev
 npm start
 ```
 
-The server will be available at `http://localhost:3000`
+The server will be available at `http://localhost:3000` by default. If port 3000 is already in use, the server will automatically try the next available port (up to 10 consecutive ports).
 
 ### Available Interfaces
 
-- **Main Application**: `http://localhost:3000/` - Block-based programming interface
-- **Hand Tracking AR**: `http://localhost:3000/ar-demo` - MediaPipe hand gesture controls
-- **Hybrid AR Demo**: `http://localhost:3000/hybrid-ar` - Combined markers + hand tracking
+- **Main Application**: `http://localhost:[PORT]/` - Block-based programming interface
+- **Hand Tracking AR**: `http://localhost:[PORT]/ar-demo` - MediaPipe hand gesture controls
+- **Hybrid AR Demo**: `http://localhost:[PORT]/hybrid-ar` - Combined markers + hand tracking
+
+Where `[PORT]` is the port number shown in the server startup message (3000 by default, or the next available port if 3000 is in use).
 
 ## Architecture Overview
 
@@ -88,8 +90,10 @@ src/ar/
 ### Base URL
 
 ```
-http://localhost:3000
+http://localhost:[PORT]
 ```
+
+Where `[PORT]` is the port number shown in the server startup message (3000 by default, or the next available port if 3000 is in use).
 
 ### Endpoints
 
