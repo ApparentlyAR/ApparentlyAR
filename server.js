@@ -31,7 +31,7 @@ app.use(bodyParser.json());
 /**
  * Serve the Login application page
  */
-app.get('/login', (req, res) => {
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
@@ -59,7 +59,7 @@ app.get('/view-project', (req, res) => {
 /**
  * Serve the Blockly application page
  */
-app.get('/', (req, res) => {
+app.get('/blockly', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'blockly-demo.html'));
 });
 
@@ -232,6 +232,7 @@ app.get('/api/projects/:id', (req, res) => {
         res.status(404).json({ error: 'Project not found' });
     }
 });
+
 
 /**
  * Endpoint to update a project by ID -Najla
