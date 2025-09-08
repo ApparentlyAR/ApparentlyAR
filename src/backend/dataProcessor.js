@@ -16,17 +16,26 @@ const Papa = require('papaparse');
  */
 class DataProcessor {
   constructor() {
+    // Bind all methods to ensure proper 'this' context first
+    this.processData = this.processData.bind(this);
+    this.filterData = this.filterData.bind(this);
+    this.sortData = this.sortData.bind(this);
+    this.aggregateData = this.aggregateData.bind(this);
+    this.selectColumns = this.selectColumns.bind(this);
+    this.groupByData = this.groupByData.bind(this);
+    this.calculateColumn = this.calculateColumn.bind(this);
+
     /**
      * Supported data processing operations
      * @type {Object}
      */
     this.supportedOperations = {
-      filter: this.filterData.bind(this),
-      sort: this.sortData.bind(this),
-      aggregate: this.aggregateData.bind(this),
-      select: this.selectColumns.bind(this),
-      groupBy: this.groupByData.bind(this),
-      calculate: this.calculateColumn.bind(this)
+      filter: this.filterData,
+      sort: this.sortData,
+      aggregate: this.aggregateData,
+      select: this.selectColumns,
+      groupBy: this.groupByData,
+      calculate: this.calculateColumn
     };
   }
 
