@@ -188,7 +188,7 @@ class HybridARController {
       }
       
       if (maxChartsStored !== null) {
-        document.getElementById('max-charts').value = maxChartsStored;
+        document.getElementById('max-charts-input').value = maxChartsStored;
       }
       
       if (limitBehaviorStored !== null) {
@@ -222,7 +222,7 @@ class HybridARController {
   setupChartLimitControls() {
     const enableLimitCheckbox = document.getElementById('enable-chart-limit');
     const limitSettings = document.getElementById('limit-settings');
-    const maxChartsInput = document.getElementById('max-charts');
+    const maxChartsInput = document.getElementById('max-charts-input');
     const limitBehaviorSelect = document.getElementById('limit-behavior');
     
     // Enable/disable chart limit

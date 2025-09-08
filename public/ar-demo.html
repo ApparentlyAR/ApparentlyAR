@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
@@ -25,38 +26,133 @@
       color: white;
       overflow: hidden;
     }
-    .container { display: flex; height: 100vh; }
-    .camera-section { flex: 1; position: relative; }
-    .controls-section {
-      width: 300px; background: #2a2a2a; padding: 20px;
-      border-left: 1px solid #444; overflow-y: auto;
+
+    .container {
+      display: flex;
+      height: 100vh;
     }
-    #video { width: 100%; height: 100%; object-fit: cover; }
-    #canvas, #ar-canvas {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+
+    .camera-section {
+      flex: 1;
+      position: relative;
+    }
+
+    .controls-section {
+      width: 300px;
+      background: #2a2a2a;
+      padding: 20px;
+      border-left: 1px solid #444;
+      overflow-y: auto;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #canvas,
+    #ar-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: none;
     }
-    .controls-section h2 { margin-top: 0; color: #4CAF50; }
-    .control-group { margin-bottom: 20px; }
-    .control-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-    .control-group select, .control-group input, .control-group button {
-      width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #555;
-      border-radius: 4px; background: #333; color: white;
+
+    .controls-section h2 {
+      margin-top: 0;
+      color: #4CAF50;
     }
-    .control-group button { background: #4CAF50; border: none; cursor: pointer; font-weight: bold; }
-    .control-group button:hover { background: #45a049; }
-    .status { padding: 10px; border-radius: 4px; margin-bottom: 10px; font-weight: bold; }
-    .status.detecting { background: #2196F3; }
-    .status.ready { background: #4CAF50; }
-    .status.error { background: #f44336; }
-    .chart-info { background: #333; padding: 10px; border-radius: 4px; margin-top: 10px; }
-    .chart-info h3 { margin-top: 0; color: #4CAF50; }
-    .chart-list { max-height: 200px; overflow-y: auto; }
-    .chart-item { background: #444; padding: 8px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; }
-    .chart-item:hover { background: #555; }
-    .chart-item.selected { background: #4CAF50; }
+
+    .control-group {
+      margin-bottom: 20px;
+    }
+
+    .control-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .control-group select,
+    .control-group input,
+    .control-group button {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #555;
+      border-radius: 4px;
+      background: #333;
+      color: white;
+    }
+
+    .control-group button {
+      background: #4CAF50;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .control-group button:hover {
+      background: #45a049;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .status.detecting {
+      background: #2196F3;
+    }
+
+    .status.ready {
+      background: #4CAF50;
+    }
+
+    .status.error {
+      background: #f44336;
+    }
+
+    .chart-info {
+      background: #333;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+
+    .chart-info h3 {
+      margin-top: 0;
+      color: #4CAF50;
+    }
+
+    .chart-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .chart-item {
+      background: #444;
+      padding: 8px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .chart-item:hover {
+      background: #555;
+    }
+
+    .chart-item.selected {
+      background: #4CAF50;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="camera-section">
@@ -67,8 +163,8 @@
 
     <div class="controls-section">
       <div class="control-group" style="margin-bottom: 15px;">
-        <button onclick="window.location.href='/'" style="background: #666; margin-bottom: 0;">
-          ← Back to Main
+        <button onclick="window.location.href='/blockly'" style="background: #666; margin-bottom: 0;">
+          ← Back to Blockly
         </button>
       </div>
       <h2>AR Chart Controls</h2>
@@ -104,7 +200,7 @@
       <div class="control-group">
         <button id="clearCharts">Clear All Charts</button>
       </div>
-       
+
       <div class="control-group">
         <label>
           <input type="checkbox" id="devMode" style="width: auto; margin-right: 8px;">
@@ -136,40 +232,40 @@
     // ===== Global state =====
     /** @type {MediaPipe.Hands} MediaPipe Hands instance for hand landmark detection */
     let hands;
-    
+
     /** @type {MediaPipe.Camera} MediaPipe Camera instance for video processing */
     let mpCamera;
-    
+
     /** @type {THREE.Scene} Three.js scene for 3D chart rendering */
     let scene;
-    
+
     /** @type {THREE.WebGLRenderer} Three.js renderer for WebGL graphics */
     let renderer;
-    
+
     /** @type {THREE.OrthographicCamera} Orthographic camera for screen-space overlay */
     let cameraOrtho;
-    
+
     /** @type {Array<Object>} Array of placed chart objects with metadata */
     let charts = [];
-    
+
     /** @type {boolean} Flag indicating if hand detection is currently active */
     let isDetecting = false;
-    
+
     /** @type {boolean} Gate to prevent overlapping MediaPipe send calls */
     let sending = false;
-    
+
     /** @type {number} Timestamp of last chart placement to prevent spam */
     let lastPlacedAt = 0;
-    
+
     /** @type {number} Cooldown period between chart placements (milliseconds) */
     const PLACE_COOLDOWN_MS = 800;
-    
+
     /** @type {Object|null} Currently selected chart for manipulation */
     let selectedChart = null;
-    
+
     /** @type {boolean} Flag indicating if user is currently pinching */
     let isPinching = false;
-    
+
     /** @type {Object} Pinch detection thresholds */
     const PINCH_THRESHOLD = 0.05; // Distance threshold for pinch detection
 
@@ -271,9 +367,9 @@
       cameraOrtho = new THREE.OrthographicCamera(0, 640, 0, 480, 1, 1000);
       cameraOrtho.position.z = 100;
 
-      renderer = new THREE.WebGLRenderer({ 
-        canvas: document.getElementById('ar-canvas'), 
-        alpha: true 
+      renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById('ar-canvas'),
+        alpha: true
       });
       renderer.setSize(640, 480);
 
@@ -308,22 +404,22 @@
      * @param {Array} results.multiHandedness - Array of hand handedness information
      * @since 1.0.0
      */
-        function onHandResults(results) {
+    function onHandResults(results) {
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
-      
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       let handDetected = false;
-      
+
       if (results.multiHandLandmarks && results.multiHandedness) {
         for (let i = 0; i < results.multiHandLandmarks.length; i++) {
           const landmarks = results.multiHandLandmarks[i];
           const handedness = results.multiHandedness[i].label;
-          
+
           drawHandLandmarks(ctx, landmarks);
           handDetected = true;
-          
+
           // Check for pinch gesture first (higher priority)
           if (isPinchGesture(landmarks, handedness)) {
             handlePinchGesture(landmarks);
@@ -332,7 +428,7 @@
           }
         }
       }
-      
+
       // Release chart if no hands detected or pinch ended
       if (!handDetected && isPinching) {
         releaseChart();
@@ -352,17 +448,17 @@
       ctx.strokeStyle = '#00FF00';
       ctx.lineWidth = 2;
       ctx.fillStyle = '#FF0000';
-      
+
       for (let i = 0; i < landmarks.length; i++) {
         // Fix horizontal inversion by flipping X coordinate
         const x = (1 - landmarks[i].x) * ctx.canvas.width;
         const y = landmarks[i].y * ctx.canvas.height;
-        
+
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, 2 * Math.PI);
         ctx.fill();
       }
-      
+
       const connections = [
         [0, 1], [1, 2], [2, 3], [3, 4],
         [0, 5], [5, 6], [6, 7], [7, 8],
@@ -370,7 +466,7 @@
         [0, 13], [13, 14], [14, 15], [15, 16],
         [0, 17], [17, 18], [18, 19], [19, 20]
       ];
-      
+
       ctx.beginPath();
       for (const [start, end] of connections) {
         // Fix horizontal inversion for connection lines too
@@ -378,7 +474,7 @@
         const startY = landmarks[start].y * ctx.canvas.height;
         const endX = (1 - landmarks[end].x) * ctx.canvas.width;
         const endY = landmarks[end].y * ctx.canvas.height;
-        
+
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
       }
@@ -398,14 +494,14 @@
     function isPinchGesture(landmarks, handedness = 'Right') {
       const thumbTip = landmarks[4];  // Thumb tip
       const indexTip = landmarks[8];  // Index finger tip
-      
+
       // Calculate 3D distance between thumb and index finger tips
       const distance = Math.sqrt(
         Math.pow(thumbTip.x - indexTip.x, 2) +
         Math.pow(thumbTip.y - indexTip.y, 2) +
         Math.pow(thumbTip.z - indexTip.z, 2)
       );
-      
+
       return distance < PINCH_THRESHOLD;
     }
 
@@ -420,11 +516,11 @@
     function handlePinchGesture(landmarks) {
       const palmCenter = landmarks[9]; // Middle finger MCP (palm center)
       const canvas = document.getElementById('canvas');
-      
+
       // Fix horizontal inversion for coordinate mapping
       const x = (1 - palmCenter.x) * canvas.width;
       const y = (1 - palmCenter.y) * canvas.height;
-      
+
       if (!isPinching) {
         // Start pinching - try to select a chart
         const chart = findChartAtPosition(x, y);
@@ -454,10 +550,10 @@
         const chart = charts[i];
         const chartX = chart.x;
         const chartY = chart.y;
-        
+
         // Check if point is within chart bounds (200x150 chart size)
         if (x >= chartX - 100 && x <= chartX + 100 &&
-            y >= chartY - 75 && y <= chartY + 75) {
+          y >= chartY - 75 && y <= chartY + 75) {
           return chart;
         }
       }
@@ -477,7 +573,7 @@
       chart.x = x;
       chart.y = y;
       chart.mesh.position.set(x - 100, y - 75, chart.z);
-      
+
       // Add visual feedback - scale up slightly when selected
       chart.mesh.scale.set(1.1, 1.1, 1.1);
     }
@@ -512,13 +608,13 @@
     function isClosedPalm(landmarks, handedness = 'Right') {
       const fingerTips = [4, 8, 12, 16, 20];
       const fingerMcps = [3, 6, 10, 14, 18];
-      
+
       let extendedFingers = 0;
-      
+
       for (let i = 0; i < fingerTips.length; i++) {
         const tip = landmarks[fingerTips[i]];
         const mcp = landmarks[fingerMcps[i]];
-        
+
         if (i === 0) {
           if (handedness === 'Right' ? tip.x > mcp.x : tip.x < mcp.x) {
             extendedFingers++;
@@ -529,7 +625,7 @@
           }
         }
       }
-      
+
       // Return true when MOST fingers are closed (0-1 extended)
       return extendedFingers <= 1;
     }
@@ -545,15 +641,15 @@
     function placeChartAtHand(landmarks) {
       const now = Date.now();
       if (now - lastPlacedAt < PLACE_COOLDOWN_MS) return;
-      
+
       const palmCenter = landmarks[9];
       const canvas = document.getElementById('canvas');
-      
+
       // Fix horizontal inversion for chart placement too
       const x = (1 - palmCenter.x) * canvas.width;
       const y = (1 - palmCenter.y) * canvas.height;
       const z = 0;
-      
+
       createChart(x, y, z);
       lastPlacedAt = now;
     }
@@ -574,19 +670,19 @@
       chartCanvas.width = 400;
       chartCanvas.height = 300;
       chartCanvas.id = chartId;
-      
+
       const chartType = document.getElementById('chartType').value;
       const datasetName = document.getElementById('sampleData').value;
       const chart = generateChart(chartCanvas, chartType, sampleData[datasetName]);
-      
+
       const texture = new THREE.CanvasTexture(chartCanvas);
       const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
       const geometry = new THREE.PlaneGeometry(200, 150);
       const mesh = new THREE.Mesh(geometry, material);
-      
+
       mesh.position.set(x - 100, y - 75, z);
       scene.add(mesh);
-      
+
       const chartObj = {
         id: chartId,
         chart: chart,
@@ -599,10 +695,10 @@
         y: y,
         z: z
       };
-      
+
       charts.push(chartObj);
       updateChartList();
-      
+
       console.log(`Chart placed: ${chartType} with ${datasetName} data at (${x}, ${y})`);
     }
 
@@ -619,7 +715,7 @@
      */
     function generateChart(canvas, type, data) {
       const ctx = canvas.getContext('2d');
-      
+
       let chartConfig = {
         type: type,
         data: {},
@@ -632,13 +728,13 @@
           }
         }
       };
-      
+
       if (type === 'bar' || type === 'line') {
         if (data === sampleData.students) {
           chartConfig.data = {
             labels: data.map(d => d.name),
-            datasets: [{ 
-              label: 'Scores', 
+            datasets: [{
+              label: 'Scores',
               data: data.map(d => d.score),
               backgroundColor: 'rgba(76, 175, 80, 0.8)',
               borderColor: 'rgba(76, 175, 80, 1)',
@@ -648,8 +744,8 @@
         } else if (data === sampleData.weather) {
           chartConfig.data = {
             labels: data.map(d => d.month),
-            datasets: [{ 
-              label: 'Temperature (°C)', 
+            datasets: [{
+              label: 'Temperature (°C)',
               data: data.map(d => d.temperature),
               backgroundColor: 'rgba(76, 175, 80, 0.8)',
               borderColor: 'rgba(76, 175, 80, 1)',
@@ -659,8 +755,8 @@
         } else if (data === sampleData.sales) {
           chartConfig.data = {
             labels: data.map(d => d.product),
-            datasets: [{ 
-              label: 'Sales', 
+            datasets: [{
+              label: 'Sales',
               data: data.map(d => d.sales),
               backgroundColor: 'rgba(76, 175, 80, 0.8)',
               borderColor: 'rgba(76, 175, 80, 1)',
@@ -672,7 +768,7 @@
         if (data === sampleData.students) {
           chartConfig.data = {
             labels: data.map(d => d.name),
-            datasets: [{ 
+            datasets: [{
               data: data.map(d => d.score),
               backgroundColor: [
                 'rgba(76, 175, 80, 0.8)',
@@ -687,7 +783,7 @@
       } else if (type === 'scatter') {
         if (data === sampleData.students) {
           chartConfig.data = {
-            datasets: [{ 
+            datasets: [{
               label: 'Age vs Score',
               data: data.map(d => ({ x: d.age, y: d.score })),
               backgroundColor: 'rgba(76, 175, 80, 0.8)'
@@ -695,7 +791,7 @@
           };
         }
       }
-      
+
       return new Chart(ctx, chartConfig);
     }
 
@@ -711,7 +807,7 @@
       if (charts.length === 0) {
         listEl.innerHTML = '<div class="chart-item">No charts placed yet</div>';
       } else {
-        listEl.innerHTML = charts.map(chart => 
+        listEl.innerHTML = charts.map(chart =>
           `<div class="chart-item" onclick="selectChart('${chart.id}', this)">
              ${chart.type.toUpperCase()} - ${chart.dataset} (#${chart.id.split('_')[1]})
            </div>`
@@ -767,7 +863,7 @@
           onFrame: async () => {
             if (!isDetecting || sending) return;
             sending = true;
-            try { await hands.send({ image: video }); } catch (e) {}
+            try { await hands.send({ image: video }); } catch (e) { }
             sending = false;
           },
           width: 640,
@@ -830,22 +926,22 @@
      */
     function setupDevMode() {
       const devModeCheckbox = document.getElementById('devMode');
-      
+
       // Auto-start camera when dev mode is enabled
       devModeCheckbox.addEventListener('change', async (e) => {
         if (e.target.checked) {
           console.log('Dev mode enabled - auto-starting camera...');
           updateStatus('Dev mode: Auto-starting camera...', 'detecting');
-          
+
           // Set some default test data
           document.getElementById('chartType').value = 'bar';
           document.getElementById('sampleData').value = 'students';
-          
+
           // Auto-start camera after a short delay
           setTimeout(async () => {
             try {
               await startCamera();
-                             updateStatus('Dev mode: Camera ready - make a fist to place, pinch to move!', 'detecting');
+              updateStatus('Dev mode: Camera ready - make a fist to place, pinch to move!', 'detecting');
             } catch (error) {
               console.error('Dev mode camera start failed:', error);
               updateStatus('Dev mode: Camera start failed', 'error');
@@ -858,7 +954,7 @@
           updateStatus('Dev mode disabled', 'ready');
         }
       });
-      
+
       // Auto-enable dev mode on page load for quick testing
       if (window.location.search.includes('dev=true')) {
         devModeCheckbox.checked = true;
@@ -897,5 +993,5 @@
     init();
   </script>
 </body>
-</html>
 
+</html>

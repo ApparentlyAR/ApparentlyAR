@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Project - ApparentlyAR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-white">
+    <header class="flex items-center justify-between p-4 bg-gray-800">
+        <div class="flex items-center">
+            <img src="LogoAR.svg" alt="ApparentlyAR Logo" class="w-8 h-8 mr-2">
+            <h1 class="text-lg font-bold">ApparentlyAR</h1>
+        </div>
+        <div>
+            <button class="text-white">👤</button>
+        </div>
+    </header>
+
+    <main class="p-6">
+        <button onclick="window.location.href='teacher-dashboard.html'"
+            class="bg-gray-500 text-white px-4 py-2 rounded mb-6">←</button>
+
+        <form onsubmit="saveProject(event)">
+            <div class="mb-6">
+                <label for="projectName" class="block text-sm font-medium mb-2">Project Name</label>
+                <input type="text" id="projectName" name="projectName" placeholder="Enter project title..."
+                    class="w-full p-3 rounded bg-gray-800 text-white border border-gray-700">
+            </div>
+
+            <div class="mb-6">
+                <label for="description" class="block text-sm font-medium mb-2">Description</label>
+                <input type="text" id="description" name="description" placeholder="Enter project description..."
+                    class="w-full p-3 rounded bg-gray-800 text-white border border-gray-700">
+            </div>
+
+            <div class="mb-6">
+                <label for="csvUpload" class="block text-sm font-medium mb-2">CSV File Upload</label>
+                <div class="w-full h-40 bg-gray-300 text-black flex items-center justify-center rounded">
+                    <span>Upload File here</span>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-gray-500 text-white px-4 py-2 rounded">Save</button>
+        </form>
+
+        <script>
+            async function loadProjectForEditing() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const projectId = urlParams.get('id');
+
+                if (projectId) {
+                    const response = await fetch(`/api/projects/${projectId}`);
+                    if (response.ok) {
+                        const project = await response.json();
+                        document.getElementById('projectName').value = project.name;
+                        document.getElementById('description').value = project.description;
+                    } else {
+                        alert('Failed to load project for editing');
+                    }
+                }
+            }
+
+            async function saveProject(event) {
+                event.preventDefault();
+                const urlParams = new URLSearchParams(window.location.search);
+                const projectId = urlParams.get('id');
+
+                const name = document.getElementById('projectName').value;
+                const description = document.getElementById('description').value;
+
+                const method = projectId ? 'PUT' : 'POST';
+                const endpoint = projectId ? `/api/projects/${projectId}` : '/api/projects';
+
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description }),
+                });
+
+                if (response.ok) {
+                    window.location.href = 'teacher-dashboard.html';
+                } else {
+                    alert('Failed to save project');
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', loadProjectForEditing);
+        </script>
+    </main>
+</body>
+
+</html>
