@@ -96,32 +96,6 @@
       background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
     }
 
-    /* Blockly styling adjustments for dark theme */
-    .blocklyToolboxDiv {
-      background-color: #171c2b !important;
-      border-right: 1px solid #2b3350 !important;
-    }
-    
-    .blocklyFlyoutBackground {
-      fill: #171c2b !important;
-    }
-    
-    .blocklyMainBackground {
-      fill: #0f1324 !important;
-    }
-    
-    .blocklyScrollbarBackground {
-      fill: #1e2436 !important;
-    }
-    
-    .blocklyScrollbarHandle {
-      fill: #a9b4d0 !important;
-    }
-    
-    .blocklyText {
-      fill: #e7ebff !important;
-    }
-
     /* Chart.js mobile responsiveness */
     .chart-container {
       position: relative;
@@ -195,6 +169,30 @@
       .resize-handle {
         display: none;
       }
+    }
+    
+    /* Fix for Blockly flyout scroll issues */
+    .blocklyFlyout {
+      overflow: hidden !important;
+    }
+    
+    .blocklyFlyoutScrollbar {
+      display: none !important;
+    }
+    
+    /* Ensure proper sizing for Blockly workspace */
+    .blocklySvg {
+      display: block;
+    }
+    
+    /* Fix for scrollbars appearing when not needed */
+    .blocklyToolboxDiv::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .blocklyToolboxDiv {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   </style>
 </head>
