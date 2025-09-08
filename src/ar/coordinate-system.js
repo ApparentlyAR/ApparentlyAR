@@ -1,90 +1,105 @@
 /**
- * Unified Coordinate System Module
+ * Simplified A-Frame Coordinate System Module
  * 
- * Handles conversion between screen coordinates and A-Frame world coordinates
- * for hybrid AR chart placement and manipulation. Now supports unified
- * coordinate system for both marker-based and hand-tracked objects.
+ * Handles direct A-Frame positioning for both marker-based and hand-tracked objects.
+ * Uses A-Frame's native 3D coordinate system for all AR objects.
  * 
  * @author ApparentlyAR Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 class CoordinateSystem {
   constructor() {
-    // Coordinate conversion utilities
-    this.markerPositions = new Map(); // Track marker world positions
+    // A-Frame scene reference
+    this.scene = null;
+    this.camera = null;
+    
+    // Track all AR objects in unified A-Frame space
+    this.markerPositions = new Map(); // Track marker positions
     this.handCharts = []; // Track hand-placed charts
-    this.unifiedObjects = []; // Track all AR objects in unified space
+    this.allObjects = []; // Track all AR objects
   }
 
   /**
-   * Convert screen coordinates to A-Frame world coordinates
-   * Uses camera projection matrix for accurate mapping
+   * Initialize with A-Frame scene reference
    * 
-   * @param {number} screenX - Screen X coordinate
-   * @param {number} screenY - Screen Y coordinate
-   * @returns {string} World position string "x y z"
+   * @param {HTMLElement} scene - A-Frame scene element
    */
-  screenToWorld(screenX, screenY) {
+  init(scene) {
+    this.scene = scene;
+    this.camera = scene.camera;
+  }
+
+  /**
+   * Convert hand position to A-Frame 3D coordinates
+   * Uses A-Frame's camera system for direct 3D positioning
+   * 
+   * @param {number} screenX - Screen X coordinate (0 to canvas width)
+   * @param {number} screenY - Screen Y coordinate (0 to canvas height)
+   * @param {number} distance - Distance from camera (default: 2.5)
+   * @returns {Object} A-Frame position object {x, y, z}
+   */
+  handToAframePosition(screenX, screenY, distance = 2.5) {
     const canvas = document.getElementById('hand-overlay');
-    const scene = document.querySelector('a-scene');
-    const camera = scene.camera;
-    
-    if (!camera) {
-      // Fallback to simplified conversion 
-      const normalizedX = (screenX / canvas.width - 0.5) * 2;
-      // Screen Y increases downward, world Y increases upward - need inversion
-      const normalizedY = (0.5 - screenY / canvas.height) * 2;
-      const worldX = normalizedX * 4;
-      const worldY = normalizedY * 3;
-      const worldZ = -3;
-      return `${worldX} ${worldY} ${worldZ}`;
+    if (!canvas || !this.camera) {
+      // Fallback positioning
+      return { x: 0, y: 0, z: -distance };
     }
     
-    // Normalize screen coordinates to NDC (-1 to 1)  
-    const ndcX = (screenX / canvas.width) * 2 - 1;
-    // Screen Y increases downward, NDC Y increases upward
-    const ndcY = -((screenY / canvas.height) * 2 - 1);
+    // Normalize screen coordinates to [-1, 1] range
+    const normalizedX = (screenX / canvas.width) * 2 - 1;
+    const normalizedY = -((screenY / canvas.height) * 2 - 1); // Flip Y axis
     
-    // Create a ray from camera through screen point
-    const vector = new THREE.Vector3(ndcX, ndcY, -1);
-    vector.unproject(camera);
+    // Use A-Frame's camera to project into 3D space
+    const camera = this.camera;
+    const cameraPosition = camera.position;
     
-    // Calculate world position at specific distance from camera
-    const direction = vector.sub(camera.position).normalize();
-    const distance = 3; // Distance from camera
-    const worldPos = camera.position.clone().add(direction.multiplyScalar(distance));
+    // Create direction vector from camera through screen point
+    const direction = new THREE.Vector3(normalizedX, normalizedY, -1);
+    direction.unproject(camera);
+    direction.sub(cameraPosition).normalize();
     
-    return `${worldPos.x} ${worldPos.y} ${worldPos.z}`;
+    // Calculate position at specified distance from camera
+    const worldPosition = cameraPosition.clone().add(direction.multiplyScalar(distance));
+    
+    return {
+      x: worldPosition.x,
+      y: worldPosition.y,
+      z: worldPosition.z
+    };
   }
 
   /**
-   * Find chart at screen position
+   * Find nearest chart to hand position
    * 
-   * @param {number} x - Screen X coordinate
-   * @param {number} y - Screen Y coordinate
+   * @param {Object} handPosition - Hand position {x, y, z}
    * @param {Array} handCharts - Array of chart objects
-   * @returns {Object|null} Chart object or null if not found
+   * @param {number} maxDistance - Maximum distance to consider
+   * @returns {Object|null} Nearest chart or null if not found
    */
-  findChartAtPosition(x, y, handCharts) {
-    // Convert screen coordinates to world coordinates
-    // This is a simplified implementation
-    for (let i = handCharts.length - 1; i >= 0; i--) {
-      const chart = handCharts[i];
-      // Check if point is within chart bounds (simplified)
-      if (Math.abs(chart.screenX - x) < 100 && Math.abs(chart.screenY - y) < 75) {
-        return chart;
+  findNearestChart(handPosition, handCharts, maxDistance = 1.0) {
+    let nearestChart = null;
+    let minDistance = maxDistance;
+    
+    handCharts.forEach(chart => {
+      if (chart.aframePosition) {
+        const distance = this.calculateDistance(handPosition, chart.aframePosition);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestChart = chart;
+        }
       }
-    }
-    return null;
+    });
+    
+    return nearestChart;
   }
 
   /**
-   * Register marker position for unified coordinate system
+   * Register marker position in A-Frame space
    * 
    * @param {string} markerId - Marker identifier
-   * @param {Object} position - Marker world position
-   * @param {Object} rotation - Marker rotation
+   * @param {Object} position - Marker A-Frame position {x, y, z}
+   * @param {Object} rotation - Marker rotation {x, y, z}
    */
   registerMarker(markerId, position, rotation) {
     this.markerPositions.set(markerId, {
@@ -93,8 +108,8 @@ class CoordinateSystem {
       timestamp: Date.now()
     });
     
-    // Add to unified objects
-    this.unifiedObjects.push({
+    // Add to all objects tracking
+    this.allObjects.push({
       id: markerId,
       type: 'marker',
       position: position,
@@ -104,10 +119,10 @@ class CoordinateSystem {
   }
 
   /**
-   * Register hand-placed chart for unified coordinate system
+   * Register hand-placed chart in A-Frame space
    * 
    * @param {string} chartId - Chart identifier
-   * @param {Object} position - Chart world position
+   * @param {Object} position - Chart A-Frame position {x, y, z}
    * @param {Object} chartData - Chart data
    */
   registerHandChart(chartId, position, chartData) {
@@ -120,16 +135,16 @@ class CoordinateSystem {
     };
     
     this.handCharts.push(chartObject);
-    this.unifiedObjects.push(chartObject);
+    this.allObjects.push(chartObject);
   }
 
   /**
-   * Get unified object positions for interaction
+   * Get all AR objects in A-Frame space
    * 
    * @returns {Array} Array of all AR objects with positions
    */
-  getUnifiedObjects() {
-    return this.unifiedObjects.filter(obj => {
+  getAllObjects() {
+    return this.allObjects.filter(obj => {
       // Remove objects older than 5 seconds (markers might be temporarily hidden)
       return Date.now() - obj.timestamp < 5000;
     });
@@ -138,7 +153,7 @@ class CoordinateSystem {
   /**
    * Find nearest marker to hand position
    * 
-   * @param {Object} handPosition - Hand world position
+   * @param {Object} handPosition - Hand A-Frame position {x, y, z}
    * @param {number} maxDistance - Maximum distance to consider
    * @returns {Object|null} Nearest marker or null
    */
@@ -177,17 +192,17 @@ class CoordinateSystem {
   }
 
   /**
-   * Place chart relative to nearest marker
+   * Place chart in A-Frame space (marker-relative or free-space)
    * 
-   * @param {Object} handPosition - Hand world position
+   * @param {Object} handPosition - Hand A-Frame position {x, y, z}
    * @param {Object} chartData - Chart data
    * @returns {Object} Chart placement information
    */
-  placeChartRelativeToMarker(handPosition, chartData) {
+  placeChartInAframe(handPosition, chartData) {
     const nearestMarker = this.findNearestMarker(handPosition);
     
     if (nearestMarker) {
-      // Place chart relative to marker
+      // Place chart relative to marker in A-Frame space
       const relativePosition = {
         x: nearestMarker.position.x + (Math.random() - 0.5) * 1.5,
         y: nearestMarker.position.y + 1.0,
@@ -201,7 +216,7 @@ class CoordinateSystem {
         placementType: 'marker-relative'
       };
     } else {
-      // Place chart in free space
+      // Place chart at hand position in A-Frame space
       return {
         position: handPosition,
         markerId: null,
@@ -212,12 +227,12 @@ class CoordinateSystem {
   }
 
   /**
-   * Get spatial relationships between objects
+   * Get spatial analysis of all A-Frame objects
    * 
    * @returns {Object} Spatial analysis
    */
   getSpatialAnalysis() {
-    const objects = this.getUnifiedObjects();
+    const objects = this.getAllObjects();
     const markers = objects.filter(obj => obj.type === 'marker');
     const charts = objects.filter(obj => obj.type === 'hand-chart');
     

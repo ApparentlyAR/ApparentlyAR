@@ -120,7 +120,7 @@ class ChartManager {
   }
 
   /**
-   * Create chart as A-Frame entity with unified coordinate system
+   * Create chart as A-Frame entity using native A-Frame positioning
    * 
    * @param {number} screenX - Screen X coordinate
    * @param {number} screenY - Screen Y coordinate
@@ -145,35 +145,28 @@ class ChartManager {
     
     // Create A-Frame entity
     const entity = document.createElement('a-plane');
-    
     entity.setAttribute('id', chartId);
     entity.setAttribute('width', '2');
     entity.setAttribute('height', '1.5');
     entity.setAttribute('material', `src: #${canvas.id}; transparent: true`);
     
-    // Convert screen coordinates to world coordinates
-    const worldPos = this.coordinateSystem.screenToWorld(screenX, screenY);
+    // Convert hand position to A-Frame 3D coordinates
+    const handPosition = this.coordinateSystem.handToAframePosition(screenX, screenY);
     
-    // Use unified coordinate system for intelligent placement
-    const handPosition = {
-      x: parseFloat(worldPos.split(' ')[0]),
-      y: parseFloat(worldPos.split(' ')[1]),
-      z: parseFloat(worldPos.split(' ')[2])
-    };
-    
-    const placementInfo = this.coordinateSystem.placeChartRelativeToMarker(
+    // Use intelligent placement in A-Frame space
+    const placementInfo = this.coordinateSystem.placeChartInAframe(
       handPosition, 
       { type: chartType, dataset: datasetName }
     );
     
-    // Set position based on placement strategy
-    const finalPosition = `${placementInfo.position.x} ${placementInfo.position.y} ${placementInfo.position.z}`;
-    entity.setAttribute('position', finalPosition);
+    // Set A-Frame position directly
+    const pos = placementInfo.position;
+    entity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
     
     // Add to scene
     document.getElementById('hand-charts').appendChild(entity);
     
-    // Store chart data
+    // Store chart data with A-Frame position
     const chartObj = {
       id: chartId,
       entity: entity,
@@ -183,13 +176,14 @@ class ChartManager {
       dataset: datasetName,
       screenX: screenX,
       screenY: screenY,
+      aframePosition: pos,
       placementInfo: placementInfo
     };
     
     this.handCharts.push(chartObj);
     
-    // Register in unified coordinate system
-    this.coordinateSystem.registerHandChart(chartId, placementInfo.position, {
+    // Register in A-Frame coordinate system
+    this.coordinateSystem.registerHandChart(chartId, pos, {
       type: chartType,
       dataset: datasetName
     });
@@ -203,7 +197,7 @@ class ChartManager {
       console.log(`Chart placed in free space`);
     }
     
-    console.log(`Chart placed: ${chartType} with ${datasetName} data at world position ${finalPosition}`);
+    console.log(`Chart placed: ${chartType} with ${datasetName} data at A-Frame position (${pos.x}, ${pos.y}, ${pos.z})`);
   }
 
   /**

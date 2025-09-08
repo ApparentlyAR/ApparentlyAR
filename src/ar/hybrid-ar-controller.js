@@ -50,6 +50,10 @@ class HybridARController {
       // Wait for AR.js to initialize and start camera
       await this.waitForArjsInit();
       
+      // Initialize coordinate system with A-Frame scene
+      const scene = document.querySelector('a-scene');
+      this.coordinateSystem.init(scene);
+      
       // Initialize MediaPipe
       await this.handTracking.initialize();
       
