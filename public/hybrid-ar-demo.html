@@ -186,11 +186,9 @@
 
     <!-- Marker-based objects from Multi-AR-Example -->
 
-    <!-- Marker 0: Red rotating cube -->
-    <a-marker type="barcode" value="0">
-      <a-box position="0 0 0" material="color: red; opacity: 0.8"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000" scale="0.8 0.8 0.8">
-      </a-box>
+    <!-- Marker 0: Dynamic chart plane anchored to marker (updated via ChartManager) -->
+    <a-marker id="marker-0" type="barcode" value="0">
+      <!-- Plane will be injected by script based on selected chart/data -->
     </a-marker>
 
     <!-- Marker 1: Blue spinning sphere -->

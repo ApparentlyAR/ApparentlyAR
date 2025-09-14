@@ -29,6 +29,9 @@ class ChartManager {
     /** @type {CoordinateSystem} Coordinate conversion utility */
     this.coordinateSystem = coordinateSystem;
 
+    /** @type {Object<string, {canvas: HTMLCanvasElement, chart: any, entity: any}>} Per-marker chart state */
+    this.markerCharts = {};
+
     /**
      * Sample datasets for chart generation
      */
@@ -55,6 +58,80 @@ class ChartManager {
         { product: 'Phone', sales: 180, revenue: 108000, region: 'South' }
       ]
     };
+  }
+
+  /**
+   * Create or update a chart anchored to a specific AR.js marker.
+   * The chart type and dataset must be provided. Subsequent calls update
+   * the existing canvas texture and reuse the plane entity.
+   *
+   * @param {string} markerId - DOM id of the <a-marker> (e.g., 'marker-0')
+   * @param {string} chartType - Chart.js type ('bar' | 'line' | 'pie' | 'scatter')
+   * @param {string} datasetName - One of sample datasets keys ('students'|'weather'|'sales')
+   */
+  createOrUpdateMarkerChart(markerId, chartType, datasetName) {
+    const marker = document.getElementById(markerId);
+    if (!marker) {
+      console.warn(`Marker not found: ${markerId}`);
+      return;
+    }
+
+    const assets = document.querySelector('a-assets');
+    if (!assets) {
+      console.warn('No <a-assets> found for chart textures');
+      return;
+    }
+
+    const key = markerId;
+    const existing = this.markerCharts[key];
+    const canvasId = `marker-chart-${markerId}`;
+
+    // Ensure canvas exists
+    let canvas = existing?.canvas || document.getElementById(canvasId);
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.id = canvasId;
+      canvas.width = 400;
+      canvas.height = 300;
+      assets.appendChild(canvas);
+    }
+
+    // (Re)generate Chart.js on the canvas
+    if (existing?.chart) {
+      try { existing.chart.destroy(); } catch (_) {}
+    }
+    const chart = this.generateChart(canvas, chartType, this.sampleData[datasetName]);
+
+    // Ensure a plane entity exists under the marker and points to our canvas
+    let entity = existing?.entity || marker.querySelector('[data-marker-chart]');
+    if (!entity) {
+      entity = document.createElement('a-plane');
+      entity.setAttribute('data-marker-chart', '');
+      entity.setAttribute('width', '2');
+      entity.setAttribute('height', '1.5');
+      // Keep it slightly above marker origin to avoid z-fighting with marker plane
+      entity.setAttribute('position', '0 1 0');
+      marker.appendChild(entity);
+    }
+    entity.setAttribute('material', `src: #${canvas.id}; transparent: true`);
+
+    // Save state
+    this.markerCharts[key] = { canvas, chart, entity };
+
+    // Log for debugging
+    console.log(`Marker chart updated on ${markerId}: ${chartType} using ${datasetName}`);
+  }
+
+  /**
+   * Helper to read control panel selections and update marker 0 chart.
+   * @param {string} markerId
+   */
+  updateMarkerChartFromControls(markerId = 'marker-0') {
+    const typeSel = document.getElementById('chart-type');
+    const dataSel = document.getElementById('sample-data');
+    const chartType = typeSel ? typeSel.value : 'bar';
+    const datasetName = dataSel ? dataSel.value : 'students';
+    this.createOrUpdateMarkerChart(markerId, chartType, datasetName);
   }
 
   /**

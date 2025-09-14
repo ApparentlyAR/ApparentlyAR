@@ -47,7 +47,10 @@ class HybridARController {
       
       // Initialize MediaPipe
       await this.handTracking.initialize();
-      
+
+      // Initialize marker-anchored chart (marker 0) based on current controls
+      this.chartManager.updateMarkerChartFromControls('marker-0');
+
       this.updateStatus('Hybrid AR ready - markers active, start hand tracking when ready', 'ready');
       
     } catch (error) {
@@ -259,6 +262,16 @@ class HybridARController {
 
     // Monitor marker detection periodically
     setInterval(this.monitorMarkers.bind(this), 500);
+
+    // Update marker 0 chart when controls change
+    const typeSel = document.getElementById('chart-type');
+    const dataSel = document.getElementById('sample-data');
+    if (typeSel) {
+      typeSel.addEventListener('change', () => this.chartManager.updateMarkerChartFromControls('marker-0'));
+    }
+    if (dataSel) {
+      dataSel.addEventListener('change', () => this.chartManager.updateMarkerChartFromControls('marker-0'));
+    }
   }
 }
 
