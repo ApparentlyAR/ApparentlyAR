@@ -44,6 +44,7 @@
   </script>
   <script src="../src/blocks/csv_import.js"></script>
   <script src="../src/blocks/to_json.js"></script>
+  <script src="../src/blocks/data_ops.js"></script>
   <script>
     // Check if CSV import generator was registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -309,6 +310,11 @@
           <block type="csv_import"></block>
           <block type="to_json">
             <value name="VALUE">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="process_data">
+            <value name="DATA">
               <block type="csv_import"></block>
             </value>
           </block>
@@ -624,7 +630,7 @@
     }, 200);
 
     // Bridge functions for React components to call vanilla JS Blockly functions
-    window.executeBlocklyCode = function () {
+    window.executeBlocklyCode = async function () {
       if (!workspace) return;
 
       // Update React state - executing
@@ -648,11 +654,15 @@
           return;
         }
 
+        // Evaluate possibly-async code and await if Promise-like
         // eslint-disable-next-line no-eval
-        const result = eval(code);
+        let result = eval(code);
+        if (result && typeof result.then === 'function') {
+          result = await result;
+        }
         console.log('Execution result:', result);
 
-        if (window.reactSetOutput) window.reactSetOutput(result !== undefined ? String(result) : 'Code executed successfully');
+        if (window.reactSetOutput) window.reactSetOutput(result !== undefined ? String(JSON.stringify(result, null, 2)) : 'Code executed successfully');
         if (window.reactSetError) window.reactSetError(false);
 
         // Dispatch event for automatic visualization of CSV data
