@@ -113,13 +113,41 @@ class ChartManager {
       entity.setAttribute('position', '0 1 0');
       marker.appendChild(entity);
     }
-    entity.setAttribute('material', `src: #${canvas.id}; transparent: true`);
+    entity.setAttribute('material', `shader: flat; src: #${canvas.id}; transparent: true; side: double`);
+    // Force the underlying texture to refresh after canvas redraw
+    this.forceMaterialRefresh(entity);
 
     // Save state
     this.markerCharts[key] = { canvas, chart, entity };
 
     // Log for debugging
     console.log(`Marker chart updated on ${markerId}: ${chartType} using ${datasetName}`);
+  }
+
+  /**
+   * Ensure A-Frame updates the CanvasTexture after we redraw the canvas.
+   * @param {Element} entity - A-Frame entity with material component
+   */
+  forceMaterialRefresh(entity) {
+    const mesh = entity.getObject3D && entity.getObject3D('mesh');
+    if (mesh) {
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      materials.forEach((m) => {
+        if (m && m.map) {
+          m.map.needsUpdate = true;
+        }
+        if (m) {
+          m.needsUpdate = true;
+        }
+      });
+    } else {
+      // As a fallback, toggle the material src attribute to force a refresh
+      const current = entity.getAttribute('material')?.src;
+      if (current) {
+        entity.setAttribute('material', 'src', null);
+        setTimeout(() => entity.setAttribute('material', 'src', current), 0);
+      }
+    }
   }
 
   /**

@@ -266,11 +266,14 @@ class HybridARController {
     // Update marker 0 chart when controls change
     const typeSel = document.getElementById('chart-type');
     const dataSel = document.getElementById('sample-data');
+    const handler = () => this.chartManager.updateMarkerChartFromControls('marker-0');
     if (typeSel) {
-      typeSel.addEventListener('change', () => this.chartManager.updateMarkerChartFromControls('marker-0'));
+      typeSel.addEventListener('change', handler);
+      typeSel.addEventListener('input', handler);
     }
     if (dataSel) {
-      dataSel.addEventListener('change', () => this.chartManager.updateMarkerChartFromControls('marker-0'));
+      dataSel.addEventListener('change', handler);
+      dataSel.addEventListener('input', handler);
     }
   }
 }
