@@ -1,9 +1,9 @@
 /**
- * Tests for Blockly process_data block integration with frontend API client.
+ * Tests for Blockly data processing blocks integration with frontend API client.
  * We stub a minimal Blockly environment and mock window.AppApi.processData.
  */
 
-describe('Blockly process_data generator integration', () => {
+describe('Blockly data processing blocks integration', () => {
 	beforeEach(() => {
 		// Minimal window + Blockly stubs
 		global.window = global.window || {};
@@ -13,6 +13,7 @@ describe('Blockly process_data generator integration', () => {
 		global.Blockly = {
 			JavaScript: {
 				ORDER_NONE: 0,
+				ORDER_FUNCTION_CALL: 1,
 				valueToCode: jest.fn(() => 'inputData') // return variable name
 			},
 			CsvImportData: { data: null },
@@ -25,58 +26,45 @@ describe('Blockly process_data generator integration', () => {
 		// Make sure window.Blockly points to the same object as global.Blockly for tests
 		global.window.Blockly = global.Blockly;
 
-		// Load generator file (registers Blockly.JavaScript.process_data)
+		// Load generator file (registers individual block generators)
 		jest.isolateModules(() => {
 			require('../../src/blocks/data_ops.js');
 		});
 	});
 
-	test('generator builds operations and calls AppApi.processData', async () => {
-		const gen = global.Blockly.JavaScript['process_data'];
+	test('filter_data generator calls AppApi.processData with filter operation', async () => {
+		const gen = global.Blockly.JavaScript['filter_data'];
 		expect(typeof gen).toBe('function');
 
 		// Fake block returns field values
 		const fakeBlock = {
 			getFieldValue: (name) => {
 				const map = {
-					DROP_EMPTY_COL: 'score',
-					FILTER_COL: 'age',
-					FILTER_OP: 'greater_than',
-					FILTER_VAL: '14',
-					SELECT_COLS: 'name,score,class',
-					SORT_COL: 'score',
-					SORT_DIR: 'desc',
-					GROUP_COL: '',
-					AGG_COL: '',
-					AGG_OP: 'sum',
-					AGG_ALIAS: 'totalScore',
-					CALC_EXPR: 'price * quantity',
-					CALC_NAME: 'total'
+					COLUMN: 'age',
+					OPERATOR: 'greater_than',
+					VALUE: '18'
 				};
 				return map[name] || '';
 			}
 		};
 
-		// Generate code and evaluate it with an input variable in scope
+		// Generate code and evaluate it
 		const code = gen(fakeBlock)[0];
 		const inputData = [
-			{ name: 'A', age: '15', score: '10', price: '2', quantity: '3' },
-			{ name: 'B', age: '13', score: '', price: '5', quantity: '1' }
+			{ name: 'A', age: '20' },
+			{ name: 'B', age: '16' }
 		];
 
 		// Mock API to verify payload and return processed result
-		const processedOut = [{ name: 'A', score: '10', class: 'X', total: 6 }];
+		const processedOut = [{ name: 'A', age: '20' }];
 		window.AppApi.processData.mockImplementation(async (data, ops) => {
-			// Ensure data is passed through and operations include our steps
 			expect(data).toBe(inputData);
 			expect(Array.isArray(ops)).toBe(true);
-			// DROP_EMPTY_COL creates a filter to drop empty values in score column
-			expect(ops.find(o => o.type === 'filter' && o.params.column === 'score' && o.params.operator === 'not_equals')).toBeTruthy();
-			// FILTER_COL creates a filter on age column
-			expect(ops.find(o => o.type === 'filter' && o.params.column === 'age' && o.params.operator === 'greater_than')).toBeTruthy();
-			expect(ops.find(o => o.type === 'select')).toBeTruthy();
-			expect(ops.find(o => o.type === 'calculate')).toBeTruthy();
-			expect(ops.find(o => o.type === 'sort')).toBeTruthy();
+			expect(ops).toHaveLength(1);
+			expect(ops[0]).toEqual({
+				type: 'filter',
+				params: { column: 'age', operator: 'greater_than', value: '18' }
+			});
 			return { data: processedOut };
 		});
 
@@ -87,20 +75,69 @@ describe('Blockly process_data generator integration', () => {
 		}
 
 		expect(result).toEqual(processedOut);
-		// The generated code sets window.Blockly.CsvImportData.data, but we're using global.Blockly in tests
 		expect(global.Blockly.CsvImportData.data).toEqual(processedOut);
 		expect(window.AppApi.processData).toHaveBeenCalledTimes(1);
 	});
 
-	test('generator falls back to input data if API missing', async () => {
-		const gen = global.Blockly.JavaScript['process_data'];
+	test('group_by generator calls AppApi.processData with groupBy operation', async () => {
+		const gen = global.Blockly.JavaScript['group_by'];
+		expect(typeof gen).toBe('function');
+
+		// Fake block returns field values
+		const fakeBlock = {
+			getFieldValue: (name) => {
+				const map = {
+					GROUP_COLUMN: 'category',
+					AGGREGATION: 'sum',
+					AGG_COLUMN: 'amount',
+					ALIAS: 'total'
+				};
+				return map[name] || '';
+			}
+		};
+
+		// Generate code and evaluate it
+		const code = gen(fakeBlock)[0];
+		const inputData = [
+			{ category: 'A', amount: 10 },
+			{ category: 'A', amount: 20 }
+		];
+
+		// Mock API to verify payload and return processed result
+		const processedOut = [{ category: 'A', total: 30 }];
+		window.AppApi.processData.mockImplementation(async (data, ops) => {
+			expect(data).toBe(inputData);
+			expect(Array.isArray(ops)).toBe(true);
+			expect(ops).toHaveLength(1);
+			expect(ops[0]).toEqual({
+				type: 'groupBy',
+				params: {
+					groupBy: 'category',
+					aggregations: [{ column: 'amount', operation: 'sum', alias: 'total' }]
+				}
+			});
+			return { data: processedOut };
+		});
+
+		// eslint-disable-next-line no-eval
+		let result = eval(code);
+		if (result && typeof result.then === 'function') {
+			result = await result;
+		}
+
+		expect(result).toEqual(processedOut);
+		expect(global.Blockly.CsvImportData.data).toEqual(processedOut);
+		expect(window.AppApi.processData).toHaveBeenCalledTimes(1);
+	});
+
+	test('generator throws error if API missing', async () => {
+		const gen = global.Blockly.JavaScript['filter_data'];
 
 		// Remove API to simulate missing client
 		window.AppApi = undefined;
 
-		const fakeBlock = { getFieldValue: () => '' };
+		const fakeBlock = { getFieldValue: () => 'test' };
 		const code = gen(fakeBlock)[0];
-		const inputData = [{ x: 1 }];
 
 		await expect((async () => {
 			// eslint-disable-next-line no-eval

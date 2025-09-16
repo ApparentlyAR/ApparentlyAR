@@ -11,9 +11,11 @@ Markers can be viewed and downloaded [here](https://github.com/nicolocarpignoli/
 ### Core Platform
 
 - **Block-Based Programming**: Drag-and-drop interface using Blockly for accessible data manipulation
-- **Data Processing**: Filter, sort, aggregate, and transform data with visual programming blocks
+- **Backend Data Processing**: Server-side data operations for improved performance on low-powered devices
+- **Advanced Data Operations**: Filter, sort, aggregate, group, and calculate with visual programming blocks
 - **Chart Generation**: Create various chart types (bar, line, scatter, pie, doughnut, area, histogram, box plot, heatmap, radar)
 - **RESTful APIs**: Clean, well-documented API endpoints for data processing and visualization
+- **Frontend API Client**: Centralized API communication with comprehensive error handling
 
 ### Augmented Reality Experiences
 
@@ -25,9 +27,10 @@ Markers can be viewed and downloaded [here](https://github.com/nicolocarpignoli/
 ### Advanced Features
 
 - **Modular Architecture**: Clean separation of concerns with reusable AR modules
+- **Backend Data Processing**: Server-side operations for improved performance on low-powered devices
 - **Real-Time Processing**: Optimized performance with frame-skipping and efficient rendering
 - **Interactive Charts**: Zoom, pan, click events, and hover effects for enhanced data exploration
-- **Comprehensive Testing**: 95%+ test coverage with 190+ passing tests
+- **Comprehensive Testing**: 95%+ test coverage with 230+ passing tests including backend integration
 
 ## Quick Start
 
@@ -155,12 +158,18 @@ Processes data through a series of operations.
 
 **Supported Operations:**
 
-- `filter`: Filter data based on conditions
-- `sort`: Sort data by column
-- `aggregate`: Aggregate data (sum, average, count, min, max)
-- `select`: Select specific columns
-- `groupBy`: Group data by column and aggregate
-- `calculate`: Calculate new columns based on expressions
+- `filter`: Filter data based on conditions (equals, not_equals, greater_than, less_than, contains, etc.)
+- `sort`: Sort data by column in ascending or descending order
+- `select`: Select specific columns from the dataset
+- `groupBy`: Group data by column and apply aggregations (sum, average, count, min, max)
+- `calculate`: Calculate new columns based on mathematical expressions
+- `dropEmpty`: Remove rows with empty values in specified columns
+
+**Performance Benefits:**
+- Server-side processing reduces client load
+- Optimized for large datasets
+- Better performance on mobile and low-powered devices
+- Non-blocking UI during data processing
 
 #### POST `/api/generate-chart`
 
@@ -290,6 +299,15 @@ The backend maintains **95%+ test coverage** across:
 - **Lines**: 95.41%
 - **Branches**: 81.14%
 
+### New Backend Integration Tests
+
+Recent additions include comprehensive testing for:
+
+- **Frontend API Integration**: Tests for React components using backend APIs
+- **Blockly Data Processing**: Tests for visual programming blocks with backend operations
+- **CSV File Processing**: Real-world data processing with user-provided CSV files
+- **End-to-End Workflows**: Complete data processing pipelines from CSV to visualization
+
 ### Test Structure
 
 ```
@@ -302,6 +320,9 @@ tests/
 │   └── testData.test.js         # Sample data tests
 ├── frontend/
 │   ├── chartGeneration.test.js  # Chart generation frontend tests
+│   ├── dataProcessingFrontend.test.js # Frontend API integration tests
+│   ├── blocklyProcessing.test.js # Blockly backend integration tests
+│   ├── csvFileProcessing.test.js # Real CSV file processing tests
 │   ├── errorHandling.test.js    # Error handling tests
 │   ├── eventCommunication.test.js # Event system tests
 │   └── hybridAR.test.js         # Hybrid AR system tests
@@ -346,15 +367,17 @@ ApparentlyAR/
 │   │   └── hybrid-ar-controller.js    # Main AR controller orchestration
 │   ├── react/                         # React frontend components
 │   │   ├── index.js                  # Main React application entry
+│   │   ├── api.js                    # Frontend API client for backend communication
 │   │   └── components/               # React UI components
 │   │       ├── AppHeader.jsx          # Application header
 │   │       ├── ButtonPanel.jsx        # Control buttons
-│   │       ├── ChartControls.jsx      # Chart configuration controls
-│   │       ├── DataVisualizationPanel.jsx # Main chart display
+│   │       ├── ChartControls.jsx      # Chart configuration controls with data processing
+│   │       ├── DataVisualizationPanel.jsx # Main chart display with backend integration
 │   │       ├── OutputDisplay.jsx      # Code output display
 │   │       └── StatusIndicator.jsx    # Execution status indicator
 │   ├── blocks/                        # Blockly custom blocks
 │   │   ├── csv_import.js             # CSV import block definition
+│   │   ├── data_ops.js               # Data processing block for backend operations
 │   │   └── to_json.js                # JSON conversion block
 │   └── sum.js                         # Utility function (legacy)
 ├── tests/                             # Test suites

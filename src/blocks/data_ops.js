@@ -1,94 +1,236 @@
+/**
+ * Data Processing Block for Blockly
+ * 
+ * Provides a Blockly block for processing data through backend operations.
+ * This block allows users to perform complex data transformations including
+ * filtering, sorting, grouping, aggregation, and calculations using a
+ * visual programming interface.
+ * 
+ * The block integrates with the backend data processing API to offload
+ * heavy computations from the client, improving performance for large datasets.
+ * 
+ * @module DataOpsBlock
+ * @version 1.0.0
+ * @since 1.0.0
+ */
+
 // === Data Processing Block (Backend) ===
 (function(){
   if (typeof Blockly === 'undefined') return;
 
   Blockly.defineBlocksWithJsonArray([
     {
-      "type": "process_data",
-      "message0": "process dataset %1 drop empty in %2 filter %3 operator %4 value %5 select columns (comma) %6 sort by %7 direction %8 group by %9 agg column %10 agg op %11 alias %12 calculate expr %13 as %14",
+      "type": "filter_data",
+      "message0": "filter %1 where %2 %3 %4",
       "args0": [
         { "type": "input_value", "name": "DATA", "check": "Dataset" },
-        { "type": "field_input", "name": "DROP_EMPTY_COL", "text": "" },
-        { "type": "field_input", "name": "FILTER_COL", "text": "" },
-        { "type": "field_dropdown", "name": "FILTER_OP", "options": [
+        { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "OPERATOR", "options": [
           ["equals", "equals"],
-          ["not_equals", "not_equals"],
-          ["greater_than", "greater_than"],
-          ["less_than", "less_than"],
-          ["greater_than_or_equal", "greater_than_or_equal"],
-          ["less_than_or_equal", "less_than_or_equal"],
-          ["contains", "contains"],
-          ["starts_with", "starts_with"],
-          ["ends_with", "ends_with"]
-        ] },
-        { "type": "field_input", "name": "FILTER_VAL", "text": "" },
-        { "type": "field_input", "name": "SELECT_COLS", "text": "" },
-        { "type": "field_input", "name": "SORT_COL", "text": "" },
-        { "type": "field_dropdown", "name": "SORT_DIR", "options": [["asc","asc"],["desc","desc"]] },
-        { "type": "field_input", "name": "GROUP_COL", "text": "" },
-        { "type": "field_input", "name": "AGG_COL", "text": "" },
-        { "type": "field_dropdown", "name": "AGG_OP", "options": [["sum","sum"],["average","average"],["count","count"],["min","min"],["max","max"]] },
-        { "type": "field_input", "name": "AGG_ALIAS", "text": "value" },
-        { "type": "field_input", "name": "CALC_EXPR", "text": "" },
-        { "type": "field_input", "name": "CALC_NAME", "text": "newValue" }
+          ["not equals", "not_equals"],
+          ["greater than", "greater_than"],
+          ["less than", "less_than"],
+          ["contains", "contains"]
+        ], "SERIALIZABLE": true },
+        { "type": "field_input", "name": "VALUE", "text": "value", "SERIALIZABLE": true }
       ],
       "output": "Dataset",
       "colour": 20,
-      "tooltip": "Process data via backend with optional cleanup and transformations.",
+      "tooltip": "Filter data based on a condition",
+      "helpUrl": ""
+    },
+    {
+      "type": "sort_data",
+      "message0": "sort %1 by %2 %3",
+      "args0": [
+        { "type": "input_value", "name": "DATA", "check": "Dataset" },
+        { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "DIRECTION", "options": [["ascending","asc"],["descending","desc"]], "SERIALIZABLE": true }
+      ],
+      "output": "Dataset",
+      "colour": 20,
+      "tooltip": "Sort data by a column",
+      "helpUrl": ""
+    },
+    {
+      "type": "select_columns",
+      "message0": "select columns %1 from %2",
+      "args0": [
+        { "type": "field_input", "name": "COLUMNS", "text": "col1,col2", "SERIALIZABLE": true },
+        { "type": "input_value", "name": "DATA", "check": "Dataset" }
+      ],
+      "output": "Dataset",
+      "colour": 20,
+      "tooltip": "Select specific columns from data",
+      "helpUrl": ""
+    },
+    {
+      "type": "group_by",
+      "message0": "group %1 by %2 and %3 %4 as %5",
+      "args0": [
+        { "type": "input_value", "name": "DATA", "check": "Dataset" },
+        { "type": "field_input", "name": "GROUP_COLUMN", "text": "group_column", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "AGGREGATION", "options": [
+          ["sum", "sum"],
+          ["average", "average"],
+          ["count", "count"],
+          ["min", "min"],
+          ["max", "max"]
+        ], "SERIALIZABLE": true },
+        { "type": "field_input", "name": "AGG_COLUMN", "text": "value_column", "SERIALIZABLE": true },
+        { "type": "field_input", "name": "ALIAS", "text": "result", "SERIALIZABLE": true }
+      ],
+      "output": "Dataset",
+      "colour": 20,
+      "tooltip": "Group data and apply aggregation",
+      "helpUrl": ""
+    },
+    {
+      "type": "calculate_column",
+      "message0": "calculate %1 as %2 from %3",
+      "args0": [
+        { "type": "field_input", "name": "EXPRESSION", "text": "col1 + col2", "SERIALIZABLE": true },
+        { "type": "field_input", "name": "NEW_COLUMN", "text": "new_column", "SERIALIZABLE": true },
+        { "type": "input_value", "name": "DATA", "check": "Dataset" }
+      ],
+      "output": "Dataset",
+      "colour": 20,
+      "tooltip": "Calculate a new column from existing data",
+      "helpUrl": ""
+    },
+    {
+      "type": "drop_empty",
+      "message0": "drop empty rows in %1 from %2",
+      "args0": [
+        { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+        { "type": "input_value", "name": "DATA", "check": "Dataset" }
+      ],
+      "output": "Dataset",
+      "colour": 20,
+      "tooltip": "Remove rows with empty values",
       "helpUrl": ""
     }
   ]);
 
-  // JavaScript generator
+  // JavaScript generators for each block
   if (Blockly.JavaScript) {
-    const generator = function(block) {
-      const dataCode = Blockly.JavaScript.valueToCode(block, 'DATA', Blockly.JavaScript.ORDER_NONE) || 'Blockly.CsvImportData.data';
-      const dropCol = block.getFieldValue('DROP_EMPTY_COL') || '';
-      const fCol = block.getFieldValue('FILTER_COL') || '';
-      const fOp = block.getFieldValue('FILTER_OP') || 'equals';
-      const fVal = block.getFieldValue('FILTER_VAL') || '';
-      const selectCols = block.getFieldValue('SELECT_COLS') || '';
-      const sortCol = block.getFieldValue('SORT_COL') || '';
-      const sortDir = block.getFieldValue('SORT_DIR') || 'asc';
-      const groupCol = block.getFieldValue('GROUP_COL') || '';
-      const aggCol = block.getFieldValue('AGG_COL') || '';
-      const aggOp = block.getFieldValue('AGG_OP') || 'sum';
-      const aggAlias = block.getFieldValue('AGG_ALIAS') || 'value';
-      const calcExpr = block.getFieldValue('CALC_EXPR') || '';
-      const calcName = block.getFieldValue('CALC_NAME') || '';
+    // Helper function to get data code safely
+    function getDataCode(block) {
+      try {
+        const dataCode = Blockly.JavaScript.valueToCode(block, 'DATA', Blockly.JavaScript.ORDER_NONE);
+        return dataCode || 'Blockly.CsvImportData.data';
+      } catch (e) {
+        return 'Blockly.CsvImportData.data';
+      }
+    }
 
-      // Build operations at runtime in generated code
+    // Filter data generator
+    Blockly.JavaScript['filter_data'] = function(block) {
+      const dataCode = getDataCode(block);
+      const column = block.getFieldValue('COLUMN') || 'column';
+      const operator = block.getFieldValue('OPERATOR') || 'equals';
+      const value = block.getFieldValue('VALUE') || 'value';
+      
       const code = `(async () => {\n` +
         `  const __input = ${dataCode} || [];\n` +
-        `  const __ops = [];\n` +
-        `  if ('${dropCol}'.trim()) { __ops.push({ type: 'filter', params: { column: '${dropCol}', operator: 'not_equals', value: '' } }); }\n` +
-        `  if ('${fCol}'.trim() && '${fVal}'.trim()) { __ops.push({ type: 'filter', params: { column: '${fCol}', operator: '${fOp}', value: '${fVal}' } }); }\n` +
-        `  if ('${selectCols}'.trim()) { __ops.push({ type: 'select', params: { columns: '${selectCols}'.split(',').map(s=>s.trim()).filter(Boolean) } }); }\n` +
-        `  if ('${calcExpr}'.trim() && '${calcName}'.trim()) { __ops.push({ type: 'calculate', params: { expression: \`${calcExpr}\`, newColumnName: '${calcName}' } }); }\n` +
-        `  if ('${sortCol}'.trim()) { __ops.push({ type: 'sort', params: { column: '${sortCol}', direction: '${sortDir}' } }); }\n` +
-        `  if ('${groupCol}'.trim() && '${aggCol}'.trim()) { __ops.push({ type: 'groupBy', params: { groupBy: '${groupCol}', aggregations: [{ column: '${aggCol}', operation: '${aggOp}', alias: '${aggAlias}' }] } }); }\n` +
         `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
-        `  const __res = await window.AppApi.processData(__input, __ops);\n` +
+        `  const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${column}', operator: '${operator}', value: '${value}' } }]);\n` +
         `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
         `  if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
         `  return __data;\n` +
         `})()`;
-
+      
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
 
-    try {
-      Object.defineProperty(Blockly.JavaScript, 'process_data', { value: generator, configurable: true });
-    } catch (_) {
-      Blockly.JavaScript['process_data'] = generator;
-    }
+    // Sort data generator
+    Blockly.JavaScript['sort_data'] = function(block) {
+      const dataCode = getDataCode(block);
+      const column = block.getFieldValue('COLUMN') || 'column';
+      const direction = block.getFieldValue('DIRECTION') || 'asc';
+      
+      const code = `(async () => {\n` +
+        `  const __input = ${dataCode} || [];\n` +
+        `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
+        `  const __res = await window.AppApi.processData(__input, [{ type: 'sort', params: { column: '${column}', direction: '${direction}' } }]);\n` +
+        `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
+        `  if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
+        `  return __data;\n` +
+        `})()`;
+      
+      return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+    };
 
-    if (Blockly.JavaScript.forBlock) {
-      try {
-        Object.defineProperty(Blockly.JavaScript.forBlock, 'process_data', { value: generator, configurable: true });
-      } catch (_) {
-        Blockly.JavaScript.forBlock['process_data'] = generator;
-      }
-    }
+    // Select columns generator
+    Blockly.JavaScript['select_columns'] = function(block) {
+      const dataCode = getDataCode(block);
+      const columns = block.getFieldValue('COLUMNS') || 'col1,col2';
+      
+      const code = `(async () => {\n` +
+        `  const __input = ${dataCode} || [];\n` +
+        `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
+        `  const __res = await window.AppApi.processData(__input, [{ type: 'select', params: { columns: '${columns}'.split(',').map(s=>s.trim()).filter(Boolean) } }]);\n` +
+        `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
+        `  if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
+        `  return __data;\n` +
+        `})()`;
+      
+      return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+    };
+
+    // Group by generator
+    Blockly.JavaScript['group_by'] = function(block) {
+      const dataCode = getDataCode(block);
+      const groupColumn = block.getFieldValue('GROUP_COLUMN') || 'group_column';
+      const aggregation = block.getFieldValue('AGGREGATION') || 'sum';
+      const aggColumn = block.getFieldValue('AGG_COLUMN') || 'value_column';
+      const alias = block.getFieldValue('ALIAS') || 'result';
+      
+      const code = `(async () => {\n` +
+        `  const __input = ${dataCode} || [];\n` +
+        `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
+        `  const __res = await window.AppApi.processData(__input, [{ type: 'groupBy', params: { groupBy: '${groupColumn}', aggregations: [{ column: '${aggColumn}', operation: '${aggregation}', alias: '${alias}' }] } }]);\n` +
+        `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
+        `  if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
+        `  return __data;\n` +
+        `})()`;
+      
+      return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+    };
+
+    // Calculate column generator
+    Blockly.JavaScript['calculate_column'] = function(block) {
+      const dataCode = getDataCode(block);
+      const expression = block.getFieldValue('EXPRESSION') || 'col1 + col2';
+      const newColumn = block.getFieldValue('NEW_COLUMN') || 'new_column';
+      
+      const code = `(async () => {\n` +
+        `  const __input = ${dataCode} || [];\n` +
+        `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
+        `  const __res = await window.AppApi.processData(__input, [{ type: 'calculate', params: { expression: \`${expression}\`, newColumnName: '${newColumn}' } }]);\n` +
+        `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
+        `  if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
+        `  return __data;\n` +
+        `})()`;
+      
+      return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+    };
+
+    // Drop empty generator
+    Blockly.JavaScript['drop_empty'] = function(block) {
+      const dataCode = getDataCode(block);
+      const column = block.getFieldValue('COLUMN') || 'column';
+      
+      const code = `(async () => {\n` +
+        `  const __input = ${dataCode} || [];\n` +
+        `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
+        `  const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${column}', operator: 'not_equals', value: '' } }]);\n` +
+        `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
+        `  if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
+        `  return __data;\n` +
+        `})()`;
+      
+      return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+    };
   }
 })();

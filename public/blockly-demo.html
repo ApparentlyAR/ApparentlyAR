@@ -42,28 +42,31 @@
     console.log('Blockly.JavaScript available:', !!window.Blockly.JavaScript);
     console.log('Available JavaScript generators before CSV import:', Object.keys(window.Blockly.JavaScript || {}));
   </script>
+  <script src="../src/react/api.js"></script>
   <script src="../src/blocks/csv_import.js"></script>
   <script src="../src/blocks/to_json.js"></script>
   <script src="../src/blocks/data_ops.js"></script>
   <script>
     // Check if CSV import generator was registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
-    console.log('CSV import generator type:', typeof window.Blockly.JavaScript['csv_import']);
+    console.log('Process data generator registered after loading:', !!window.Blockly.JavaScript['process_data']);
+    console.log('AppApi available:', !!window.AppApi);
+    console.log('AppApi.processData available:', !!window.AppApi?.processData);
 
     // Show all available generators that might be block-related
     const allKeys = Object.keys(window.Blockly.JavaScript || {});
     const blockKeys = allKeys.filter(key => !key.startsWith('ORDER_') && !key.startsWith('STATEMENT_') && !key.startsWith('FUNCTION_') && !key.startsWith('INFINITE_') && !key.startsWith('INDENT') && !key.startsWith('COMMENT_') && !key.startsWith('RESERVED_') && key.length > 2);
     console.log('Block-related generators:', blockKeys);
 
-    // Test the generator directly
+    // Test the generators directly
     setTimeout(() => {
       if (window.Blockly.JavaScript['csv_import']) {
         try {
           console.log('Testing CSV generator directly...');
           const result = window.Blockly.JavaScript['csv_import']();
-          console.log('Direct generator test result:', result);
+          console.log('Direct CSV generator test result:', result);
         } catch (e) {
-          console.error('Direct generator test failed:', e);
+          console.error('Direct CSV generator test failed:', e);
         }
       }
     }, 200);
@@ -313,7 +316,32 @@
               <block type="csv_import"></block>
             </value>
           </block>
-          <block type="process_data">
+          <block type="filter_data">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="sort_data">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="select_columns">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="group_by">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_column">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="drop_empty">
             <value name="DATA">
               <block type="csv_import"></block>
             </value>
