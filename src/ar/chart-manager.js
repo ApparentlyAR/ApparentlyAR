@@ -107,10 +107,10 @@ class ChartManager {
     if (!entity) {
       entity = document.createElement('a-plane');
       entity.setAttribute('data-marker-chart', '');
-      entity.setAttribute('width', '2');
-      entity.setAttribute('height', '1.5');
+      entity.setAttribute('width', '4');
+      entity.setAttribute('height', '3');
       // Keep it slightly above marker origin to avoid z-fighting with marker plane
-      entity.setAttribute('position', '0 1 0');
+      entity.setAttribute('position', '0 2 0');
       marker.appendChild(entity);
     }
     entity.setAttribute('material', `shader: flat; src: #${canvas.id}; transparent: true; side: double`);
