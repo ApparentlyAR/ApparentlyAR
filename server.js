@@ -57,6 +57,13 @@ app.get('/view-project', (req, res) => {
 });
 
 /**
+ * Serve the Student Dashboard application page
+ */
+app.get('/student-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'student-dashboard.html'));
+});
+
+/**
  * Serve the Blockly application page
  */
 app.get('/blockly', (req, res) => {
