@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <link rel="icon" type="image/jpeg" href="./logo.jpg">
+  <link rel="icon" type="image/jpeg" href="./LogoAR.svg">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
   <title>ApparentlyAR</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -51,12 +53,12 @@
     // Check if CSV import generator was registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
     console.log('CSV import generator type:', typeof window.Blockly.JavaScript['csv_import']);
-    
+
     // Show all available generators that might be block-related
     const allKeys = Object.keys(window.Blockly.JavaScript || {});
     const blockKeys = allKeys.filter(key => !key.startsWith('ORDER_') && !key.startsWith('STATEMENT_') && !key.startsWith('FUNCTION_') && !key.startsWith('INFINITE_') && !key.startsWith('INDENT') && !key.startsWith('COMMENT_') && !key.startsWith('RESERVED_') && key.length > 2);
     console.log('Block-related generators:', blockKeys);
-    
+
     // Test the generator directly
     setTimeout(() => {
       if (window.Blockly.JavaScript['csv_import']) {
@@ -78,6 +80,7 @@
         "blocks stage data"
         "guide guide guide";
     }
+
     @media (max-width: 980px) {
       [data-areas="desktop"] {
         grid-template-areas:
@@ -92,6 +95,7 @@
         min-height: 100vh;
       }
     }
+
     .camera-checker {
       background-image: linear-gradient(45deg, #1b2441 25%, transparent 25%),
         linear-gradient(-45deg, #1b2441 25%, transparent 25%),
@@ -101,43 +105,17 @@
       background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
     }
 
-    /* Blockly styling adjustments for dark theme */
-    .blocklyToolboxDiv {
-      background-color: #171c2b !important;
-      border-right: 1px solid #2b3350 !important;
-    }
-    
-    .blocklyFlyoutBackground {
-      fill: #171c2b !important;
-    }
-    
-    .blocklyMainBackground {
-      fill: #0f1324 !important;
-    }
-    
-    .blocklyScrollbarBackground {
-      fill: #1e2436 !important;
-    }
-    
-    .blocklyScrollbarHandle {
-      fill: #a9b4d0 !important;
-    }
-    
-    .blocklyText {
-      fill: #e7ebff !important;
-    }
-
     /* Chart.js mobile responsiveness */
     .chart-container {
       position: relative;
       width: 100%;
     }
-    
+
     @media (max-width: 640px) {
       .chart-container {
         height: 300px !important;
       }
-      
+
       .chart-container canvas {
         max-width: 100% !important;
         height: auto !important;
@@ -201,40 +179,51 @@
         display: none;
       }
     }
+    
+    /* Fix for Blockly flyout scroll issues */
+    .blocklyFlyout {
+      overflow: hidden !important;
+    }
+    
+    .blocklyFlyoutScrollbar {
+      display: none !important;
+    }
+    
+    /* Ensure proper sizing for Blockly workspace */
+    .blocklySvg {
+      display: block;
+    }
+    
+    /* Fix for scrollbars appearing when not needed */
+    .blocklyToolboxDiv::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .blocklyToolboxDiv {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   </style>
 </head>
+
 <body class="m-0 text-text bg-[radial-gradient(1200px_700px_at_70%_-10%,#1b2240,#0a0d18)] min-h-screen">
-  <div
-    id="main-grid"
-    class="grid h-screen overflow-hidden"
-    style="
+  <div id="main-grid" class="grid h-screen overflow-hidden" style="
       grid-template-rows: 56px 1fr 120px;
       grid-template-columns: 320px 1fr 360px;
-    "
-    data-areas="desktop"
-  >
+    " data-areas="desktop">
     <!-- Resize Handle between blocks and stage -->
-    <div 
-      id="resize-handle-1" 
-      class="resize-handle resize-handle-vertical"
-      style="grid-row: 2; grid-column: 2; margin-left: -4px; z-index: 10;"
-    ></div>
-    
+    <div id="resize-handle-1" class="resize-handle resize-handle-vertical"
+      style="grid-row: 2; grid-column: 2; margin-left: -4px; z-index: 10;"></div>
+
     <!-- Resize Handle between stage and data -->
-    <div 
-      id="resize-handle-2" 
-      class="resize-handle resize-handle-vertical"
-      style="grid-row: 2; grid-column: 3; margin-left: -4px; z-index: 10;"
-    ></div>
+    <div id="resize-handle-2" class="resize-handle resize-handle-vertical"
+      style="grid-row: 2; grid-column: 3; margin-left: -4px; z-index: 10;"></div>
     <!-- Topbar -->
-    <header
-      style="grid-area: topbar"
-      class="flex items-center gap-3 px-3 py-2 bg-gradient-to-b from-[#151a2a] to-[#111624] border-b border-border"
-    >
+    <header style="grid-area: topbar"
+      class="flex items-center gap-3 px-3 py-2 bg-gradient-to-b from-[#151a2a] to-[#111624] border-b border-border">
       <div class="flex items-center gap-2 font-bold">
         <div
-          class="w-6 h-6 rounded-md bg-gradient-to-br from-accent to-[#b28bff] grid place-items-center text-[#0a0d18] text-xs"
-        >
+          class="w-6 h-6 rounded-md bg-gradient-to-br from-accent to-[#b28bff] grid place-items-center text-[#0a0d18] text-xs">
           AR
         </div>
         <span>ApparentlyAR</span>
@@ -243,22 +232,16 @@
 
       <div class="flex items-center gap-2">
         <span class="text-sm text-muted">Project:</span>
-        <button
-          class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-        >
+        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
           My AR Viz
         </button>
       </div>
 
       <div class="flex items-center gap-2">
-        <button
-          class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-        >
+        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
           Student
         </button>
-        <button
-          class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-        >
+        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
           Teacher
         </button>
       </div>
@@ -273,230 +256,214 @@
       <div class="ml-auto flex items-center gap-2">
         <button
           class="rounded-lg border border-accent bg-accent/10 text-accent text-sm px-3 py-1.5 hover:bg-accent/20 transition-colors font-medium"
-          onclick="window.location.href='/hybrid-ar'"
-        >
+          onclick="window.location.href='/hybrid-ar'">
           Enter AR
         </button>
-        <button
-          class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-        >
+        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
           Simulate
         </button>
-        <button
-          class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5"
-        >
+        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
           Snapshot
         </button>
       </div>
     </header>
 
     <!-- Blocks Panel -->
-    <aside
-      style="grid-area: blocks"
-      class="grid grid-rows-[auto,1fr] bg-panel border-r border-border overflow-hidden"
-    >
+    <aside style="grid-area: blocks" class="grid grid-rows-[auto,1fr] bg-panel border-r border-border overflow-hidden">
       <div class="p-2 border-b border-border">
-        <input
-          class="w-full px-3 py-2 rounded-lg border border-border bg-[#0e1220] text-sm text-text placeholder-muted"
-          placeholder="Search blocks..."
-        />
+        <input class="w-full px-3 py-2 rounded-lg border border-border bg-[#0e1220] text-sm text-text placeholder-muted"
+          placeholder="Search blocks..." />
       </div>
-      
+
       <!-- Blockly Workspace -->
       <div id="blocklyDiv" class="w-full h-full overflow-hidden bg-[#0f1324]"></div>
-        
-        <!-- Hidden Blockly Toolbox -->
-        <xml id="toolbox" style="display: none">
-          <category name="Data Import" colour="20">
-            <block type="csv_import"></block>
-            <block type="to_json">
-              <value name="VALUE">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-          </category>
-          <category name="Data Cleaning" colour="20">
-            <block type="convert_type">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="drop_column">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="rename_column">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="handle_missing">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="handle_missing_with_value">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-          </category>
-          <category name="Data Filtering" colour="120">
-            <block type="filter_data">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="select_columns">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="sort_data">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="filter_range">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-          </category>
-          <category name="Data Transform" colour="260">
-            <block type="group_by">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="aggregate">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="group_aggregate">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="bin_data">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="calculate_field">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="calculate_with_value">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="pivot_table">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-          </category>
-          <category name="Visualization" colour="330">
-            <block type="quick_chart">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="set_chart_type"></block>
-            <block type="set_axes">
-              <value name="CHART_CONFIG">
-                <block type="set_chart_type"></block>
-              </value>
-            </block>
-            <block type="chart_options">
-              <value name="CHART_CONFIG">
-                <block type="set_chart_type"></block>
-              </value>
-            </block>
-            <block type="advanced_chart_options">
-              <value name="CHART_CONFIG">
-                <block type="set_chart_type"></block>
-              </value>
-            </block>
-            <block type="generate_visualization">
-              <value name="CHART_CONFIG">
-                <block type="set_chart_type"></block>
-              </value>
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="histogram_config">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="boxplot_config">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-            <block type="heatmap_config">
-              <value name="DATASET">
-                <block type="csv_import"></block>
-              </value>
-            </block>
-          </category>
-          <category name="Logic" colour="210">
-            <block type="controls_if"></block>
-            <block type="logic_compare"></block>
-            <block type="logic_operation"></block>
-            <block type="logic_negate"></block>
-            <block type="logic_boolean"></block>
-          </category>
-          <category name="Loops" colour="120">
-            <block type="controls_repeat_ext"></block>
-            <block type="controls_whileUntil"></block>
-          </category>
-          <category name="Math" colour="230">
-            <block type="math_number"></block>
-            <block type="math_arithmetic"></block>
-            <block type="math_single"></block>
-            <block type="math_round"></block>
-            <block type="math_on_list"></block>
-          </category>
-          <category name="Text" colour="160">
-            <block type="text"></block>
-            <block type="text_print"></block>
-          </category>
-          <category name="Lists" colour="260">
-            <block type="lists_create_with"></block>
-            <block type="lists_getIndex"></block>
-            <block type="lists_setIndex"></block>
-            <block type="lists_length"></block>
-          </category>
-          <category name="Variables" colour="330" custom="VARIABLE"></category>
-          <category name="Functions" colour="290" custom="PROCEDURE"></category>
-        </xml>
+
+      <!-- Hidden Blockly Toolbox -->
+      <xml id="toolbox" style="display: none">
+        <category name="Data Import" colour="20">
+          <block type="csv_import"></block>
+          <block type="to_json">
+            <value name="VALUE">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Data Cleaning" colour="20">
+          <block type="convert_type">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="drop_column">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="rename_column">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="handle_missing">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="handle_missing_with_value">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Data Filtering" colour="120">
+          <block type="filter_data">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="select_columns">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="sort_data">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="filter_range">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Data Transform" colour="260">
+          <block type="group_by">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="aggregate">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="group_aggregate">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="bin_data">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_field">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_with_value">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="pivot_table">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Visualization" colour="330">
+          <block type="quick_chart">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="set_chart_type"></block>
+          <block type="set_axes">
+            <value name="CHART_CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="chart_options">
+            <value name="CHART_CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="advanced_chart_options">
+            <value name="CHART_CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="generate_visualization">
+            <value name="CHART_CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="histogram_config">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="boxplot_config">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="heatmap_config">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Logic" colour="210">
+          <block type="controls_if"></block>
+          <block type="logic_compare"></block>
+          <block type="logic_operation"></block>
+          <block type="logic_negate"></block>
+          <block type="logic_boolean"></block>
+        </category>
+        <category name="Loops" colour="120">
+          <block type="controls_repeat_ext"></block>
+          <block type="controls_whileUntil"></block>
+        </category>
+        <category name="Math" colour="230">
+          <block type="math_number"></block>
+          <block type="math_arithmetic"></block>
+          <block type="math_single"></block>
+          <block type="math_round"></block>
+          <block type="math_on_list"></block>
+        </category>
+        <category name="Text" colour="160">
+          <block type="text"></block>
+          <block type="text_print"></block>
+        </category>
+        <category name="Lists" colour="260">
+          <block type="lists_create_with"></block>
+          <block type="lists_getIndex"></block>
+          <block type="lists_setIndex"></block>
+          <block type="lists_length"></block>
+        </category>
+        <category name="Variables" colour="330" custom="VARIABLE"></category>
+        <category name="Functions" colour="290" custom="PROCEDURE"></category>
+      </xml>
     </aside>
 
     <!-- Stage / Visualization Area -->
-    <section
-      style="grid-area: stage"
-      class="relative grid grid-rows-[44px,1fr] bg-gradient-to-b from-[#0f1324] to-[#0b0f1c]"
-    >
-      <div
-        class="flex items-center gap-2 p-2 border-b border-border bg-[#13182a]"
-      >
-        
+    <section style="grid-area: stage"
+      class="relative grid grid-rows-[44px,1fr] bg-gradient-to-b from-[#0f1324] to-[#0b0f1c]">
+      <div class="flex items-center gap-2 p-2 border-b border-border bg-[#13182a]">
+
         <div id="react-controls-container" class="flex items-center gap-2"></div>
 
       </div>
 
       <!-- Visualization Container -->
-      <div
-        class="relative m-3 rounded-2xl border border-border overflow-hidden"
-        style="
+      <div class="relative m-3 rounded-2xl border border-border overflow-hidden" style="
           background: conic-gradient(
             from 0deg at 50% 50%,
             #11182c,
@@ -504,26 +471,20 @@
             #10172b,
             #11182c
           );
-        "
-      >
+        ">
         <!-- React Chart Component Mount Point -->
         <div id="react-chart-container" class="w-full h-full min-h-[400px] grid place-items-center text-muted">
           <div class="text-sm text-muted">
             Visualization will appear here when blocks are executed
           </div>
         </div>
-        
+
       </div>
     </section>
 
     <!-- Data Panel -->
-    <aside
-      style="grid-area: data"
-      class="grid grid-rows-[44px,auto,1fr] bg-panel border-l border-border"
-    >
-      <div
-        class="flex items-center gap-2 p-2 border-b border-border bg-[#151a2c]"
-      >
+    <aside style="grid-area: data" class="grid grid-rows-[44px,auto,1fr] bg-panel border-l border-border">
+      <div class="flex items-center gap-2 p-2 border-b border-border bg-[#151a2c]">
         <strong>Data Panel</strong>
       </div>
 
@@ -535,18 +496,15 @@
     </aside>
 
     <!-- Guide / Console -->
-    <footer
-      style="grid-area: guide"
-      class="flex items-center gap-3 px-3 py-2 bg-[#111524] border-t border-border"
-    >
-      
+    <footer style="grid-area: guide" class="flex items-center gap-3 px-3 py-2 bg-[#111524] border-t border-border">
+
       <!-- React Output Display Mount Point -->
       <div id="output-root" class="flex-1"></div>
-      
+
       <div class="ml-auto flex items-center gap-2">
         <!-- React Status Indicator Mount Point -->
         <div id="status-root"></div>
-        
+
       </div>
     </footer>
   </div>
@@ -555,24 +513,24 @@
     // Enhanced workspace configuration with dark theme
     const workspace = Blockly.inject('blocklyDiv', {
       toolbox: document.getElementById('toolbox'),
-      grid: { 
-        spacing: 20, 
-        length: 3, 
-        colour: '#2b3350', 
-        snap: true 
+      grid: {
+        spacing: 20,
+        length: 3,
+        colour: '#2b3350',
+        snap: true
       },
-      zoom: { 
-        controls: true, 
-        wheel: true, 
-        startScale: 0.8, 
-        maxScale: 2, 
-        minScale: 0.3, 
-        scaleSpeed: 1.2 
+      zoom: {
+        controls: true,
+        wheel: true,
+        startScale: 0.8,
+        maxScale: 2,
+        minScale: 0.3,
+        scaleSpeed: 1.2
       },
-      move: { 
-        scrollbars: true, 
-        drag: true, 
-        wheel: true 
+      move: {
+        scrollbars: true,
+        drag: true,
+        wheel: true
       },
       trashcan: true,
       theme: {
@@ -600,7 +558,7 @@
       if (workspace && document.getElementById('blocklyDiv')) {
         try {
           Blockly.svgResize(workspace);
-          
+
           // Mobile-specific adjustments
           if (isMobile || window.innerWidth <= 768) {
             // Adjust workspace scale for mobile
@@ -627,16 +585,16 @@
     window.addEventListener('orientationchange', () => {
       setTimeout(resizeWorkspace, 300); // Delay for orientation change
     });
-    
+
     // Enhanced mobile touch handling
     if (isTouch) {
-      document.addEventListener('touchstart', function() {}, { passive: true });
+      document.addEventListener('touchstart', function () { }, { passive: true });
     }
-    
+
     // Initial resize with mobile detection
     setTimeout(() => {
       resizeWorkspace();
-      
+
       // Additional mobile initialization
       if (isMobile) {
         console.log('Mobile device detected, applying optimizations');
@@ -685,14 +643,14 @@
       // Load saved sizes from localStorage
       const savedBlocksWidth = localStorage.getItem('panelBlocksWidth');
       const savedDataWidth = localStorage.getItem('panelDataWidth');
-      
+
       if (savedBlocksWidth) {
         startBlocksWidth = parseInt(savedBlocksWidth);
       }
       if (savedDataWidth) {
         startDataWidth = parseInt(savedDataWidth);
       }
-      
+
       // Apply saved sizes
       mainGrid.style.gridTemplateColumns = `${startBlocksWidth}px 1fr ${startDataWidth}px`;
 
@@ -735,7 +693,7 @@
         }
 
         mainGrid.style.gridTemplateColumns = `${newBlocksWidth}px 1fr ${newDataWidth}px`;
-        
+
         // Update Blockly workspace
         if (workspace && currentHandle === 1) {
           requestAnimationFrame(() => {
@@ -752,7 +710,7 @@
       document.addEventListener('mouseup', () => {
         if (isResizing) {
           isResizing = false;
-          
+
           // Clean up visual states
           handle1.classList.remove('dragging');
           handle2.classList.remove('dragging');
@@ -762,14 +720,14 @@
           // Parse current widths and save to localStorage
           const currentStyle = mainGrid.style.gridTemplateColumns;
           const widthMatch = currentStyle.match(/(\d+)px 1fr (\d+)px/);
-          
+
           if (widthMatch) {
             const blocksWidth = parseInt(widthMatch[1]);
             const dataWidth = parseInt(widthMatch[2]);
-            
+
             localStorage.setItem('panelBlocksWidth', blocksWidth);
             localStorage.setItem('panelDataWidth', dataWidth);
-            
+
             startBlocksWidth = blocksWidth;
             startDataWidth = dataWidth;
           }
@@ -803,37 +761,37 @@
     }, 200);
 
     // Bridge functions for React components to call vanilla JS Blockly functions
-    window.executeBlocklyCode = function() {
+    window.executeBlocklyCode = function () {
       if (!workspace) return;
-      
+
       // Update React state - executing
       if (window.reactSetExecuting) window.reactSetExecuting(true);
       if (window.reactSetOutput) window.reactSetOutput('');
-      
+
       console.log('Run button clicked via React');
-      
+
       try {
         console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
         console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
         console.log('Calling workspaceToCode...');
-        
+
         const code = Blockly.JavaScript.workspaceToCode(workspace);
         console.log('Generated code:', code);
-        
+
         if (!code.trim()) {
           if (window.reactSetOutput) window.reactSetOutput('No code generated - make sure you have blocks in the workspace');
           if (window.reactSetError) window.reactSetError(false);
           if (window.reactSetExecuting) window.reactSetExecuting(false);
           return;
         }
-        
+
         // eslint-disable-next-line no-eval
         const result = eval(code);
         console.log('Execution result:', result);
-        
+
         if (window.reactSetOutput) window.reactSetOutput(result !== undefined ? String(result) : 'Code executed successfully');
         if (window.reactSetError) window.reactSetError(false);
-        
+
         // Dispatch event for automatic visualization of CSV data
         window.dispatchEvent(new CustomEvent('blocklyExecuted'));
       } catch (e) {
@@ -841,28 +799,29 @@
         if (window.reactSetOutput) window.reactSetOutput(`Error: ${e.message}`);
         if (window.reactSetError) window.reactSetError(true);
       }
-      
+
       // Update React state - finished executing
       if (window.reactSetExecuting) window.reactSetExecuting(false);
     };
 
-    window.showBlocklyCode = function() {
+    window.showBlocklyCode = function () {
       if (!workspace) return;
-      
+
       console.log('Show code button clicked via React');
       console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
       console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
-      
+
       const code = Blockly.JavaScript.workspaceToCode(workspace);
       console.log('Generated code:', code);
-      
+
       if (window.reactSetOutput) window.reactSetOutput(code || 'No code generated');
       if (window.reactSetError) window.reactSetError(false);
     };
 
   </script>
-  
+
   <!-- Include React bundle -->
   <script src="react-bundle.js"></script>
 </body>
+
 </html>

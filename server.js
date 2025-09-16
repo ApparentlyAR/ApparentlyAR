@@ -11,6 +11,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const bodyParser = require('body-parser');
 
 // Import backend modules
 const dataProcessor = require('./src/backend/dataProcessor');
@@ -25,11 +26,40 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/src', express.static('src'));
+app.use(bodyParser.json());
 
 /**
- * Serve the main application page
+ * Serve the Login application page
  */
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+/**
+ * Serve the Teacher Dashboard application page
+ */
+app.get('/teacher-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'teacher-dashboard.html'));
+});
+
+/**
+ * Serve the Teacher Create a Project Dashboard application page
+ */
+app.get('/create-project', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'create-project.html'));
+});
+
+/**
+ * Serve the View Project application page
+ */
+app.get('/view-project', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'view-project.html'));
+});
+
+/**
+ * Serve the Blockly application page
+ */
+app.get('/blockly', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'blockly-demo.html'));
 });
 
@@ -170,6 +200,54 @@ app.post('/api/ar-visualization', async (req, res) => {
 });
 
 /**
+ * Temporary in-memory storage for projects -Najla
+ */
+let projects = [];
+
+/**
+ * Endpoint to save a new project -Najla
+ */
+app.post('/api/projects', (req, res) => {
+    const { name, description } = req.body;
+    const newProject = { id: Date.now(), name, description, status: 'Active' };
+    projects.push(newProject);
+    res.status(201).json(newProject);
+});
+
+/**
+ * Endpoint to fetch all projects -Najla
+ */
+app.get('/api/projects', (req, res) => {
+    res.json(projects);
+});
+
+/**
+ * Endpoint to fetch a single project by ID -Najla
+ */
+app.get('/api/projects/:id', (req, res) => {
+    const project = projects.find(p => p.id === parseInt(req.params.id));
+    if (project) {
+        res.json(project);
+    } else {
+        res.status(404).json({ error: 'Project not found' });
+    }
+});
+
+
+/**
+ * Endpoint to update a project by ID -Najla
+ */
+app.put('/api/projects/:id', (req, res) => {
+    const projectIndex = projects.findIndex(p => p.id === parseInt(req.params.id));
+    if (projectIndex !== -1) {
+        projects[projectIndex] = { ...projects[projectIndex], ...req.body };
+        res.json(projects[projectIndex]);
+    } else {
+        res.status(404).json({ error: 'Project not found' });
+    }
+});
+
+/**
  * Global error handling middleware
  * Catches and handles any unhandled errors in the application
  */
@@ -180,11 +258,34 @@ app.use((error, req, res, next) => {
 
 // Start server only if this is the main module (not when imported for testing)
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`ApparentlyAR server running on http://localhost:${PORT}`);
-    console.log(`Data visualization backend ready`);
-    console.log(`AR endpoints available at /api/ar-visualization`);
-  });
+  // Function to start server on a specific port
+  const startServer = (port) => {
+    const server = app.listen(port, () => {
+      console.log(`ApparentlyAR server running on http://localhost:${port}`);
+      console.log(`Data visualization backend ready`);
+      console.log(`AR endpoints available at /api/ar-visualization`);
+    });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`Port ${port} is already in use.`);
+        const nextPort = port + 1;
+        // Try up to 10 consecutive ports
+        if (nextPort < port + 10) {
+          console.log(`Trying port ${nextPort}...`);
+          startServer(nextPort);
+        } else {
+          console.error('Unable to find an available port after 10 attempts.');
+          process.exit(1);
+        }
+      } else {
+        console.error('Server error:', err);
+      }
+    });
+  };
+
+  // Start server on the configured port
+  startServer(PORT);
 }
 
 module.exports = app;
