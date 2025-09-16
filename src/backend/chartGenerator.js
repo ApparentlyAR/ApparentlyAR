@@ -13,21 +13,35 @@
  */
 class ChartGenerator {
   constructor() {
+    // Bind all methods to ensure proper 'this' context first
+    this.generateChart = this.generateChart.bind(this);
+    this.generateARVisualization = this.generateARVisualization.bind(this);
+    this.generateBarChart = this.generateBarChart.bind(this);
+    this.generateLineChart = this.generateLineChart.bind(this);
+    this.generateScatterChart = this.generateScatterChart.bind(this);
+    this.generatePieChart = this.generatePieChart.bind(this);
+    this.generateDoughnutChart = this.generateDoughnutChart.bind(this);
+    this.generateAreaChart = this.generateAreaChart.bind(this);
+    this.generateHistogramChart = this.generateHistogramChart.bind(this);
+    this.generateBoxPlotChart = this.generateBoxPlotChart.bind(this);
+    this.generateHeatmapChart = this.generateHeatmapChart.bind(this);
+    this.generateRadarChart = this.generateRadarChart.bind(this);
+
     /**
      * Supported chart types and their generation functions
      * @type {Object}
      */
     this.supportedChartTypes = {
-      bar: this.generateBarChart.bind(this),
-      line: this.generateLineChart.bind(this),
-      scatter: this.generateScatterChart.bind(this),
-      pie: this.generatePieChart.bind(this),
-      doughnut: this.generateDoughnutChart.bind(this),
-      area: this.generateAreaChart.bind(this),
-      histogram: this.generateHistogramChart.bind(this),
-      boxplot: this.generateBoxPlotChart.bind(this),
-      heatmap: this.generateHeatmapChart.bind(this),
-      radar: this.generateRadarChart.bind(this)
+      bar: this.generateBarChart,
+      line: this.generateLineChart,
+      scatter: this.generateScatterChart,
+      pie: this.generatePieChart,
+      doughnut: this.generateDoughnutChart,
+      area: this.generateAreaChart,
+      histogram: this.generateHistogramChart,
+      boxplot: this.generateBoxPlotChart,
+      heatmap: this.generateHeatmapChart,
+      radar: this.generateRadarChart
     };
   }
 

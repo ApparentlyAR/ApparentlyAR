@@ -265,11 +265,34 @@ app.use((error, req, res, next) => {
 
 // Start server only if this is the main module (not when imported for testing)
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`ApparentlyAR server running on http://localhost:${PORT}`);
-    console.log(`Data visualization backend ready`);
-    console.log(`AR endpoints available at /api/ar-visualization`);
-  });
+  // Function to start server on a specific port
+  const startServer = (port) => {
+    const server = app.listen(port, () => {
+      console.log(`ApparentlyAR server running on http://localhost:${port}`);
+      console.log(`Data visualization backend ready`);
+      console.log(`AR endpoints available at /api/ar-visualization`);
+    });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`Port ${port} is already in use.`);
+        const nextPort = port + 1;
+        // Try up to 10 consecutive ports
+        if (nextPort < port + 10) {
+          console.log(`Trying port ${nextPort}...`);
+          startServer(nextPort);
+        } else {
+          console.error('Unable to find an available port after 10 attempts.');
+          process.exit(1);
+        }
+      } else {
+        console.error('Server error:', err);
+      }
+    });
+  };
+
+  // Start server on the configured port
+  startServer(PORT);
 }
 
 module.exports = app;
