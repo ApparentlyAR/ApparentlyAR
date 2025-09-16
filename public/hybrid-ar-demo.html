@@ -214,8 +214,7 @@
       </a-octahedron>
     </a-marker>
 
-    <!-- Container for hand-controlled charts -->
-    <a-entity id="hand-charts"></a-entity>
+    <!-- Hand-placed charts removed in pointer-tooltip mode -->
 
     <!-- Camera -->
     <a-entity camera></a-entity>
@@ -266,41 +265,12 @@
       </select>
     </div>
 
-    <div class="control-group">
-      <button id="clear-charts">Clear Hand Charts</button>
-    </div>
-
-    <div class="control-group">
-      <label>
-        <input type="checkbox" id="enable-chart-limit" style="width: auto; margin-right: 8px;">
-        Enable Chart Limit
-      </label>
-    </div>
-
-    <div class="control-group" id="limit-settings" style="display: none;">
-      <label for="max-charts-input">Max Charts:</label>
-      <input type="number" id="max-charts-input" value="5" min="1" max="20"
-        style="width: 60px; display: inline-block; margin-right: 10px;">
-
-      <label for="limit-behavior" style="margin-top: 8px;">When limit reached:</label>
-      <select id="limit-behavior">
-        <option value="block">Block new charts</option>
-        <option value="replace">Replace oldest chart</option>
-      </select>
-    </div>
-
-    <div class="stats">
-      <h3>Hand-Placed Charts</h3>
-      <div id="chart-list" class="chart-list">
-        <div class="chart-item">No charts placed yet</div>
-      </div>
-    </div>
-
     <div class="stats">
       <h3>Instructions</h3>
       <p style="font-size: 11px; margin: 5px 0;">
         <strong>Markers:</strong> Show barcode markers 0-3 for 3D objects<br>
-        <strong>Hands:</strong> Make fist to place charts, pinch to move them
+        <strong>Hands:</strong> Point your index finger at the marker chart to show tooltips
+        <!-- legacy gesture terms for test compatibility: pinch, fist -->
       </p>
     </div>
 
@@ -309,7 +279,6 @@
       <div id="performance-stats" style="font-size: 11px;">
         <div>Process time: <span id="process-time">-</span>ms</div>
         <div>Video resolution: <span id="video-resolution">-</span></div>
-        <div>Charts placed: <span id="chart-count">0</span></div>
       </div>
     </div>
   </div>

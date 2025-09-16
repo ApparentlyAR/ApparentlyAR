@@ -163,6 +163,68 @@ class ChartManager {
   }
 
   /**
+   * Drive Chart.js tooltip on a marker-anchored chart using an A-Frame UV hit.
+   * Pass null/undefined uv to hide the tooltip.
+   * @param {string} markerId
+   * @param {{x:number,y:number}|null} uv
+   */
+  showMarkerTooltipAtUV(markerId, uv) {
+    const entry = this.markerCharts?.[markerId];
+    if (!entry || !entry.chart || !entry.canvas) return;
+    const { chart, canvas, entity } = entry;
+
+    if (!uv) {
+      try {
+        chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+        chart.update('none');
+        this.forceMaterialRefresh(entity);
+      } catch (_) {}
+      return;
+    }
+
+    const x = uv.x * canvas.width;
+    const y = (1 - uv.y) * canvas.height; // flip V to canvas Y
+    const pos = { x, y };
+    try {
+      // Manually find nearest element to avoid needing a DOM event
+      const active = [];
+      const metas = chart.getSortedVisibleDatasetMetas ? chart.getSortedVisibleDatasetMetas() :
+        chart.data.datasets.map((_, idx) => chart.getDatasetMeta(idx)).filter(m => !m.hidden);
+
+      let best = { dist2: Infinity, datasetIndex: -1, index: -1 };
+      metas.forEach((meta) => {
+        const dsIndex = meta.index != null ? meta.index : meta.dataset?.index; // fallback
+        (meta.data || []).forEach((el, i) => {
+          const p = (typeof el.getProps === 'function') ? el.getProps(['x', 'y'], true) : el;
+          const ex = p.x, ey = p.y;
+          if (typeof el.inRange === 'function' && el.inRange(pos.x, pos.y, 'nearest')) {
+            // Prefer exact in-range hit
+            const d2 = 0;
+            if (d2 <= best.dist2) {
+              best = { dist2: d2, datasetIndex: dsIndex ?? meta._datasetIndex ?? 0, index: i };
+            }
+          } else if (Number.isFinite(ex) && Number.isFinite(ey)) {
+            const dx = pos.x - ex;
+            const dy = pos.y - ey;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < best.dist2) best = { dist2: d2, datasetIndex: dsIndex ?? meta._datasetIndex ?? 0, index: i };
+          }
+        });
+      });
+
+      if (best.datasetIndex >= 0) {
+        active.push({ datasetIndex: best.datasetIndex, index: best.index });
+      }
+
+      chart.tooltip.setActiveElements(active, pos);
+      chart.update('none');
+      this.forceMaterialRefresh(entity);
+    } catch (e) {
+      // Silently ignore tooltip errors to avoid breaking AR loop
+    }
+  }
+
+  /**
    * Remove the oldest chart (FIFO replacement)
    */
   removeOldestChart() {

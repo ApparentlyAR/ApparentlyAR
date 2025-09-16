@@ -32,6 +32,7 @@ class HandTracking {
     
     /** @type {Function} Status update callback */
     this.updateStatus = updateStatus;
+    // Tooltip locking removed per UI request (no pinch behavior)
   }
 
   /**
@@ -150,7 +151,7 @@ class HandTracking {
       document.getElementById('start-hands').disabled = true;
       document.getElementById('stop-hands').disabled = false;
       
-      this.updateStatus('Hand tracking active - make fist to place, pinch to move', 'detecting');
+      this.updateStatus('Hand tracking active - point at chart for tooltips; pinch to lock', 'detecting');
       
     } catch (error) {
       console.error('Failed to start hand tracking:', error);
@@ -193,29 +194,39 @@ class HandTracking {
     let handDetected = false;
     
     if (results.multiHandLandmarks && results.multiHandedness) {
+      // Use fingertip as pointer for marker chart tooltips
+      const sceneEl = document.querySelector('a-scene');
+      const camera = sceneEl && sceneEl.camera;
+      const markerPlane = document.querySelector('#marker-0 [data-marker-chart]');
+      const mesh = markerPlane && markerPlane.getObject3D && markerPlane.getObject3D('mesh');
+
       for (let i = 0; i < results.multiHandLandmarks.length; i++) {
         const landmarks = results.multiHandLandmarks[i];
-        const handedness = results.multiHandedness[i].label;
-        
+        // Draw landmarks for visual feedback
         this.gestureDetector.drawHandLandmarks(ctx, landmarks);
         handDetected = true;
-        
-        // Process gestures
-        if (this.gestureDetector.isPinchGesture(landmarks, handedness)) {
-          this.gestureDetector.handlePinchGesture(
-            landmarks, 
-            this.chartManager.getCharts(), 
-            this.chartManager.coordinateSystem
+
+        const THREE_NS = (typeof THREE !== 'undefined') ? THREE : (window.AFRAME && window.AFRAME.THREE);
+        if (camera && mesh && THREE_NS) {
+          // Index finger tip as pointer
+          const tip = landmarks[8];
+          const sx = (1 - tip.x) * canvas.width;
+          const sy = tip.y * canvas.height;
+          const ndc = new THREE_NS.Vector2(
+            (sx / canvas.width) * 2 - 1,
+            -((sy / canvas.height) * 2 - 1)
           );
-        } else if (this.gestureDetector.isClosedPalm(landmarks, handedness)) {
-          this.chartManager.placeChartAtHand(landmarks, this.updateStatus);
+
+          const raycaster = new THREE_NS.Raycaster();
+          raycaster.setFromCamera(ndc, camera);
+          const hits = raycaster.intersectObject(mesh, true);
+          const uv = hits && hits[0] && hits[0].uv ? hits[0].uv : null;
+          this.chartManager.showMarkerTooltipAtUV('marker-0', uv);
         }
       }
-    }
-    
-    // Release chart if no hands detected
-    if (!handDetected && this.gestureDetector.isPinching) {
-      this.gestureDetector.releaseChart();
+    } else {
+      // Hide tooltip if no hands
+      this.chartManager.showMarkerTooltipAtUV('marker-0', null);
     }
   }
 

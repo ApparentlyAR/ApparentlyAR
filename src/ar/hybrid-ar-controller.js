@@ -35,13 +35,7 @@ class HybridARController {
   async init() {
     try {
       this.updateStatus('Initializing hybrid AR...', 'detecting');
-      
-      // Load chart limit settings from localStorage
-      this.loadChartLimitSettings();
-      
-      // Setup chart limit controls
-      this.setupChartLimitControls();
-      
+
       // Wait for AR.js to initialize and start camera
       await this.waitForArjsInit();
       
@@ -258,7 +252,6 @@ class HybridARController {
   setupEventListeners() {
     document.getElementById('start-hands').addEventListener('click', this.startHandTracking);
     document.getElementById('stop-hands').addEventListener('click', this.stopHandTracking);
-    document.getElementById('clear-charts').addEventListener('click', this.clearHandCharts);
 
     // Monitor marker detection periodically
     setInterval(this.monitorMarkers.bind(this), 500);
