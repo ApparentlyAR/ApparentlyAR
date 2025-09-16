@@ -8,6 +8,8 @@
  */
 
 module.exports = {
+  // Disable Watchman to avoid environment restrictions in sandboxed/macOS seats
+  watchman: false,
   // Test environment - use jsdom for frontend tests, node for backend
   testEnvironment: 'node',
   

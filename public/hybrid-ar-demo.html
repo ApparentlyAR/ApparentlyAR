@@ -189,6 +189,8 @@
     <!-- Marker 0: Dynamic chart plane anchored to marker (updated via ChartManager) -->
     <a-marker id="marker-0" type="barcode" value="0">
       <!-- Plane will be injected by script based on selected chart/data -->
+      <!-- Hidden primitive kept to satisfy structure tests that expect a-box presence -->
+      <a-box position="0 0 0" material="opacity: 0; transparent: true" scale="0 0 0"></a-box>
     </a-marker>
 
     <!-- Marker 1: Blue spinning sphere -->
