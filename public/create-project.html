@@ -46,11 +46,12 @@
             <p class="block text-2xl font-bold mb-2">Create Project</p>
         </div>
 
+        <h2 class="text-2xl font-bold mb-6" id="form-title">Create New Project</h2>
+
         <form onsubmit="saveProject(event)">
             <div class="mb-6">
                 <label for="projectName" class="block text-xl font-medium mt-8 mb-4">Project Name</label>
-                <input type="text" id="projectName" name="projectName" placeholder="Enter project title..."
-                    class="block w-full bg-white border border-gray-300 rounded-md p-4 text-sm placeholder-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <input type="text" id="projectName" name="projectName" placeholder="Enter project title..." class="block w-full bg-white border border-gray-300 rounded-md p-4 text-sm placeholder-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
             </div>
 
             <div class="mb-6">
@@ -75,7 +76,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="pt-5 text-right">
                 <button type="submit" class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     Save
@@ -84,46 +84,69 @@
         </form>
 
         <script>
+            let projectId = null;
+
+            // Load project for editing if ID is provided in URL
             async function loadProjectForEditing() {
                 const urlParams = new URLSearchParams(window.location.search);
-                const projectId = urlParams.get('id');
+                projectId = urlParams.get('id');
 
                 if (projectId) {
-                    const response = await fetch(`/api/projects/${projectId}`);
-                    if (response.ok) {
-                        const project = await response.json();
-                        document.getElementById('projectName').value = project.name;
-                        document.getElementById('description').value = project.description;
-                    } else {
+                    // Update form title for editing
+                    document.getElementById('form-title').textContent = 'Edit Project';
+                    
+                    try {
+                        const response = await fetch(`/api/projects/${projectId}`);
+                        if (response.ok) {
+                            const project = await response.json();
+                            document.getElementById('projectName').value = project.name;
+                            document.getElementById('description').value = project.description;
+                        } else {
+                            alert('Failed to load project for editing');
+                        }
+                    } catch (error) {
+                        console.error('Error loading project:', error);
                         alert('Failed to load project for editing');
                     }
                 }
             }
 
+            // Save project (create or update)
             async function saveProject(event) {
                 event.preventDefault();
-                const urlParams = new URLSearchParams(window.location.search);
-                const projectId = urlParams.get('id');
-
+                
                 const name = document.getElementById('projectName').value;
                 const description = document.getElementById('description').value;
 
-                const method = projectId ? 'PUT' : 'POST';
-                const endpoint = projectId ? `/api/projects/${projectId}` : '/api/projects';
+                // Validate input
+                if (!name) {
+                    alert('Project name is required');
+                    return;
+                }
 
-                const response = await fetch(endpoint, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, description }),
-                });
+                try {
+                    const method = projectId ? 'PUT' : 'POST';
+                    const endpoint = projectId ? `/api/projects/${projectId}` : '/api/projects';
 
-                if (response.ok) {
-                    window.location.href = 'teacher-dashboard.html';
-                } else {
-                    alert('Failed to save project');
+                    const response = await fetch(endpoint, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, description }),
+                    });
+
+                    if (response.ok) {
+                        window.location.href = 'teacher-dashboard.html';
+                    } else {
+                        const errorData = await response.json();
+                        alert('Failed to save project: ' + (errorData.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error saving project:', error);
+                    alert('Failed to save project due to network error');
                 }
             }
 
+            // Load project data when page loads
             document.addEventListener('DOMContentLoaded', loadProjectForEditing);
         </script>
     </main>

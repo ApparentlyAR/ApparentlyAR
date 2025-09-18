@@ -17,15 +17,14 @@
         <div class="flex items-center space-x-2">
             <button onclick="window.location.href='teacher-dashboard.html'"
                 class="bg-gray-500 text-white px-4 py-2 rounded">←</button>
-            <button class="bg-gray-500 text-white px-4 py-2 rounded"
-                onclick="window.location.href='create-project.html?id=${projectId}'">Edit</button>
+            <button class="bg-gray-500 text-white px-4 py-2 rounded" id="edit-button">Edit</button>
         </div>
     </header>
 
     <main class="p-6">
         <section class="mb-6">
-            <h2 class="text-2xl font-bold mb-4">Visualisation 1</h2>
-            <p class="text-gray-400">Deskripsi projectnya</p>
+            <h2 class="text-2xl font-bold mb-4" id="project-name">Loading project...</h2>
+            <p class="text-gray-400" id="project-description">Loading description...</p>
         </section>
 
         <div class="flex justify-center mt-10">
@@ -35,25 +34,42 @@
     </main>
 
     <script>
+        let projectId = null;
+
+        // Load project data
         async function loadProject() {
             const urlParams = new URLSearchParams(window.location.search);
-            const projectId = urlParams.get('id');
+            projectId = urlParams.get('id');
 
             if (!projectId) {
-                alert('No project ID provided');
+                document.getElementById('project-name').textContent = 'Error: No project ID provided';
+                document.getElementById('project-description').textContent = 'Unable to load project details.';
                 return;
             }
 
-            const response = await fetch(`/api/projects/${projectId}`);
-            if (response.ok) {
-                const project = await response.json();
-                document.querySelector('h2').textContent = project.name;
-                document.querySelector('p').textContent = project.description;
-            } else {
-                alert('Failed to load project');
+            try {
+                const response = await fetch(`/api/projects/${projectId}`);
+                if (response.ok) {
+                    const project = await response.json();
+                    document.getElementById('project-name').textContent = project.name;
+                    document.getElementById('project-description').textContent = project.description || 'No description provided.';
+                    
+                    // Set up edit button
+                    document.getElementById('edit-button').onclick = () => {
+                        window.location.href = `create-project.html?id=${projectId}`;
+                    };
+                } else {
+                    document.getElementById('project-name').textContent = 'Error: Project not found';
+                    document.getElementById('project-description').textContent = 'The requested project could not be found.';
+                }
+            } catch (error) {
+                console.error('Error loading project:', error);
+                document.getElementById('project-name').textContent = 'Error: Failed to load project';
+                document.getElementById('project-description').textContent = 'An error occurred while loading the project details.';
             }
         }
 
+        // Load project when page loads
         document.addEventListener('DOMContentLoaded', loadProject);
     </script>
 </body>

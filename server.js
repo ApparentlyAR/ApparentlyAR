@@ -18,6 +18,15 @@ const dataProcessor = require('./src/backend/dataProcessor');
 const chartGenerator = require('./src/backend/chartGenerator');
 const { sampleData, weatherData, salesData } = require('./src/backend/testData');
 
+// Import projects manager for persistent storage -Najla
+const {
+  getAllProjects,
+  getProjectById,
+  createProject,
+  updateProject,
+  deleteProject
+} = require('./src/backend/projectsManager'); // -Najla
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -207,51 +216,99 @@ app.post('/api/ar-visualization', async (req, res) => {
 });
 
 /**
- * Temporary in-memory storage for projects -Najla
- */
-let projects = [];
-
-/**
- * Endpoint to save a new project -Najla
- */
-app.post('/api/projects', (req, res) => {
-    const { name, description } = req.body;
-    const newProject = { id: Date.now(), name, description, status: 'Active' };
-    projects.push(newProject);
-    res.status(201).json(newProject);
-});
-
-/**
- * Endpoint to fetch all projects -Najla
+ * Endpoint to fetch all projects
+ * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.get('/api/projects', (req, res) => {
+  try {
+    const projects = getAllProjects();
     res.json(projects);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: 'Failed to fetch projects' });
+  }
 });
 
 /**
- * Endpoint to fetch a single project by ID -Najla
+ * Endpoint to fetch a single project by ID
+ * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.get('/api/projects/:id', (req, res) => {
-    const project = projects.find(p => p.id === parseInt(req.params.id));
+  try {
+    const projectId = parseInt(req.params.id);
+    const project = getProjectById(projectId);
+    
     if (project) {
-        res.json(project);
+      res.json(project);
     } else {
-        res.status(404).json({ error: 'Project not found' });
+      res.status(404).json({ error: 'Project not found' });
     }
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({ error: 'Failed to fetch project' });
+  }
 });
 
+/**
+ * Endpoint to save a new project
+ * @author Najla - Replaced in-memory storage with persistent JSON storage
+ */
+app.post('/api/projects', (req, res) => {
+  try {
+    const { name, description } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: 'Project name is required' });
+    }
+    
+    const newProject = createProject({ name, description });
+    res.status(201).json(newProject);
+  } catch (error) {
+    console.error('Error creating project:', error);
+    res.status(500).json({ error: 'Failed to create project' });
+  }
+});
 
 /**
- * Endpoint to update a project by ID -Najla
+ * Endpoint to update a project by ID
+ * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.put('/api/projects/:id', (req, res) => {
-    const projectIndex = projects.findIndex(p => p.id === parseInt(req.params.id));
-    if (projectIndex !== -1) {
-        projects[projectIndex] = { ...projects[projectIndex], ...req.body };
-        res.json(projects[projectIndex]);
+  try {
+    const projectId = parseInt(req.params.id);
+    const { name, description, status } = req.body;
+    
+    const updatedProject = updateProject(projectId, { name, description, status });
+    
+    if (updatedProject) {
+      res.json(updatedProject);
     } else {
-        res.status(404).json({ error: 'Project not found' });
+      res.status(404).json({ error: 'Project not found' });
     }
+  } catch (error) {
+    console.error('Error updating project:', error);
+    res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+/**
+ * Endpoint to delete a project by ID
+ * @author Najla - Added endpoint for deleting projects from JSON storage
+ */
+app.delete('/api/projects/:id', (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const deleted = deleteProject(projectId);
+    
+    if (deleted) {
+      res.json({ message: 'Project deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Project not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
 });
 
 /**
