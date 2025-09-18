@@ -26,37 +26,49 @@
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-xl font-semibold">Available Projects</h3>
             </div>
-            <div class="space-y-4">
+            <div class="space-y-4" id="projects-container">
                 <!-- Projects will be dynamically loaded here -->
             </div>
         </section>
     </main>
 
     <script>
+        // Load projects from the API
         async function loadProjects() {
-            const response = await fetch('/api/projects');
-            const projects = await response.json();
+            try {
+                const response = await fetch('/api/projects');
+                const projects = await response.json();
 
-            const projectContainer = document.querySelector('.space-y-4');
-            projectContainer.innerHTML = ''; // Clear existing projects
+                const projectContainer = document.getElementById('projects-container');
+                projectContainer.innerHTML = ''; // Clear existing projects
 
-            if (projects.length === 0) {
-                projectContainer.innerHTML = '<p class="text-gray-500">No projects available yet.</p>';
-            } else {
-                projects.forEach(project => {
-                    const projectElement = document.createElement('div');
-                    projectElement.className = 'flex items-center justify-between bg-gray-700 p-4 rounded';
-                    projectElement.innerHTML = `
-                            <span>${project.name} </span>
+                if (projects.length === 0) {
+                    projectContainer.innerHTML = '<p class="text-gray-500">No projects available yet.</p>';
+                } else {
+                    projects.forEach(project => {
+                        const projectElement = document.createElement('div');
+                        projectElement.className = 'flex items-center justify-between bg-gray-700 p-4 rounded';
+                        projectElement.innerHTML = `
+                            <span>${project.name}</span>
                             <div class="flex items-center space-x-2">
-                                <button class="bg-gray-500 text-white px-2 py-1 rounded" onclick="window.location.href='view-project.html?id=${project.id}'">View</button>
+                                <button class="bg-gray-500 text-white px-2 py-1 rounded" onclick="viewProject(${project.id})">View</button>
                             </div>
                         `;
-                    projectContainer.appendChild(projectElement);
-                });
+                        projectContainer.appendChild(projectElement);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                document.getElementById('projects-container').innerHTML = '<p class="text-red-500">Failed to load projects.</p>';
             }
         }
 
+        // View a project
+        function viewProject(projectId) {
+            window.location.href = `view-project.html?id=${projectId}`;
+        }
+
+        // Load projects when the page loads
         document.addEventListener('DOMContentLoaded', loadProjects);
     </script>
 </body>
