@@ -1,23 +1,24 @@
 /**
  * Data Processor Module
- * 
+ *
  * Handles data transformation, filtering, sorting, aggregation, and analysis
  * for the ApparentlyAR data visualization platform.
- * 
+ *
  * @author ApparentlyAR Team
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 const fs = require('fs');
+const crypto = require('crypto');
 const Papa = require('papaparse');
 
-/**
- * DataProcessor class for handling data operations
- */
 class DataProcessor {
   constructor() {
-    // Bind all methods to ensure proper 'this' context first
+    // Bind methods (stable this)
     this.processData = this.processData.bind(this);
+    this.parseCSVFile = this.parseCSVFile.bind(this);
+
+    // Core ops
     this.filterData = this.filterData.bind(this);
     this.sortData = this.sortData.bind(this);
     this.aggregateData = this.aggregateData.bind(this);
@@ -25,11 +26,24 @@ class DataProcessor {
     this.groupByData = this.groupByData.bind(this);
     this.calculateColumn = this.calculateColumn.bind(this);
 
+    // New cleaning ops
+    this.convertType = this.convertType.bind(this);
+    this.dropColumn = this.dropColumn.bind(this);
+    this.renameColumn = this.renameColumn.bind(this);
+    this.handleMissing = this.handleMissing.bind(this);
+
     /**
      * Supported data processing operations
-     * @type {Object}
+     * Keys must match the `type` emitted by blocks / Professor.
      */
     this.supportedOperations = {
+      // Transform / cleaning
+      convertType: this.convertType,
+      dropColumn: this.dropColumn,
+      renameColumn: this.renameColumn,
+      handleMissing: this.handleMissing,
+
+      // Analysis pipeline
       filter: this.filterData,
       sort: this.sortData,
       aggregate: this.aggregateData,
@@ -39,12 +53,76 @@ class DataProcessor {
     };
   }
 
+  /* =============================== *
+   * Utilities (deterministic & safe)
+   * =============================== */
+
+  _deepClone(obj) {
+    // Fast deterministic clone for JSON-compatible data
+    return JSON.parse(JSON.stringify(obj));
+  }
+
+  _isMissing(v) {
+    return v === null || v === undefined || v === '';
+  }
+
+  _toNumber(v) {
+    const n = typeof v === 'number' ? v : parseFloat(v);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  _toText(v) {
+    if (v === null || v === undefined) return '';
+    return String(v);
+  }
+
+  _toDate(v) {
+    // Deterministic date parse: accept Date, timestamp, or ISO-ish strings
+    if (v instanceof Date) return v;
+    if (typeof v === 'number') return new Date(v);
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  _stableCompare(a, b) {
+    if (a === b) return 0;
+    // NaN handling: push NaN to the end consistently
+    const aNaN = Number.isNaN(a);
+    const bNaN = Number.isNaN(b);
+    if (aNaN && bNaN) return 0;
+    if (aNaN) return 1;
+    if (bNaN) return -1;
+    return a > b ? 1 : -1;
+  }
+
+  _schemaOf(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return {};
+    const first = rows[0];
+    const schema = {};
+    for (const key of Object.keys(first)) {
+      const val = first[key];
+      let t = typeof val;
+      if (val instanceof Date) t = 'date';
+      schema[key] = t;
+    }
+    return schema;
+  }
+
+  _fingerprint(data) {
+    // Canonical JSON string then SHA-256
+    const json = JSON.stringify(data);
+    return 'sha256:' + crypto.createHash('sha256').update(json).digest('hex');
+    // Note: For large datasets consider streaming or columnar hashing.
+  }
+
+  /* =============================== *
+   * CSV parsing
+   * =============================== */
+
   /**
    * Parse CSV file and return structured data
-   * 
-   * @param {string} filePath - Path to the CSV file
-   * @returns {Promise<Array>} Parsed data as array of objects
-   * @throws {Error} If CSV parsing fails or contains errors
+   * @param {string} filePath
+   * @returns {Promise<Array<Object>>}
    */
   async parseCSVFile(filePath) {
     return new Promise((resolve, reject) => {
@@ -52,308 +130,310 @@ class DataProcessor {
       Papa.parse(fileContent, {
         header: true,
         skipEmptyLines: true,
+        dynamicTyping: false, // keep raw; conversion via operations
         complete: (results) => {
-          if (results.errors.length > 0) {
+          if (results.errors && results.errors.length > 0) {
             reject(new Error(`CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`));
           } else {
             resolve(results.data);
           }
         },
-        error: (error) => {
-          reject(new Error(`CSV parsing failed: ${error.message}`));
-        }
+        error: (error) => reject(new Error(`CSV parsing failed: ${error.message}`))
       });
     });
   }
+
+  /* =============================== *
+   * Pipeline execution
+   * =============================== */
 
   /**
    * Process data with a series of operations
-   * 
-   * @param {Array} data - Input data array
-   * @param {Array} operations - Array of operation objects with type and params
-   * @returns {Promise<Array>} Processed data
-   * @throws {Error} If operation type is not supported
+   * @param {Array<Object>} data
+   * @param {Array<{type:string, params:Object}>} operations
+   * @returns {Promise<Array|*>} Processed data (usually Array; `aggregate` returns scalar)
    */
   async processData(data, operations) {
-    let processedData = [...data];
-    
+    let processedData = this._deepClone(data);
+
     for (const operation of operations) {
-      const { type, params } = operation;
-      
-      if (this.supportedOperations[type]) {
-        processedData = await this.supportedOperations[type](processedData, params);
-      } else {
-        throw new Error(`Unsupported operation: ${type}`);
-      }
+      const { type, params } = operation || {};
+      const fn = this.supportedOperations[type];
+      if (!fn) throw new Error(`Unsupported operation: ${type}`);
+      processedData = await fn(processedData, params);
     }
-    
+
     return processedData;
   }
 
+  /* =============================== *
+   * Cleaning / Transform operations
+   * =============================== */
+
   /**
-   * Filter data based on conditions
-   * 
-   * @param {Array} data - Input data array
-   * @param {Object} params - Filter parameters
-   * @param {string} params.column - Column name to filter on
-   * @param {string} params.operator - Filter operator (equals, greater_than, etc.)
-   * @param {*} params.value - Value to compare against
-   * @returns {Array} Filtered data array
+   * convertType({ column, dataType: 'number'|'text'|'date' })
    */
-  filterData(data, params) {
-    const { column, operator, value } = params;
-    
+  convertType(data, { column, dataType }) {
+    return data.map(row => {
+      const v = row?.[column];
+      if (this._isMissing(v)) return { ...row };
+      let nv = v;
+      try {
+        if (dataType === 'number') nv = this._toNumber(v);
+        else if (dataType === 'text') nv = this._toText(v);
+        else if (dataType === 'date') nv = this._toDate(v);
+      } catch {
+        // keep original on failure
+      }
+      return { ...row, [column]: nv };
+    });
+  }
+
+  /**
+   * dropColumn({ column })
+   */
+  dropColumn(data, { column }) {
+    return data.map(row => {
+      const { [column]: _omit, ...rest } = row;
+      return rest;
+    });
+  }
+
+  /**
+   * renameColumn({ oldName, newName })
+   */
+  renameColumn(data, { oldName, newName }) {
+    return data.map(row => {
+      if (!Object.prototype.hasOwnProperty.call(row, oldName)) return { ...row };
+      const { [oldName]: val, ...rest } = row;
+      return { ...rest, [newName]: val };
+    });
+  }
+
+  /**
+   * handleMissing({ column, method: 'remove'|'fill'|'fill_average'|'fill_median', fillValue? })
+   */
+  handleMissing(data, { column, method, fillValue }) {
+    if (method === 'remove') {
+      return data.filter(r => !this._isMissing(r[column]));
+    }
+    if (method === 'fill') {
+      return data.map(r => {
+        if (this._isMissing(r[column])) return { ...r, [column]: fillValue };
+        return r;
+      });
+    }
+    if (method === 'fill_average' || method === 'fill_median') {
+      const nums = data
+        .map(r => this._toNumber(r[column]))
+        .filter(v => !Number.isNaN(v))
+        .sort((a, b) => a - b);
+
+      const avg = nums.length ? nums.reduce((s, v) => s + v, 0) / nums.length : null;
+      let med = null;
+      if (nums.length) {
+        const mid = Math.floor(nums.length / 2);
+        med = (nums.length % 2) ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+      }
+      const fill = method === 'fill_average' ? avg : med;
+
+      return data.map(r => {
+        if (this._isMissing(r[column]) && fill !== null) return { ...r, [column]: fill };
+        return r;
+      });
+    }
+    return data;
+  }
+
+  /* =============================== *
+   * Analysis / Compute operations
+   * =============================== */
+
+  /**
+   * filter({ column, operator, value })
+   * operators: equals, not_equals, greater_than, less_than, greater_than_or_equal,
+   *            less_than_or_equal, contains, starts_with, ends_with
+   */
+  filterData(data, { column, operator, value }) {
     return data.filter(row => {
       const cellValue = row[column];
-      
+
       switch (operator) {
-        case 'equals':
-          return cellValue == value;
-        case 'not_equals':
-          return cellValue != value;
-        case 'greater_than':
-          return parseFloat(cellValue) > parseFloat(value);
-        case 'less_than':
-          return parseFloat(cellValue) < parseFloat(value);
-        case 'greater_than_or_equal':
-          return parseFloat(cellValue) >= parseFloat(value);
-        case 'less_than_or_equal':
-          return parseFloat(cellValue) <= parseFloat(value);
-        case 'contains':
-          return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
-        case 'starts_with':
-          return String(cellValue).toLowerCase().startsWith(String(value).toLowerCase());
-        case 'ends_with':
-          return String(cellValue).toLowerCase().endsWith(String(value).toLowerCase());
-        default:
-          return true;
+        case 'equals':                 return cellValue == value;
+        case 'not_equals':             return cellValue != value;
+        case 'greater_than':           return this._toNumber(cellValue) >  this._toNumber(value);
+        case 'less_than':              return this._toNumber(cellValue) <  this._toNumber(value);
+        case 'greater_than_or_equal':  return this._toNumber(cellValue) >= this._toNumber(value);
+        case 'less_than_or_equal':     return this._toNumber(cellValue) <= this._toNumber(value);
+        case 'contains':               return this._toText(cellValue).toLowerCase().includes(this._toText(value).toLowerCase());
+        case 'starts_with':            return this._toText(cellValue).toLowerCase().startsWith(this._toText(value).toLowerCase());
+        case 'ends_with':              return this._toText(cellValue).toLowerCase().endsWith(this._toText(value).toLowerCase());
+        default:                       return true;
       }
     });
   }
 
   /**
-   * Sort data by column
-   * 
-   * @param {Array} data - Input data array
-   * @param {Object} params - Sort parameters
-   * @param {string} params.column - Column name to sort by
-   * @param {string} params.direction - Sort direction ('asc' or 'desc')
-   * @returns {Array} Sorted data array
+   * sort({ column, direction: 'asc'|'desc' })
    */
-  sortData(data, params) {
-    const { column, direction = 'asc' } = params;
-    
-    return [...data].sort((a, b) => {
-      let aVal = a[column];
-      let bVal = b[column];
-      
-      // Try to convert to numbers for numeric sorting
-      const aNum = parseFloat(aVal);
-      const bNum = parseFloat(bVal);
-      
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        aVal = aNum;
-        bVal = bNum;
+  sortData(data, { column, direction = 'asc' }) {
+    const out = this._deepClone(data);
+    out.sort((a, b) => {
+      let av = a[column];
+      let bv = b[column];
+
+      // Try numeric compare first
+      const an = this._toNumber(av);
+      const bn = this._toNumber(bv);
+      if (!Number.isNaN(an) && !Number.isNaN(bn)) {
+        return direction === 'asc' ? this._stableCompare(an, bn) : this._stableCompare(bn, an);
       }
-      
-      if (direction === 'asc') {
-        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-      } else {
-        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
-      }
+
+      // Fallback to string compare (case-insensitive)
+      av = this._toText(av).toLowerCase();
+      bv = this._toText(bv).toLowerCase();
+      return direction === 'asc' ? this._stableCompare(av, bv) : this._stableCompare(bv, av);
     });
+    return out;
   }
 
   /**
-   * Aggregate data (sum, average, count, min, max)
-   * 
-   * @param {Array} data - Input data array
-   * @param {Object} params - Aggregation parameters
-   * @param {string} params.column - Column name to aggregate
-   * @param {string} params.operation - Aggregation operation
-   * @returns {number|null} Aggregated value
-   * @throws {Error} If operation is not supported
+   * aggregate({ column, operation: 'sum'|'average'|'count'|'min'|'max' })
+   * NOTE: Returns a scalar number (backwards-compatible with your original code).
    */
-  aggregateData(data, params) {
-    const { column, operation } = params;
-    
-    const values = data.map(row => parseFloat(row[column])).filter(val => !isNaN(val));
-    
+  aggregateData(data, { column, operation }) {
+    const values = data.map(r => this._toNumber(r[column])).filter(v => !Number.isNaN(v));
+
     switch (operation) {
-      case 'sum':
-        return values.reduce((sum, val) => sum + val, 0);
-      case 'average':
-        return values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : 0;
-      case 'count':
-        return values.length;
-      case 'min':
-        return values.length > 0 ? Math.min(...values) : null;
-      case 'max':
-        return values.length > 0 ? Math.max(...values) : null;
-      default:
-        throw new Error(`Unsupported aggregation operation: ${operation}`);
+      case 'sum':     return values.reduce((s, v) => s + v, 0);
+      case 'average': return values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0;
+      case 'count':   return values.length;
+      case 'min':     return values.length ? Math.min(...values) : null;
+      case 'max':     return values.length ? Math.max(...values) : null;
+      default:        throw new Error(`Unsupported aggregation operation: ${operation}`);
     }
   }
 
   /**
-   * Select specific columns from data
-   * 
-   * @param {Array} data - Input data array
-   * @param {Object} params - Selection parameters
-   * @param {Array} params.columns - Array of column names to select
-   * @returns {Array} Data with only selected columns
+   * select({ columns: string[] })
    */
-  selectColumns(data, params) {
-    const { columns } = params;
-    
+  selectColumns(data, { columns }) {
     return data.map(row => {
       const newRow = {};
-      columns.forEach(col => {
-        if (row.hasOwnProperty(col)) {
-          newRow[col] = row[col];
-        }
-      });
+      for (const col of columns) {
+        if (Object.prototype.hasOwnProperty.call(row, col)) newRow[col] = row[col];
+      }
       return newRow;
     });
   }
 
   /**
-   * Group data by column and apply aggregation
-   * 
-   * @param {Array} data - Input data array
-   * @param {Object} params - Group by parameters
-   * @param {string} params.groupBy - Column name to group by
-   * @param {Array} params.aggregations - Array of aggregation operations
-   * @returns {Array} Grouped and aggregated data
+   * groupBy({ groupBy: string, aggregations: [{column, operation, alias}] })
+   * Returns array of grouped rows with aggregation results.
    */
-  groupByData(data, params) {
-    const { groupBy, aggregations } = params;
-    
+  groupByData(data, { groupBy, aggregations }) {
     const groups = {};
-    
-    data.forEach(row => {
-      const groupKey = row[groupBy];
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push(row);
-    });
-    
-    return Object.keys(groups).map(groupKey => {
-      const groupData = groups[groupKey];
-      const result = { [groupBy]: groupKey };
-      
-      aggregations.forEach(agg => {
-        const { column, operation, alias } = agg;
-        const values = groupData.map(row => parseFloat(row[column])).filter(val => !isNaN(val));
-        
-        switch (operation) {
-          case 'sum':
-            result[alias] = values.reduce((sum, val) => sum + val, 0);
-            break;
-          case 'average':
-            result[alias] = values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : 0;
-            break;
-          case 'count':
-            result[alias] = values.length;
-            break;
-          case 'min':
-            result[alias] = values.length > 0 ? Math.min(...values) : null;
-            break;
-          case 'max':
-            result[alias] = values.length > 0 ? Math.max(...values) : null;
-            break;
-        }
-      });
-      
-      return result;
-    });
-  }
-
-  /**
-   * Calculate new column based on expression
-   * 
-   * @param {Array} data - Input data array
-   * @param {Object} params - Calculation parameters
-   * @param {string} params.expression - Mathematical expression to evaluate
-   * @param {string} params.newColumnName - Name for the new calculated column
-   * @returns {Array} Data with new calculated column
-   */
-  calculateColumn(data, params) {
-    const { expression, newColumnName } = params;
-    
-    return data.map(row => {
-      try {
-        let calculatedValue = expression;
-        
-        // Replace column references with actual values
-        Object.keys(row).forEach(col => {
-          const regex = new RegExp(`\\b${col}\\b`, 'g');
-          calculatedValue = calculatedValue.replace(regex, row[col]);
-        });
-        
-        // Evaluate the expression
-        const result = eval(calculatedValue);
-        
-        return {
-          ...row,
-          [newColumnName]: isNaN(result) ? null : result
-        };
-      } catch (error) {
-        return {
-          ...row,
-          [newColumnName]: null
-        };
-      }
-    });
-  }
-
-  /**
-   * Get data summary with statistics
-   * 
-   * @param {Array} data - Input data array
-   * @returns {Object} Data summary with rows, columns, and column statistics
-   */
-  getDataSummary(data) {
-    if (!data || data.length === 0) {
-      return {
-        rows: 0,
-        columns: 0,
-        summary: {}
-      };
+    for (const row of data) {
+      const key = row[groupBy];
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(row);
     }
 
-    const columns = Object.keys(data[0]);
-    const summary = {};
+    const out = [];
+    for (const key of Object.keys(groups)) {
+      const bucket = groups[key];
+      const result = { [groupBy]: key };
+      for (const agg of aggregations || []) {
+        const { column, operation, alias } = agg;
+        const vals = bucket.map(r => this._toNumber(r[column])).filter(v => !Number.isNaN(v));
+        let val = null;
+        switch (operation) {
+          case 'sum':     val = vals.reduce((s, v) => s + v, 0); break;
+          case 'average': val = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0; break;
+          case 'count':   val = vals.length; break;
+          case 'min':     val = vals.length ? Math.min(...vals) : null; break;
+          case 'max':     val = vals.length ? Math.max(...vals) : null; break;
+          default:        val = null;
+        }
+        result[alias || `${operation}(${column})`] = val;
+      }
+      out.push(result);
+    }
+    return out;
+  }
 
-    columns.forEach(col => {
-      const values = data.map(row => row[col]).filter(val => val !== null && val !== undefined);
-      const numericValues = values.map(val => parseFloat(val)).filter(val => !isNaN(val));
-      
-      summary[col] = {
-        type: numericValues.length === values.length ? 'numeric' : 'text',
-        count: values.length,
-        unique: new Set(values).size
-      };
+  /**
+   * calculate({ expression, newColumnName })
+   * WARNING: uses eval() for demo purposes; replace with a sandboxed parser in production.
+   */
+  calculateColumn(data, { expression, newColumnName }) {
+    return data.map(row => {
+      try {
+        let expr = String(expression);
 
-      if (numericValues.length > 0) {
-        summary[col].min = Math.min(...numericValues);
-        summary[col].max = Math.max(...numericValues);
-        summary[col].average = numericValues.reduce((sum, val) => sum + val, 0) / numericValues.length;
+        // Replace bareword column references with their values.
+        // Very simple substitution: col names should be safe JS identifiers for best results.
+        for (const col of Object.keys(row)) {
+          const re = new RegExp(`\\b${col}\\b`, 'g');
+          expr = expr.replace(re, `${JSON.stringify(row[col])}`);
+        }
+
+        // Evaluate; non-number becomes null for consistency with numeric derivations.
+        // eslint-disable-next-line no-eval
+        const result = eval(expr);
+        return { ...row, [newColumnName]: Number.isFinite(result) ? result : null };
+      } catch {
+        return { ...row, [newColumnName]: null };
       }
     });
+  }
+
+  /* =============================== *
+   * Summaries / metadata
+   * =============================== */
+
+  /**
+   * getDataSummary(data) -> { rows, columns, summary: {col: {type, count, unique, min?, max?, average?}}, schema, fingerprint }
+   */
+  getDataSummary(data) {
+    if (!Array.isArray(data) || data.length === 0) {
+      return { rows: 0, columns: 0, summary: {}, schema: {}, fingerprint: this._fingerprint([]) };
+    }
+
+    const cols = Object.keys(data[0] || {});
+    const summary = {};
+
+    for (const col of cols) {
+      const values = data.map(r => r[col]).filter(v => !this._isMissing(v));
+      const nums = values.map(v => this._toNumber(v)).filter(v => !Number.isNaN(v));
+      const allNumeric = nums.length === values.length && values.length > 0;
+
+      const item = {
+        type: allNumeric ? 'numeric' : (values[0] instanceof Date ? 'date' : 'text'),
+        count: values.length,
+        unique: new Set(values.map(v => (v instanceof Date ? v.toISOString() : v))).size
+      };
+
+      if (allNumeric) {
+        item.min = Math.min(...nums);
+        item.max = Math.max(...nums);
+        item.average = nums.reduce((s, v) => s + v, 0) / nums.length;
+      }
+
+      summary[col] = item;
+    }
 
     return {
       rows: data.length,
-      columns: columns.length,
-      summary: summary
+      columns: cols.length,
+      summary,
+      schema: this._schemaOf(data),
+      fingerprint: this._fingerprint(data)
     };
   }
 
   /**
-   * Get list of available operations
-   * 
-   * @returns {Array} Array of supported operation names
+   * List supported operation names
    */
   getAvailableOperations() {
     return Object.keys(this.supportedOperations);
