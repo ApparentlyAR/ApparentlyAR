@@ -1,0 +1,15 @@
+/* Global CSS for ApparentlyAR */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #f8fafc;
+}
+
+/* Custom scrollbar for data panel if needed, for demonstration */
+.data-panel-table-container {
+    overflow-x: auto; /* Enable horizontal scrolling if table content is wide */
+    max-width: 100%;   /* Ensure it doesn't overflow parent */
+}
+
+.data-panel-table-container table {
+    min-width: 700px;
+}
