@@ -30,7 +30,39 @@ Blockly.defineBlocksWithJsonArray([
     "helpUrl": ""
   }
 ]);
+function normalizeHeaders(fields) {
+  const seen = {};
+  return (fields || []).map((raw, i) => {
+    let name = String(raw ?? '').trim();
+    if (!name) name = `col_${i + 1}`;
+    if (seen[name]) {
+      let k = 2;
+      while (seen[`${name}_${k}`]) k++;
+      name = `${name}_${k}`;
+    }
+    seen[name] = true;
+    return name;
+  });
+}
 
+// Determine if the fields of header:true are unreliable (all empty/all numbers)
+function badHeaderFields(fields) {
+  if (!fields || fields.length === 0) return true;
+  const allEmpty = fields.every(f => String(f ?? '').trim() === '');
+  const allNumeric = fields.every(f => /^\d+$/.test(String(f ?? '').trim()));
+  return allEmpty || allNumeric;
+}
+
+// Force refresh of all column dropdowns (requires you to have registered field_column_dropdown.refreshAll;
+function refreshAllColumnDropdowns() {
+  const ctor = Blockly.fieldRegistry && Blockly.fieldRegistry.get('field_column_dropdown');
+  if (ctor && typeof ctor.refreshAll === 'function') {
+    ctor.refreshAll(Blockly.getMainWorkspace());
+  } else {
+    // Refresh the selected state of the toolbox and trigger a redraw
+    Blockly.getMainWorkspace().refreshToolboxSelection();
+  }
+}
 // Custom Blockly field for file upload
 class FieldFileButton extends Blockly.Field {
   constructor(value, validator) {
@@ -71,22 +103,84 @@ class FieldFileButton extends Blockly.Field {
         this.render_();
         const reader = new FileReader();
         reader.onload = (event) => {
-          Papa.parse(event.target.result, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-              Blockly.CsvImportData.data = results.data;
-              Blockly.CsvImportData.filename = file.name;
-              
-              // NEW: Display data in panel immediately and update column registry
-              if (window.BlockUtils && window.BlockUtils.updateDataPanel) {
-                window.BlockUtils.updateDataPanel(results.data);
-              }
-              
-              this._dialogOpen = false;
-            }
-          });
-        };
+  const rawText = event.target.result;
+
+  // Try parsing with header:true first
+  Papa.parse(rawText, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (r1) => {
+      let data = r1.data || [];
+      let fields = r1?.meta?.fields ? normalizeHeaders(r1.meta.fields) : [];
+
+      // If the header row looks suspicious (empty or numeric only), fall back to header:false
+      if (badHeaderFields(fields)) {
+        console.warn('[CSV Import] Header looks invalid. Falling back to header:false.');
+        Papa.parse(rawText, {
+          header: false,
+          skipEmptyLines: true,
+          complete: (r2) => {
+            const rows = r2.data || [];
+            const maxLen = rows.reduce((m, r) => Math.max(m, r.length), 0);
+            fields = Array.from({ length: maxLen }, (_, i) => `col_${i + 1}`);
+            data = rows.map(r => {
+              const obj = {};
+              fields.forEach((f, i) => { obj[f] = r[i] ?? ''; });
+              return obj;
+            });
+
+            // Update global dataset & UI
+            Blockly.CsvImportData.data = data;
+            Blockly.CsvImportData.filename = file.name;
+
+            // 1) show data
+            window.BlockUtils?.updateDataPanel?.(data);
+            // 2) provide columns for column dropdowns
+            window.BlockUtils?.setCurrentColumns?.(fields);
+            // 3) force dropdowns to refresh now
+            refreshAllColumnDropdowns();
+
+            this._dialogOpen = false;
+          },
+          error: (err) => {
+            console.error('[CSV Import] Reparse with header:false failed:', err);
+            this._dialogOpen = false;
+          }
+        });
+        return;
+      }
+
+      // If header:true is fine but we normalized field names, realign keys in data
+      const original = r1.meta.fields || [];
+      const changed = original.some((n, i) => fields[i] !== n);
+      if (changed) {
+        data = data.map(row => {
+          const obj = {};
+          fields.forEach((newKey, i) => { obj[newKey] = row[original[i]]; });
+          return obj;
+        });
+      }
+
+      // Update global dataset & UI
+      Blockly.CsvImportData.data = data;
+      Blockly.CsvImportData.filename = file.name;
+
+      // 1) show data
+      window.BlockUtils?.updateDataPanel?.(data);
+      // 2) provide columns for column dropdowns
+      window.BlockUtils?.setCurrentColumns?.(fields);
+      // 3) force dropdowns to refresh now
+      refreshAllColumnDropdowns();
+
+      this._dialogOpen = false;
+    },
+    error: (error) => {
+      console.error('[CSV Import] Parse failed:', error);
+      this._dialogOpen = false;
+    }
+  });
+};
+
         reader.readAsText(file);
       } else {
         this._dialogOpen = false;

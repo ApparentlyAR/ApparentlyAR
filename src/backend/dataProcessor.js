@@ -11,6 +11,24 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const Papa = require('papaparse');
+function normalizeHeaders(fields) {
+  const seen = {};
+  return fields.map((raw, i) => {
+    let name = String(raw ?? '').trim();
+    if (!name) name = `col_${i + 1}`;
+    if (seen[name]) {
+      let k = 2;
+      while (seen[`${name}_${k}`]) k++;
+      name = `${name}_${k}`;
+    }
+    seen[name] = true;
+    return name;
+  });
+}
+
+function looksLikeHeader(line) {
+  return /[A-Za-z_]/.test(line);
+}
 
 class DataProcessor {
   constructor() {
@@ -124,29 +142,53 @@ class DataProcessor {
    * @param {string} filePath
    * @returns {Promise<Array<Object>>}
    */
-  async parseCSVFile(filePath) {
+   async parseCSVFile(filePath) {
     return new Promise((resolve, reject) => {
       const fileContent = fs.readFileSync(filePath, 'utf8');
+      const firstNonEmpty = (fileContent.split(/\r?\n/).find(l => l.trim().length > 0) || '');
+      const useHeader = looksLikeHeader(firstNonEmpty);
+
       Papa.parse(fileContent, {
-        header: true,
+        header: useHeader,
         skipEmptyLines: true,
         dynamicTyping: false, // keep raw; conversion via operations
         complete: (results) => {
           if (results.errors && results.errors.length > 0) {
             reject(new Error(`CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`));
-          } else {
-            resolve(results.data);
+            return;
           }
+
+          let data, fields;
+          if (useHeader) {
+            data = results.data;
+            const original = results.meta?.fields || Object.keys(data[0] || {});
+            const normalized = normalizeHeaders(original);
+            fields = normalized;
+
+            if (original.some((n,i) => normalized[i] !== n)) {
+              data = data.map(row => {
+                const obj = {};
+                normalized.forEach((newKey, i) => obj[newKey] = row[original[i]]);
+                return obj;
+              });
+            }
+          } else {
+            const rows = results.data; // array-of-arrays
+            const maxLen = rows.reduce((m, r) => Math.max(m, r.length), 0);
+            fields = Array.from({ length: maxLen }, (_, i) => `col_${i+1}`);
+            data = rows.map(r => {
+              const obj = {};
+              fields.forEach((f, i) => obj[f] = r[i] ?? '');
+              return obj;
+            });
+          }
+
+          resolve({ data, fields }); // <— 同時回傳 data + 欄位
         },
         error: (error) => reject(new Error(`CSV parsing failed: ${error.message}`))
       });
     });
   }
-
-  /* =============================== *
-   * Pipeline execution
-   * =============================== */
-
   /**
    * Process data with a series of operations
    * @param {Array<Object>} data
@@ -439,5 +481,7 @@ class DataProcessor {
     return Object.keys(this.supportedOperations);
   }
 }
+
+
 
 module.exports = new DataProcessor();
