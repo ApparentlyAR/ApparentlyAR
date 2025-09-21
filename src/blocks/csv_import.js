@@ -1,3 +1,11 @@
+/**
+ * CSV Import Blockly block and generator
+ *
+ * - Provides a custom field button to upload a CSV and parse it via PapaParse.
+ * - Stores parsed rows on Blockly.CsvImportData.data for later blocks.
+ * - Registers the generator using both legacy (obj['csv_import']) and
+ *   the newer forBlock API for maximum compatibility.
+ */
 // === CSV Import Block Definition ===
 Blockly.defineBlocksWithJsonArray([
   {

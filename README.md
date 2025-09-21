@@ -66,6 +66,18 @@ The server will be available at `http://localhost:3000` by default. If port 3000
 
 Where `[PORT]` is the port number shown in the server startup message (3000 by default, or the next available port if 3000 is in use).
 
+### Blockly Data Operations (New)
+
+- New blocks: `filter_data`, `sort_data`, `select_columns`, `group_by`, `calculate_column`, `drop_empty`.
+- CSV import uses PapaParse; parsed rows are available at `Blockly.CsvImportData.data`.
+- Generators register after Blockly is ready and support both classic and `forBlock` APIs.
+- The system accepts arrays, PapaParse results (`{ data: [...] }`), or JSON strings.
+- If a block still shows placeholders (e.g., `column`, `value`), it no-ops instead of calling the backend.
+
+Troubleshooting:
+- If you see “generator does not know how to generate code,” hard refresh (Ctrl+F5) to reload scripts.
+- If you see “input data must be an array,” ensure the CSV finished parsing or chain from the `csv_import` block.
+
 ## Architecture Overview
 
 ### Modular JavaScript Structure

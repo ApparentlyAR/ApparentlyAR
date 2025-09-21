@@ -14,6 +14,18 @@
  * @since 1.0.0
  */
 
+/**
+ * Data processing blocks and generators (frontend integration)
+ *
+ * - Defines individual Blockly blocks: filter_data, sort_data, select_columns,
+ *   group_by, calculate_column, drop_empty.
+ * - Registers JavaScript generators and ensures compatibility with Blockly's
+ *   newer generator API via forBlock mappings.
+ * - Includes a small data normalizer so blocks accept either raw arrays,
+ *   PapaParse results (with .data), or JSON strings.
+ * - Defers initialization until Blockly is available to avoid race conditions
+ *   in plain <script> environments.
+ */
 // === Data Processing Block (Backend) ===
 (function(){
   // Wait for Blockly to be available
@@ -136,6 +148,17 @@
 
   // JavaScript generators for each block
   if (Blockly.JavaScript) {
+    // Global normalizer to coerce various inputs (PapaParse result, JSON string) into an array of rows
+    if (typeof window !== 'undefined' && !window.BlocklyNormalizeData) {
+      window.BlocklyNormalizeData = function(input) {
+        if (Array.isArray(input)) return input;
+        if (input && Array.isArray(input.data)) return input.data; // PapaParse shape
+        if (typeof input === 'string') {
+          try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+        }
+        return [];
+      };
+    }
     // Helper function to get data code safely
     function getDataCode(block) {
       try {
@@ -159,7 +182,16 @@
       
       const code = `(async () => {\n` +
         `  try {\n` +
-        `    const __input = ${dataCode} || [];\n` +
+        `    let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
+        `    if (!Array.isArray(__input)) {\n` +
+        `      for (let __i=0; __i<60 && !Array.isArray(__input); __i++) {\n` +
+        `        await new Promise(r=>setTimeout(r,50));\n` +
+        `        __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
+        `      }\n` +
+        `    }\n` +
+        `    // Skip backend call if placeholders not yet edited\n` +
+        `    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${safeColumn}') || (${JSON.stringify(['value'])}).includes('${safeValue}');\n` +
+        `    if (__isPlaceholder) { return __input; }\n` +
         `    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }\n` +
         `    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
         `    const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);\n` +
@@ -168,7 +200,7 @@
         `    return __data;\n` +
         `  } catch (error) {\n` +
         `    console.error('Filter data error:', error);\n` +
-        `    return ${dataCode} || [];\n` +
+        `    return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
         `  }\n` +
         `})()`;
       
@@ -186,7 +218,7 @@
 
       const code = `(async () => {\n` +
         `  try {\n` +
-        `    const __input = ${dataCode} || [];\n` +
+        `    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
         `    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }\n` +
         `    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
         `    const __res = await window.AppApi.processData(__input, [{ type: 'sort', params: { column: '${safeColumn}', direction: '${direction}' } }]);\n` +
@@ -195,7 +227,7 @@
         `    return __data;\n` +
         `  } catch (error) {\n` +
         `    console.error('Sort data error:', error);\n` +
-        `    return ${dataCode} || [];\n` +
+        `    return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
         `  }\n` +
         `})()`;
 
@@ -208,7 +240,7 @@
       const columns = block.getFieldValue('COLUMNS') || 'col1,col2';
       
       const code = `(async () => {\n` +
-        `  const __input = ${dataCode} || [];\n` +
+        `  const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
         `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
         `  const __res = await window.AppApi.processData(__input, [{ type: 'select', params: { columns: '${columns}'.split(',').map(s=>s.trim()).filter(Boolean) } }]);\n` +
         `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
@@ -228,7 +260,7 @@
       const alias = block.getFieldValue('ALIAS') || 'result';
       
       const code = `(async () => {\n` +
-        `  const __input = ${dataCode} || [];\n` +
+        `  const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
         `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
         `  const __res = await window.AppApi.processData(__input, [{ type: 'groupBy', params: { groupBy: '${groupColumn}', aggregations: [{ column: '${aggColumn}', operation: '${aggregation}', alias: '${alias}' }] } }]);\n` +
         `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
@@ -246,7 +278,7 @@
       const newColumn = block.getFieldValue('NEW_COLUMN') || 'new_column';
       
       const code = `(async () => {\n` +
-        `  const __input = ${dataCode} || [];\n` +
+        `  const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
         `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
         `  const __res = await window.AppApi.processData(__input, [{ type: 'calculate', params: { expression: \`${expression}\`, newColumnName: '${newColumn}' } }]);\n` +
         `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
@@ -263,7 +295,7 @@
       const column = block.getFieldValue('COLUMN') || 'column';
       
       const code = `(async () => {\n` +
-        `  const __input = ${dataCode} || [];\n` +
+        `  const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
         `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
         `  const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${column}', operator: 'not_equals', value: '' } }]);\n` +
         `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
