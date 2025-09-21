@@ -101,11 +101,26 @@
             event.stopPropagation();
             const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
             try {
-                const response = await fetch(`/api/projects/${projectId}/status`, {
-                    method: 'PATCH',
+                // First, we need to get the current project to preserve its name and description
+                const projectResponse = await fetch(`/api/projects/${projectId}`);
+                if (!projectResponse.ok) {
+                    alert('Failed to fetch project details.');
+                    return;
+                }
+                
+                const project = await projectResponse.json();
+                
+                // Then update the project with the new status using the existing PUT endpoint
+                const response = await fetch(`/api/projects/${projectId}`, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: newStatus })
+                    body: JSON.stringify({ 
+                        name: project.name, 
+                        description: project.description, 
+                        status: newStatus 
+                    })
                 });
+                
                 if (response.ok) loadProjects();
                 else alert('Failed to update status.');
             } catch (error) {
