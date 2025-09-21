@@ -47,9 +47,9 @@
   <script src="../src/blocks/to_json.js"></script>
   <script src="../src/blocks/data_ops.js"></script>
   <script>
-    // Check if CSV import generator was registered
+    // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
-    console.log('Process data generator registered after loading:', !!window.Blockly.JavaScript['process_data']);
+    console.log('filter_data generator registered after loading:', !!(window.Blockly.JavaScript && window.Blockly.JavaScript['filter_data']));
     console.log('AppApi available:', !!window.AppApi);
     console.log('AppApi.processData available:', !!window.AppApi?.processData);
 
@@ -658,6 +658,19 @@
     }, 200);
 
     // Bridge functions for React components to call vanilla JS Blockly functions
+    async function waitForGenerators(requiredKeys, timeoutMs = 3000) {
+      const start = Date.now();
+      return new Promise((resolve, reject) => {
+        (function poll() {
+          const js = window.Blockly && window.Blockly.JavaScript;
+          const ready = !!js && requiredKeys.every(k => !!js[k]);
+          if (ready) return resolve(true);
+          if (Date.now() - start > timeoutMs) return reject(new Error('Generators not ready'));
+          setTimeout(poll, 50);
+        })();
+      });
+    }
+
     window.executeBlocklyCode = async function () {
       if (!workspace) return;
 
@@ -668,8 +681,11 @@
       console.log('Run button clicked via React');
 
       try {
+        // Ensure our custom generators are registered before codegen
+        await waitForGenerators(['csv_import','filter_data','sort_data','select_columns','group_by','calculate_column','drop_empty']).catch(() => {});
         console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
         console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
+        console.log('filter_data generator available:', !!Blockly.JavaScript['filter_data']);
         console.log('Calling workspaceToCode...');
 
         const code = Blockly.JavaScript.workspaceToCode(workspace);

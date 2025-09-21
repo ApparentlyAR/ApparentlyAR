@@ -16,9 +16,31 @@
 
 // === Data Processing Block (Backend) ===
 (function(){
-  if (typeof Blockly === 'undefined') return;
+  // Wait for Blockly to be available
+  function waitForBlockly() {
+    if (typeof Blockly !== 'undefined' && Blockly.JavaScript) {
+      initializeBlocks();
+    } else {
+      setTimeout(waitForBlockly, 10);
+    }
+  }
 
-  Blockly.defineBlocksWithJsonArray([
+  // Debug: confirm generators are registered in the browser
+  try {
+    if (typeof Blockly !== 'undefined' && Blockly.JavaScript) {
+      console.log('[DataOps] Generators registered:', {
+        filter_data: !!Blockly.JavaScript['filter_data'],
+        sort_data: !!Blockly.JavaScript['sort_data'],
+        select_columns: !!Blockly.JavaScript['select_columns'],
+        group_by: !!Blockly.JavaScript['group_by'],
+        calculate_column: !!Blockly.JavaScript['calculate_column'],
+        drop_empty: !!Blockly.JavaScript['drop_empty']
+      });
+    }
+  } catch (_) { /* noop */ }
+  
+  function initializeBlocks() {
+    Blockly.defineBlocksWithJsonArray([
     {
       "type": "filter_data",
       "message0": "filter %1 where %2 %3 %4",
@@ -131,13 +153,23 @@
       const operator = block.getFieldValue('OPERATOR') || 'equals';
       const value = block.getFieldValue('VALUE') || 'value';
       
+      // Escape special characters in strings to prevent code injection
+      const safeColumn = column.replace(/'/g, "\\'").replace(/"/g, '\\"');
+      const safeValue = value.replace(/'/g, "\\'").replace(/"/g, '\\"');
+      
       const code = `(async () => {\n` +
-        `  const __input = ${dataCode} || [];\n` +
-        `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
-        `  const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${column}', operator: '${operator}', value: '${value}' } }]);\n` +
-        `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
-        `  if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
-        `  return __data;\n` +
+        `  try {\n` +
+        `    const __input = ${dataCode} || [];\n` +
+        `    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }\n` +
+        `    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
+        `    const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);\n` +
+        `    const __data = (__res && __res.data) ? __res.data : __input;\n` +
+        `    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
+        `    return __data;\n` +
+        `  } catch (error) {\n` +
+        `    console.error('Filter data error:', error);\n` +
+        `    return ${dataCode} || [];\n` +
+        `  }\n` +
         `})()`;
       
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
@@ -148,16 +180,25 @@
       const dataCode = getDataCode(block);
       const column = block.getFieldValue('COLUMN') || 'column';
       const direction = block.getFieldValue('DIRECTION') || 'asc';
-      
+
+      // Escape special characters in strings
+      const safeColumn = column.replace(/'/g, "\\'").replace(/"/g, '\\"');
+
       const code = `(async () => {\n` +
-        `  const __input = ${dataCode} || [];\n` +
-        `  if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
-        `  const __res = await window.AppApi.processData(__input, [{ type: 'sort', params: { column: '${column}', direction: '${direction}' } }]);\n` +
-        `  const __data = (__res && __res.data) ? __res.data : __input;\n` +
-        `  if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
-        `  return __data;\n` +
+        `  try {\n` +
+        `    const __input = ${dataCode} || [];\n` +
+        `    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }\n` +
+        `    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
+        `    const __res = await window.AppApi.processData(__input, [{ type: 'sort', params: { column: '${safeColumn}', direction: '${direction}' } }]);\n` +
+        `    const __data = (__res && __res.data) ? __res.data : __input;\n` +
+        `    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
+        `    return __data;\n` +
+        `  } catch (error) {\n` +
+        `    console.error('Sort data error:', error);\n` +
+        `    return ${dataCode} || [];\n` +
+        `  }\n` +
         `})()`;
-      
+
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
 
@@ -233,4 +274,20 @@
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
   }
+
+  // Register forBlock mappings for newer Blockly generator API
+  if (Blockly.JavaScript) {
+    const js = Blockly.JavaScript;
+    js.forBlock = js.forBlock || {};
+    if (js['filter_data'] && !js.forBlock['filter_data']) js.forBlock['filter_data'] = (block, generator) => js['filter_data'](block, generator);
+    if (js['sort_data'] && !js.forBlock['sort_data']) js.forBlock['sort_data'] = (block, generator) => js['sort_data'](block, generator);
+    if (js['select_columns'] && !js.forBlock['select_columns']) js.forBlock['select_columns'] = (block, generator) => js['select_columns'](block, generator);
+    if (js['group_by'] && !js.forBlock['group_by']) js.forBlock['group_by'] = (block, generator) => js['group_by'](block, generator);
+    if (js['calculate_column'] && !js.forBlock['calculate_column']) js.forBlock['calculate_column'] = (block, generator) => js['calculate_column'](block, generator);
+    if (js['drop_empty'] && !js.forBlock['drop_empty']) js.forBlock['drop_empty'] = (block, generator) => js['drop_empty'](block, generator);
+  }
+  }
+  
+  // Start waiting for Blockly
+  waitForBlockly();
 })();

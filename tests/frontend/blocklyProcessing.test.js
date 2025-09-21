@@ -130,20 +130,37 @@ describe('Blockly data processing blocks integration', () => {
 		expect(window.AppApi.processData).toHaveBeenCalledTimes(1);
 	});
 
-	test('generator throws error if API missing', async () => {
+	test('generator handles API missing gracefully', async () => {
 		const gen = global.Blockly.JavaScript['filter_data'];
 
 		// Remove API to simulate missing client
 		window.AppApi = undefined;
 
+		// Mock valueToCode to return a valid data reference
+		Blockly.JavaScript.valueToCode = jest.fn(() => 'Blockly.CsvImportData.data');
+		
 		const fakeBlock = { getFieldValue: () => 'test' };
 		const code = gen(fakeBlock)[0];
 
-		await expect((async () => {
-			// eslint-disable-next-line no-eval
-			let res = eval(code);
-			if (res && typeof res.then === 'function') res = await res;
-			return res;
-		})()).rejects.toThrow('API not available');
+		// Should not throw, should return original data due to error handling
+		const result = await eval(code);
+		expect(result).toEqual([]); // Returns empty array when API is missing
+	});
+
+	test('generator handles invalid input data gracefully', async () => {
+		const gen = global.Blockly.JavaScript['filter_data'];
+
+		// Mock API to return success
+		window.AppApi = { processData: jest.fn().mockResolvedValue({ data: [] }) };
+
+		// Mock valueToCode to return invalid data
+		Blockly.JavaScript.valueToCode = jest.fn(() => 'null');
+		
+		const fakeBlock = { getFieldValue: () => 'test' };
+		const code = gen(fakeBlock)[0];
+
+		// Should not throw, should return empty array
+		const result = await eval(code);
+		expect(result).toEqual([]);
 	});
 });
