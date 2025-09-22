@@ -1,0 +1,11 @@
+student_name,age,grade,math_score,english_score,department
+Alice Johnson,17,11,85,92,Science
+Bob Smith,16,10,78,87,Arts
+Charlie Brown,,11,92,85,Science
+Diana Prince,18,12,88,,Math
+Emma Wilson,17,11,75,89,Arts
+Frank Miller,16,10,,91,Science
+Grace Lee,18,12,94,93,Math
+Henry Davis,17,11,82,86,Arts
+Ivy Chen,,10,89,88,Science
+Jack Taylor,16,11,77,84,Math
