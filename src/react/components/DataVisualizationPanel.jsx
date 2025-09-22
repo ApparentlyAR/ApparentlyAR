@@ -129,27 +129,38 @@ const DataVisualizationPanel = () => {
   // Listen for Blockly execution to automatically visualize CSV data
   useEffect(() => {
     const handleBlocklyExecution = async () => {
-      // Check if we have CSV data from Blockly and process it via backend
+      // Check if we have processed data first, otherwise fall back to CSV data
+      const processedData = window.processedData;
       const csvData = window.Blockly?.CsvImportData?.data;
-      if (csvData && csvData.length > 0) {
+      const dataToUse = processedData || csvData;
+      
+      if (dataToUse && dataToUse.length > 0) {
         try {
           setLoading(true);
           setError(null);
 
-          // For now, send with an empty operations array (no-op pipeline)
-          const processed = await apiProcessData(csvData, []);
-          const processedData = processed && processed.data ? processed.data : csvData;
+          // If no processed data, try to process via backend API
+          let finalData = dataToUse;
+          if (!processedData && csvData) {
+            try {
+              const processed = await apiProcessData(csvData, []);
+              finalData = processed && processed.data ? processed.data : csvData;
+            } catch (e) {
+              // Fallback to original data if backend processing fails
+              finalData = csvData;
+            }
+          }
 
-          // Default options from CSV columns
-          const columns = Object.keys(processedData[0] || {});
+          // Default options from columns
+          const columns = Object.keys(finalData[0] || {});
           const options = { 
             xColumn: columns[0] || 'x', 
             yColumn: columns[1] || 'y', 
-            title: 'CSV Data Visualization' 
+            title: processedData ? 'Processed Data Visualization' : 'CSV Data Visualization'
           };
 
-          // Generate a bar chart by default using processed data
-          await generateChart(processedData, 'bar', options);
+          // Generate a bar chart by default
+          await generateChart(finalData, 'bar', options);
         } catch (e) {
           setError(e.message || 'Failed to process data');
         } finally {
@@ -158,11 +169,28 @@ const DataVisualizationPanel = () => {
       }
     };
 
-    // Listen for the custom event that's dispatched when Blockly code is executed
+    const handleDataProcessed = (event) => {
+      // Use the processed data from Professor operations
+      const { data } = event.detail;
+      if (data && data.length > 0) {
+        const columns = Object.keys(data[0] || {});
+        const options = { 
+          xColumn: columns[0] || 'x', 
+          yColumn: columns[1] || 'y', 
+          title: 'Processed Data Visualization'
+        };
+        
+        generateChart(data, 'bar', options);
+      }
+    };
+
+    // Listen for both events
     window.addEventListener('blocklyExecuted', handleBlocklyExecution);
+    window.addEventListener('dataProcessed', handleDataProcessed);
     
     return () => {
       window.removeEventListener('blocklyExecuted', handleBlocklyExecution);
+      window.removeEventListener('dataProcessed', handleDataProcessed);
     };
   }, []);
 
