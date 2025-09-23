@@ -1,3 +1,11 @@
+/**
+ * CSV Import Blockly block and generator
+ *
+ * - Provides a custom field button to upload a CSV and parse it via PapaParse.
+ * - Stores parsed rows on Blockly.CsvImportData.data for later blocks.
+ * - Registers the generator using both legacy (obj['csv_import']) and
+ *   the newer forBlock API for maximum compatibility.
+ */
 // === CSV Import Block Definition ===
 Blockly.defineBlocksWithJsonArray([
   {
@@ -7,11 +15,13 @@ Blockly.defineBlocksWithJsonArray([
       {
         "type": "field_label",
         "name": "CSV_FILENAME",
-        "text": "No file chosen"
+        "text": "No file chosen",
+        "SERIALIZABLE": true
       },
       {
         "type": "field_file_button",
-        "name": "CSV_UPLOAD"
+        "name": "CSV_UPLOAD",
+        "SERIALIZABLE": true
       }
     ],
     "output": "Dataset",
@@ -29,6 +39,7 @@ class FieldFileButton extends Blockly.Field {
     this.fileInput_ = null;
     this.filename_ = 'No file chosen';
     this._dialogOpen = false;
+    this.SERIALIZABLE = true;
   }
 
   static fromJson(options) {
@@ -119,6 +130,18 @@ class FieldFileButton extends Blockly.Field {
 
   getDisplayText_() {
     return ''; // Return empty string to prevent default text rendering
+  }
+
+  // Serialization methods
+  saveState() {
+    return {
+      filename: this.filename_
+    };
+  }
+
+  loadState(state) {
+    this.filename_ = state.filename || 'No file chosen';
+    this.render_();
   }
 }
 

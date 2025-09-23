@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Project - ApparentlyAR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="global.css">
+</head>
+
+<body class="text-gray-800">
+    <main class="max-w-screen-md mx-auto p-4 sm:p-6 lg:p-8">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Edit Project</h2>
+        <form id="edit-project-form" class="space-y-6">
+            <div>
+                <label for="project-name" class="block text-sm font-medium text-gray-700">Project Name</label>
+                <input type="text" id="project-name" name="name"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    required>
+            </div>
+            <div>
+                <label for="project-description" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="project-description" name="description" rows="4"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Save
+                Changes</button>
+        </form>
+    </main>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id'); // Get the project ID from the URL
+
+        // Fetch the current project details
+        async function fetchProject() {
+            try {
+                const response = await fetch(`/api/projects/${projectId}`);
+                if (!response.ok) throw new Error('Failed to fetch project details');
+                const project = await response.json();
+
+                // Populate the form with the current project details
+                document.getElementById('project-name').value = project.name;
+                document.getElementById('project-description').value = project.description;
+            } catch (error) {
+                console.error('Error fetching project:', error);
+                alert('Failed to load project details. Please try again.');
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('edit-project-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const name = document.getElementById('project-name').value;
+            const description = document.getElementById('project-description').value;
+
+            try {
+                // Delete the current project
+                const deleteResponse = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
+                if (!deleteResponse.ok) throw new Error('Failed to delete the current project');
+
+                // Create a new project with the updated data
+                const createResponse = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description })
+                });
+                if (!createResponse.ok) throw new Error('Failed to create the updated project');
+
+                // Redirect back to the teacher dashboard
+                window.location.href = 'teacher-dashboard.html';
+            } catch (error) {
+                console.error('Error saving changes:', error);
+                alert('Failed to save changes. Please try again.');
+            }
+        });
+
+        // Load the current project details when the page loads
+        document.addEventListener('DOMContentLoaded', fetchProject);
+    </script>
+</body>
+
+</html>

@@ -42,18 +42,21 @@
                 const projectContainer = document.getElementById('projects-container');
                 projectContainer.innerHTML = ''; // Clear existing projects
 
-                if (projects.length === 0) {
-                    projectContainer.innerHTML = '<p class="text-gray-500">No projects available yet.</p>';
+                // Filter projects to only include those with status "Active"
+                const activeProjects = projects.filter(project => project.status === 'Active');
+
+                if (activeProjects.length === 0) {
+                    projectContainer.innerHTML = '<p class="text-gray-500">No active projects available yet.</p>';
                 } else {
-                    projects.forEach(project => {
+                    activeProjects.forEach(project => {
                         const projectElement = document.createElement('div');
                         projectElement.className = 'flex items-center justify-between bg-gray-700 p-4 rounded';
                         projectElement.innerHTML = `
-                            <span>${project.name}</span>
-                            <div class="flex items-center space-x-2">
-                                <button class="bg-gray-500 text-white px-2 py-1 rounded" onclick="viewProject(${project.id})">View</button>
-                            </div>
-                        `;
+                        <span>${project.name}</span>
+                        <div class="flex items-center space-x-2">
+                            <button class="bg-gray-500 text-white px-2 py-1 rounded" onclick="viewProject(${project.id})">View</button>
+                        </div>
+                    `;
                         projectContainer.appendChild(projectElement);
                     });
                 }
