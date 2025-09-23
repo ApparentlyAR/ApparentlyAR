@@ -1,14 +1,19 @@
 <header class="bg-white shadow-sm">
     <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
-            <div class="flex items-center gap-3">
+            <a id="header-dashboard-link" href="#" class="flex items-center gap-3">
                 <img src="LogoAR.svg" alt="ApparentlyAR Logo" class="w-8 h-8">
                 <h1 class="text-lg font-bold text-gray-900">ApparentlyAR</h1>
-            </div>
-            <div class="flex items-center">
-                 <button onclick="window.location.href='/'" type="button" class="p-1 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            </a>
+            
+            <div class="relative">
+                <button onclick="toggleUserMenu(event)" type="button" class="dropdown-toggle p-1 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
+                
+                <div id="user-menu" class="project-dropdown hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20">
+                    <a href="#" onclick="logout(event)" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                </div>
             </div>
         </div>
     </div>

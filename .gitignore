@@ -233,3 +233,6 @@ sampleui.html
 .Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
+
+# Project database
+projects.json

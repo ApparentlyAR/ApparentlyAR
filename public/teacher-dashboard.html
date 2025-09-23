@@ -1,90 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard - ApparentlyAR</title>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
-        rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="global.css">
 </head>
-
 <body class="text-gray-800">
 
-    <!-- Header imported from header.html -->
     <div id="header-container"></div>
-    <script>
-        fetch('header.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('header-container').innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error loading header:', error);
-            });
-    </script>
 
     <main class="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
         <h2 class="text-3xl font-bold text-gray-900 mb-8">Welcome, Teacher</h2>
         <div class="flex justify-between items-center mb-6">
             <div class="relative w-full max-w-xs">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 </div>
-                <input type="text" placeholder="Search Project"
-                    class="block w-full bg-white border border-gray-300 rounded-md py-2 pl-10 pr-3 text-sm placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <input type="text" placeholder="Search Project" class="block w-full bg-white border border-gray-300 rounded-md py-2 pl-10 pr-3 text-sm placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
             </div>
-            <button onclick="window.location.href='create-project.html'"
-                class="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100">
-                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
+            <button onclick="window.location.href='create-project.html'" class="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             </button>
         </div>
 
         <h3 class="text-2xl font-semibold mb-4 text-gray-900">My Project</h3>
-        <div id="project-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        </div>
+        <div id="project-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
     </main>
 
     <script>
-        // --- Dropdown Menu Logic ---
-
+        // --- Universal Dropdown & Header Logic ---
         function closeAllDropdowns() {
-            document.querySelectorAll('.project-dropdown').forEach(menu => {
-                menu.classList.add('hidden');
-            });
+            document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
             document.querySelectorAll('.dropdown-toggle').forEach(button => {
-                button.querySelector('.icon-open').classList.add('hidden');
-                button.querySelector('.icon-closed').classList.remove('hidden');
+                const iconOpen = button.querySelector('.icon-open');
+                const iconClosed = button.querySelector('.icon-closed');
+                if (iconOpen && iconClosed) {
+                    iconOpen.classList.add('hidden');
+                    iconClosed.classList.remove('hidden');
+                }
             });
         }
 
+        function toggleUserMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('user-menu');
+            const isHidden = menu.classList.contains('hidden');
+            closeAllDropdowns();
+            if (isHidden) menu.classList.remove('hidden');
+        }
+        
         function toggleDropdown(event, menuId) {
             event.stopPropagation();
             const button = event.currentTarget;
             const menu = document.getElementById(menuId);
             const isHidden = menu.classList.contains('hidden');
-
             closeAllDropdowns();
-
             if (isHidden) {
                 menu.classList.remove('hidden');
                 button.querySelector('.icon-closed').classList.add('hidden');
                 button.querySelector('.icon-open').classList.remove('hidden');
             }
+        }
+
+        function logout(event) {
+            event.preventDefault();
+            console.log("User logged out.");
+            window.location.href = '/';
         }
 
         window.addEventListener('click', function (event) {
@@ -93,15 +79,24 @@
             }
         });
 
-        // --- API Interaction Functions ---
-
+        // --- Page-Specific Loading & API Logic ---
+        fetch('header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header-container').innerHTML = data;
+                document.getElementById('header-dashboard-link').href = 'teacher-dashboard.html';
+            });
+        
         async function deleteProject(projectId, event) {
             event.stopPropagation();
             if (confirm('Are you sure you want to delete this project?')) {
                 try {
                     const response = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
-                    if (response.ok) loadProjects();
-                    else alert('Failed to delete project.');
+                    if (response.ok) {
+                        loadProjects();
+                    } else {
+                        alert('Failed to delete project.');
+                    }
                 } catch (error) {
                     console.error('Error deleting project:', error);
                     alert('An error occurred. Please try again.');
@@ -113,16 +108,13 @@
             event.stopPropagation();
             const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
             try {
-                // First, we need to get the current project to preserve its name and description
                 const projectResponse = await fetch(`/api/projects/${projectId}`);
                 if (!projectResponse.ok) {
-                    alert('Failed to fetch project details.');
+                    alert('Failed to fetch project details for update.');
                     return;
                 }
-
                 const project = await projectResponse.json();
 
-                // Then update the project with the new status using the existing PUT endpoint
                 const response = await fetch(`/api/projects/${projectId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -133,27 +125,25 @@
                     })
                 });
 
-                if (response.ok) loadProjects();
-                else alert('Failed to update status.');
+                if (response.ok) {
+                    loadProjects();
+                } else {
+                    alert('Failed to update status.');
+                }
             } catch (error) {
                 console.error('Error updating status:', error);
                 alert('An error occurred. Please try again.');
             }
         }
 
-        // --- Main Function to Load and Render Projects ---
-
         async function loadProjects() {
             const projectContainer = document.getElementById('project-container');
             projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">Loading projects...</p>';
-
             try {
                 const response = await fetch('/api/projects');
                 if (!response.ok) throw new Error('Network response was not ok');
                 const projects = await response.json();
-
                 projectContainer.innerHTML = '';
-
                 if (projects.length === 0) {
                     projectContainer.innerHTML = `<p class="text-gray-500 col-span-full">No projects created yet. Click the '+' button to get started.</p>`;
                 } else {
@@ -167,12 +157,11 @@
                             footerBg: is_active ? 'bg-green-50/50' : 'bg-red-50/50'
                         };
                         const publishText = is_active ? 'Unpublish' : 'Publish';
-
                         const projectElement = document.createElement('div');
                         projectElement.className = `bg-white rounded-lg shadow-sm ${statusClasses.borderColor} border-l-4 flex flex-col`;
-
+                        
                         projectElement.innerHTML = `
-                            <div class="p-4 flex-grow cursor-pointer" onclick="window.location.href = 'view-project.html?id=${project.id}'">
+                            <div class="p-4 flex-grow cursor-pointer" onclick="window.location.href = 'view-project.html?id=${project.id}&role=teacher'">
                                 <div class="flex justify-between items-center">
                                     <div class="flex items-center gap-4">
                                         <div class="flex items-center gap-2 text-sm font-medium px-3 py-1 ${statusClasses.bgColor} ${statusClasses.textColor} rounded-full">
@@ -187,15 +176,15 @@
                                             <svg class="icon-open hidden h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                         </button>
                                         <div id="project-menu-${project.id}" class="project-dropdown hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-10">
-                                            <a href="view-project.html?id=${project.id}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View Project</a>
-                                            <a href="edit-project.html?id=${project.id}" class="block px-4 py-2 text-sm text-gray-400 hover:bg-gray-100">Edit Project (wip)</a>
-                                            <button onclick="toggleProjectStatus('${project.id}', '${project.status}', event)" class="w-full text-left block px-4 py-2 text-sm text-gray-400 hover:bg-gray-100">${publishText} (wip)</button>
-                                            <button onclick="deleteProject('${project.id}', event)" class="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete (wip)</button>
+                                            <a href="view-project.html?id=${project.id}&role=teacher" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View Project</a>
+                                            <a href="edit-project.html?id=${project.id}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Edit Project</a>
+                                            <button onclick="toggleProjectStatus('${project.id}', '${project.status}', event)" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">${publishText}</button>
+                                            <button onclick="deleteProject('${project.id}', event)" class="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="border-t border-gray-200 p-4 ${statusClasses.footerBg} cursor-pointer" onclick="window.location.href = 'view-project.html?id=${project.id}'">
+                            <div class="border-t border-gray-200 p-4 ${statusClasses.footerBg} cursor-pointer" onclick="window.location.href = 'view-project.html?id=${project.id}&role=teacher'">
                                 <div class="flex justify-between items-center text-sm">
                                     <p class="text-gray-600">${project.description || 'No description available.'}</p>
                                     <p class="text-gray-500">${new Date(project.createdAt).toLocaleDateString()}</p>
@@ -210,9 +199,7 @@
                 projectContainer.innerHTML = '<p class="text-red-500 col-span-full">Failed to load projects. Please try again later.</p>';
             }
         }
-
         document.addEventListener('DOMContentLoaded', loadProjects);
     </script>
 </body>
-
 </html>
