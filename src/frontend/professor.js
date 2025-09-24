@@ -253,32 +253,38 @@ window.AppAR.Professor = {
       console.log(`[Professor] Operation completed. Output: ${result.length} rows`);
       
       // Update the data panel with the result
-      if (window.BlockUtils && window.BlockUtils.updateDataPanel) {
+      if (typeof window !== 'undefined' && window.BlockUtils && window.BlockUtils.updateDataPanel) {
         window.BlockUtils.updateDataPanel(result);
       }
       
       // Update the visualization data for automatic charts
-      window.processedData = result;
-      
-      // Trigger auto-visualization with processed data
-      window.dispatchEvent(new CustomEvent('dataProcessed', { 
-        detail: { 
-          data: result,
-          operation: operation.type 
-        } 
-      }));
+      if (typeof window !== 'undefined') {
+        window.processedData = result;
+        
+        // Trigger auto-visualization with processed data (browser only)
+        if (window.dispatchEvent && typeof CustomEvent !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('dataProcessed', { 
+            detail: { 
+              data: result,
+              operation: operation.type 
+            } 
+          }));
+        }
+      }
       
       return result;
       
     } catch (error) {
       console.error('[Professor] Operation failed:', error);
       
-      // Provide user-friendly error feedback
-      if (window.reactSetOutput) {
-        window.reactSetOutput(`Error: ${error.message}`);
-      }
-      if (window.reactSetError) {
-        window.reactSetError(true);
+      // Provide user-friendly error feedback (browser only)
+      if (typeof window !== 'undefined') {
+        if (window.reactSetOutput) {
+          window.reactSetOutput(`Error: ${error.message}`);
+        }
+        if (window.reactSetError) {
+          window.reactSetError(true);
+        }
       }
       
       // Re-throw the error so blocks can handle it appropriately

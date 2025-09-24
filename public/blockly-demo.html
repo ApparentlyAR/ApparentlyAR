@@ -48,10 +48,12 @@
   <script src="../src/blocks/csv_import.js"></script>
   <script src="../src/blocks/to_json.js"></script>
   <script src="../src/blocks/data_ops.js"></script>
+  <script src="../src/blocks/data-cleaning.js"></script>
   <script>
     // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
     console.log('filter_data generator registered after loading:', !!(window.Blockly.JavaScript && window.Blockly.JavaScript['filter_data']));
+    console.log('convert_type generator registered after loading:', !!(window.Blockly.JavaScript && window.Blockly.JavaScript['convert_type']));
     console.log('AppApi available:', !!window.AppApi);
     console.log('AppApi.processData available:', !!window.AppApi?.processData);
 
@@ -345,6 +347,33 @@
           </block>
           <block type="drop_empty">
             <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Data Cleaning" colour="60">
+          <block type="convert_type">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="drop_column">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="rename_column">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="handle_missing">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="handle_missing_with_value">
+            <value name="DATASET">
               <block type="csv_import"></block>
             </value>
           </block>
@@ -684,7 +713,7 @@
 
       try {
         // Ensure our custom generators are registered before codegen
-        await waitForGenerators(['csv_import','filter_data','sort_data','select_columns','group_by','calculate_column','drop_empty']).catch(() => {});
+        await waitForGenerators(['csv_import','filter_data','sort_data','select_columns','group_by','calculate_column','drop_empty','convert_type','drop_column','rename_column','handle_missing','handle_missing_with_value']).catch(() => {});
         console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
         console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
         console.log('filter_data generator available:', !!Blockly.JavaScript['filter_data']);

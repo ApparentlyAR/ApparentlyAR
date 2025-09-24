@@ -384,10 +384,13 @@ describe('DataProcessor', () => {
       
       const result = await dataProcessor.parseCSVFile(mockFilePath);
       
-      expect(result).toEqual([
-        { name: 'Alice', age: '25' },
-        { name: 'Bob', age: '30' }
-      ]);
+      expect(result).toEqual({
+        data: [
+          { name: 'Alice', age: '25' },
+          { name: 'Bob', age: '30' }
+        ],
+        fields: ['name', 'age']
+      });
       
       // Restore original function
       require('fs').readFileSync = originalReadFileSync;
