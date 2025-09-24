@@ -47,8 +47,10 @@
   <script src="../src/frontend/professor.js"></script>
   <script src="../src/blocks/csv_import.js"></script>
   <script src="../src/blocks/to_json.js"></script>
-  <script src="../src/blocks/data_ops.js"></script>
   <script src="../src/blocks/data-cleaning.js"></script>
+  <script src="../src/blocks/data-filtering.js"></script>
+  <script src="../src/blocks/data-transform.js"></script>
+  <script src="../src/blocks/visualization.js"></script>
   <script>
     // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -283,6 +285,146 @@
 
       <!-- Hidden Blockly Toolbox -->
       <xml id="toolbox" style="display: none">
+        <category name="Data Import" colour="20">
+          <block type="csv_import"></block>
+          <block type="to_json">
+            <value name="VALUE">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Data Cleaning" colour="20">
+          <block type="convert_type">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="drop_column">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="rename_column">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="handle_missing">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="handle_missing_with_value">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Data Filtering" colour="120">
+          <block type="filter_data">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="select_columns">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="sort_data">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="filter_range">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Data Transform" colour="260">
+          <block type="group_by">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="aggregate">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="group_aggregate">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="bin_data">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_field">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_with_value">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="pivot_table">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Visualization" colour="330">
+          <block type="quick_chart">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="set_chart_type"></block>
+          <block type="set_axes">
+            <value name="CHART_CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="chart_options">
+            <value name="CHART_CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="advanced_chart_options">
+            <value name="CHART_CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="generate_visualization">
+            <value name="CHART_CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="histogram_config">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="boxplot_config">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="heatmap_config">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
         <category name="Logic" colour="210">
           <block type="controls_if"></block>
           <block type="logic_compare"></block>
@@ -313,71 +455,6 @@
         </category>
         <category name="Variables" colour="330" custom="VARIABLE"></category>
         <category name="Functions" colour="290" custom="PROCEDURE"></category>
-        <category name="Data" colour="20">
-          <block type="csv_import"></block>
-          <block type="to_json">
-            <value name="VALUE">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="filter_data">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="sort_data">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="select_columns">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="group_by">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="calculate_column">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="drop_empty">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-        </category>
-        <category name="Data Cleaning" colour="60">
-          <block type="convert_type">
-            <value name="DATASET">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="drop_column">
-            <value name="DATASET">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="rename_column">
-            <value name="DATASET">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="handle_missing">
-            <value name="DATASET">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="handle_missing_with_value">
-            <value name="DATASET">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-        </category>
       </xml>
     </aside>
 

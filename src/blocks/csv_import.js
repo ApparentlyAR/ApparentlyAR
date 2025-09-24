@@ -78,6 +78,11 @@ class FieldFileButton extends Blockly.Field {
   static get SERIALIZABLE() {
     return true;
   }
+  
+  // Mark field as serializable to prevent warnings
+  static get SERIALIZABLE() {
+    return true;
+  }
 
   static fromJson(options) {
     return new FieldFileButton(options['value']);
