@@ -176,6 +176,226 @@ class ClientDataProcessor {
   }
 
   /**
+   * Calculate descriptive statistics for a column
+   */
+  descriptiveStats(data, { column }) {
+    console.log(`[Professor] Calculating descriptive statistics for column '${column}'`);
+    
+    const values = data
+      .map(row => this._toNumber(row[column]))
+      .filter(v => !Number.isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    const median = values.length % 2 === 0 
+      ? (values[values.length / 2 - 1] + values[values.length / 2]) / 2
+      : values[Math.floor(values.length / 2)];
+    
+    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    
+    const min = values[0];
+    const max = values[values.length - 1];
+    const q1 = values[Math.floor(values.length * 0.25)];
+    const q3 = values[Math.floor(values.length * 0.75)];
+
+    const stats = { 
+      column, 
+      count: values.length,
+      mean: Number(mean.toFixed(4)),
+      median: Number(median.toFixed(4)),
+      stdDev: Number(stdDev.toFixed(4)),
+      min, max, q1, q3,
+      variance: Number(variance.toFixed(4))
+    };
+
+    console.log(`[Professor] Descriptive statistics calculated:`, stats);
+    return stats;
+  }
+
+  /**
+   * Calculate mean of a column
+   */
+  calculateMean(data, { column }) {
+    console.log(`[Professor] Calculating mean for column '${column}'`);
+    
+    const values = data
+      .map(row => this._toNumber(row[column]))
+      .filter(v => !Number.isNaN(v));
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    return Number(mean.toFixed(4));
+  }
+
+  /**
+   * Calculate median of a column
+   */
+  calculateMedian(data, { column }) {
+    console.log(`[Professor] Calculating median for column '${column}'`);
+    
+    const values = data
+      .map(row => this._toNumber(row[column]))
+      .filter(v => !Number.isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const median = values.length % 2 === 0 
+      ? (values[values.length / 2 - 1] + values[values.length / 2]) / 2
+      : values[Math.floor(values.length / 2)];
+    
+    return Number(median.toFixed(4));
+  }
+
+  /**
+   * Calculate standard deviation of a column
+   */
+  calculateStandardDeviation(data, { column }) {
+    console.log(`[Professor] Calculating standard deviation for column '${column}'`);
+    
+    const values = data
+      .map(row => this._toNumber(row[column]))
+      .filter(v => !Number.isNaN(v));
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    
+    return Number(stdDev.toFixed(4));
+  }
+
+  /**
+   * Calculate correlation between two columns
+   */
+  calculateCorrelation(data, { columnX, columnY }) {
+    console.log(`[Professor] Calculating correlation between '${columnX}' and '${columnY}'`);
+    
+    const pairs = data
+      .map(row => ({ x: this._toNumber(row[columnX]), y: this._toNumber(row[columnY]) }))
+      .filter(pair => !Number.isNaN(pair.x) && !Number.isNaN(pair.y));
+
+    if (pairs.length < 2) {
+      throw new Error(`Not enough valid numeric pairs found between '${columnX}' and '${columnY}'`);
+    }
+
+    const meanX = pairs.reduce((sum, p) => sum + p.x, 0) / pairs.length;
+    const meanY = pairs.reduce((sum, p) => sum + p.y, 0) / pairs.length;
+    
+    let numerator = 0, denomX = 0, denomY = 0;
+    for (const pair of pairs) {
+      const devX = pair.x - meanX;
+      const devY = pair.y - meanY;
+      numerator += devX * devY;
+      denomX += devX * devX;
+      denomY += devY * devY;
+    }
+    
+    const correlation = numerator / Math.sqrt(denomX * denomY);
+    return Number(correlation.toFixed(4));
+  }
+
+  /**
+   * Detect outliers in a column
+   */
+  detectOutliers(data, { column, method }) {
+    console.log(`[Professor] Detecting outliers in '${column}' using '${method}' method`);
+    
+    const values = data.map(row => this._toNumber(row[column]));
+    const validValues = values.filter(v => !Number.isNaN(v));
+    
+    if (validValues.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    let outlierIndices = new Set();
+
+    if (method === 'iqr') {
+      const sorted = [...validValues].sort((a, b) => a - b);
+      const q1 = sorted[Math.floor(sorted.length * 0.25)];
+      const q3 = sorted[Math.floor(sorted.length * 0.75)];
+      const iqr = q3 - q1;
+      const lowerBound = q1 - 1.5 * iqr;
+      const upperBound = q3 + 1.5 * iqr;
+      
+      values.forEach((v, i) => {
+        if (!Number.isNaN(v) && (v < lowerBound || v > upperBound)) {
+          outlierIndices.add(i);
+        }
+      });
+    } else if (method === 'zscore') {
+      const mean = validValues.reduce((sum, v) => sum + v, 0) / validValues.length;
+      const stdDev = Math.sqrt(validValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / validValues.length);
+      
+      values.forEach((v, i) => {
+        if (!Number.isNaN(v) && Math.abs((v - mean) / stdDev) > 3) {
+          outlierIndices.add(i);
+        }
+      });
+    }
+
+    return data.map((row, i) => ({
+      ...row,
+      [`${column}_is_outlier`]: outlierIndices.has(i)
+    }));
+  }
+
+  /**
+   * Count frequency of values in a column
+   */
+  frequencyCount(data, { column }) {
+    console.log(`[Professor] Counting frequencies for column '${column}'`);
+    
+    const frequencies = {};
+    data.forEach(row => {
+      const value = row[column];
+      const key = value === null || value === undefined ? 'null' : String(value);
+      frequencies[key] = (frequencies[key] || 0) + 1;
+    });
+
+    return Object.entries(frequencies)
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  /**
+   * Calculate percentiles of a column
+   */
+  calculatePercentiles(data, { column, percentile }) {
+    console.log(`[Professor] Calculating ${percentile}th percentile for column '${column}'`);
+    
+    const values = data
+      .map(row => this._toNumber(row[column]))
+      .filter(v => !Number.isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const index = (percentile / 100) * (values.length - 1);
+    const lower = Math.floor(index);
+    const upper = Math.ceil(index);
+    const weight = index % 1;
+
+    const result = values[lower] * (1 - weight) + values[upper] * weight;
+    return Number(result.toFixed(4));
+  }
+
+  /**
    * Process data with a single operation
    */
   async processData(data, operations) {
@@ -197,6 +417,23 @@ class ClientDataProcessor {
         case 'handleMissing':
           processedData = this.handleMissing(processedData, params);
           break;
+        case 'descriptiveStats':
+          return this.descriptiveStats(processedData, params);
+        case 'calculateMean':
+          return this.calculateMean(processedData, params);
+        case 'calculateMedian':
+          return this.calculateMedian(processedData, params);
+        case 'calculateStandardDeviation':
+          return this.calculateStandardDeviation(processedData, params);
+        case 'calculateCorrelation':
+          return this.calculateCorrelation(processedData, params);
+        case 'detectOutliers':
+          processedData = this.detectOutliers(processedData, params);
+          break;
+        case 'frequencyCount':
+          return this.frequencyCount(processedData, params);
+        case 'calculatePercentiles':
+          return this.calculatePercentiles(processedData, params);
         default:
           throw new Error(`Unsupported operation: ${type}`);
       }
@@ -296,7 +533,11 @@ window.AppAR.Professor = {
    * Get available operations (for debugging/introspection)
    */
   getAvailableOperations() {
-    return ['convertType', 'dropColumn', 'renameColumn', 'handleMissing'];
+    return [
+      'convertType', 'dropColumn', 'renameColumn', 'handleMissing',
+      'descriptiveStats', 'calculateMean', 'calculateMedian', 'calculateStandardDeviation',
+      'calculateCorrelation', 'detectOutliers', 'frequencyCount', 'calculatePercentiles'
+    ];
   },
 
   /**
@@ -340,6 +581,40 @@ window.AppAR.Professor = {
         }
         if (params.method === 'fill' && params.fillValue === undefined) {
           throw new Error('fill method requires fillValue parameter');
+        }
+        break;
+
+      case 'descriptiveStats':
+      case 'calculateMean':
+      case 'calculateMedian':
+      case 'calculateStandardDeviation':
+      case 'frequencyCount':
+        if (!params.column) {
+          throw new Error(`${type} requires column parameter`);
+        }
+        break;
+
+      case 'calculateCorrelation':
+        if (!params.columnX || !params.columnY) {
+          throw new Error('calculateCorrelation requires columnX and columnY parameters');
+        }
+        break;
+
+      case 'detectOutliers':
+        if (!params.column || !params.method) {
+          throw new Error('detectOutliers requires column and method parameters');
+        }
+        if (!['iqr', 'zscore', 'modified_zscore'].includes(params.method)) {
+          throw new Error('outlier detection method must be iqr, zscore, or modified_zscore');
+        }
+        break;
+
+      case 'calculatePercentiles':
+        if (!params.column || params.percentile === undefined) {
+          throw new Error('calculatePercentiles requires column and percentile parameters');
+        }
+        if (params.percentile < 0 || params.percentile > 100) {
+          throw new Error('percentile must be between 0 and 100');
         }
         break;
         

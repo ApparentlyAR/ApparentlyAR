@@ -51,6 +51,7 @@
   <script src="../src/blocks/data-filtering.js"></script>
   <script src="../src/blocks/data-transform.js"></script>
   <script src="../src/blocks/visualization.js"></script>
+  <script src="../src/blocks/statistics.js"></script>
   <script>
     // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -374,6 +375,48 @@
             </value>
           </block>
           <block type="pivot_table">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Statistical Analysis" colour="40">
+          <block type="descriptive_stats">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_mean">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_median">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_std">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_correlation">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="detect_outliers">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="frequency_count">
+            <value name="DATASET">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_percentiles">
             <value name="DATASET">
               <block type="csv_import"></block>
             </value>
