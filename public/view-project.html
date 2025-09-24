@@ -12,7 +12,7 @@
 </head>
 <body class="text-gray-800">
     <div id="header-container"></div>
-
+    
     <main class="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
         <nav class="flex mb-6" aria-label="Breadcrumb">
             <ol class="inline-flex items-center space-x-1 md:space-x-3">
@@ -35,12 +35,15 @@
             </button>
         </div>
         <p id="project-description" class="text-gray-600 mb-10 w-full max-w-2xl">Loading description...</p>
+
         <h3 class="text-2xl font-bold text-gray-900 mb-4">Data Panel</h3>
         <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
             <div class="data-panel-table-container">
-                <table id="data-table" class="min-w-full divide-y divide-gray-200"></table>
+                <table id="data-table" class="min-w-full divide-y divide-gray-200">
+                    </table>
             </div>
         </div>
+
         <div class="text-right">
             <button class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onclick="window.location.href='blockly-demo.html'">
                 Simulate Project
@@ -48,11 +51,10 @@
         </div>
     </main>
     <script>
-        // --- Universal Dropdown & Header Logic ---
+        // --- Universal Dropdown Logic ---
         function closeAllDropdowns() {
             document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
         }
-
         function toggleUserMenu(event) {
             event.stopPropagation();
             const menu = document.getElementById('user-menu');
@@ -60,35 +62,60 @@
             closeAllDropdowns();
             if (isHidden) menu.classList.remove('hidden');
         }
-
         function logout(event) {
             event.preventDefault();
             console.log("User logged out.");
             window.location.href = '/';
         }
-
         window.addEventListener('click', function (event) {
             if (!event.target.closest('.dropdown-toggle')) {
                 closeAllDropdowns();
             }
         });
 
-        // --- Page-Specific Loading & API Logic ---
+        // --- Page Setup Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // First, load the header
+            fetch('header.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('header-container').innerHTML = data;
+                    // Once header is loaded, run the main page logic
+                    initializeApp();
+                });
+        });
+
         function getQueryParam(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
         }
 
-        async function loadProjectDetails() {
+        async function initializeApp() {
             const projectId = getQueryParam('id');
             const role = getQueryParam('role');
+
             const editButton = document.getElementById('edit-project-button');
+            const breadcrumbLink = document.getElementById('breadcrumb-dashboard-link');
+            const headerLink = document.getElementById('header-dashboard-link');
 
-            if (role === 'student') {
-                if (editButton) editButton.style.display = 'none';
+            // 1. Set all dynamic links based on role
+            const dashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
+            if (breadcrumbLink) breadcrumbLink.href = dashboardUrl;
+            if (headerLink) headerLink.href = dashboardUrl;
+
+            // 2. Adjust UI based on role
+            if (role === 'student' && editButton) {
+                editButton.style.display = 'none';
             }
-
-            if (!projectId) { /* ... same as before ... */ return; }
+            
+            // 3. Handle project ID and fetch data
+            if (!projectId) {
+                document.getElementById('project-title').textContent = 'Error: No Project ID Provided';
+                document.getElementById('project-description').textContent = 'Please select a project from the dashboard.';
+                document.getElementById('breadcrumb-project-name').textContent = 'Error';
+                if (editButton) editButton.style.display = 'none';
+                return;
+            }
             
             if (role === 'teacher' && editButton) {
                 editButton.onclick = function() { window.location.href = 'edit-project.html?id=' + projectId; };
@@ -98,25 +125,19 @@
                 const response = await fetch(`/api/projects/${projectId}`);
                 if (!response.ok) throw new Error('Failed to fetch project details.');
                 const project = await response.json();
+                
                 document.getElementById('breadcrumb-project-name').textContent = project.name;
                 document.getElementById('project-title').textContent = project.name;
                 document.getElementById('project-description').textContent = project.description || 'No description available for this project.';
-            } catch (error) { /* ... same as before ... */ }
+                // Logic to populate the data table with project.csvData would go here
+            } catch (error) {
+                console.error('Error loading project details:', error);
+                document.getElementById('breadcrumb-project-name').textContent = 'Error';
+                document.getElementById('project-title').textContent = 'Error Loading Project';
+                document.getElementById('project-description').textContent = `Could not load project details. ${error.message || 'Please try again.'}`;
+                if (editButton) editButton.style.display = 'none';
+            }
         }
-
-        // Load Header and set dynamic links
-        fetch('header.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('header-container').innerHTML = data;
-                const role = getQueryParam('role');
-                const dashboardLink = document.getElementById('header-dashboard-link');
-                if (dashboardLink) {
-                    dashboardLink.href = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
-                }
-            });
-
-        document.addEventListener('DOMContentLoaded', loadProjectDetails);
     </script>
 </body>
 </html>
