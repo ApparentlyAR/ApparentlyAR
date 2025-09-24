@@ -4,34 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Project - ApparentlyAR</title>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="global.css">
 </head>
 <body class="text-gray-800">
-
-    <!-- Header imported from header.html -->
     <div id="header-container"></div>
-    <script>
-        fetch('header.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('header-container').innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error loading header:', error);
-            });
-    </script>
-
+    
     <main class="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
         <nav class="flex mb-6" aria-label="Breadcrumb">
             <ol class="inline-flex items-center space-x-1 md:space-x-3">
                 <li class="inline-flex items-center">
-                    <a href="teacher-dashboard.html" class="text-sm font-medium text-gray-500 hover:text-gray-700">My Project</a>
+                    <a id="breadcrumb-dashboard-link" href="#" class="text-sm font-medium text-gray-500 hover:text-gray-700">My Project</a>
                 </li>
                 <li>
                     <div class="flex items-center">
@@ -41,43 +27,20 @@
                 </li>
             </ol>
         </nav>
-
         <div class="flex items-center gap-4 mb-4">
             <h2 id="project-title" class="text-4xl font-bold text-gray-900">Loading Project...</h2>
-            <button id="edit-project-button" onclick="window.location.href='edit-project.html?id=' + projectId" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <!-- pencil icon -->
+            <button id="edit-project-button" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-6.071 7.071L4 14.172V17h2.828l6.172-6.172-2.828-2.828z" /></svg>
                 Edit
             </button>
         </div>
-
-        <p id="project-description" class="text-gray-600 mb-10 w-full max-w-2xl">
-            Loading description...
-        </p>
+        <p id="project-description" class="text-gray-600 mb-10 w-full max-w-2xl">Loading description...</p>
 
         <h3 class="text-2xl font-bold text-gray-900 mb-4">Data Panel</h3>
         <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
             <div class="data-panel-table-container">
                 <table id="data-table" class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cell 1</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column 2</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column 3</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column 4</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Column 5</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 1 Data A</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 1 Data B</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 1 Data C</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 1 Data D</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 1 Data E</td></tr>
-                        <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 2 Data A</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 2 Data B</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 2 Data C</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 2 Data D</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 2 Data E</td></tr>
-                        <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 3 Data A</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 3 Data B</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 3 Data C</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 3 Data D</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 3 Data E</td></tr>
-                        <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 4 Data A</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 4 Data B</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 4 Data C</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 4 Data D</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 4 Data E</td></tr>
-                        <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 5 Data A</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 5 Data B</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 5 Data C</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 5 Data D</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 5 Data E</td></tr>
-                        <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 6 Data A</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 6 Data B</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 6 Data C</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 6 Data D</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 6 Data E</td></tr>
-                        <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 7 Data A</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 7 Data B</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 7 Data C</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 7 Data D</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 7 Data E</td></tr>
-                        <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 8 Data A</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 8 Data B</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 8 Data C</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 8 Data D</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Row 8 Data E</td></tr>
-                    </tbody>
-                </table>
+                    </table>
             </div>
         </div>
 
@@ -87,61 +50,94 @@
             </button>
         </div>
     </main>
-
     <script>
-        // Function to get query parameters from the URL
+        // --- Universal Dropdown Logic ---
+        function closeAllDropdowns() {
+            document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
+        }
+        function toggleUserMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('user-menu');
+            const isHidden = menu.classList.contains('hidden');
+            closeAllDropdowns();
+            if (isHidden) menu.classList.remove('hidden');
+        }
+        function logout(event) {
+            event.preventDefault();
+            console.log("User logged out.");
+            window.location.href = '/';
+        }
+        window.addEventListener('click', function (event) {
+            if (!event.target.closest('.dropdown-toggle')) {
+                closeAllDropdowns();
+            }
+        });
+
+        // --- Page Setup Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // First, load the header
+            fetch('header.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('header-container').innerHTML = data;
+                    // Once header is loaded, run the main page logic
+                    initializeApp();
+                });
+        });
+
         function getQueryParam(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
         }
 
-        // --- Main Function to Load Project Details ---
-        async function loadProjectDetails() {
+        async function initializeApp() {
             const projectId = getQueryParam('id');
+            const role = getQueryParam('role');
+
+            const editButton = document.getElementById('edit-project-button');
+            const breadcrumbLink = document.getElementById('breadcrumb-dashboard-link');
+            const headerLink = document.getElementById('header-dashboard-link');
+
+            // 1. Set all dynamic links based on role
+            const dashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
+            if (breadcrumbLink) breadcrumbLink.href = dashboardUrl;
+            if (headerLink) headerLink.href = dashboardUrl;
+
+            // 2. Adjust UI based on role
+            if (role === 'student' && editButton) {
+                editButton.style.display = 'none';
+            }
             
+            // 3. Handle project ID and fetch data
             if (!projectId) {
-                // If no ID is found, redirect to dashboard or show an error
                 document.getElementById('project-title').textContent = 'Error: No Project ID Provided';
                 document.getElementById('project-description').textContent = 'Please select a project from the dashboard.';
                 document.getElementById('breadcrumb-project-name').textContent = 'Error';
-                document.getElementById('edit-project-button').style.display = 'none'; // Hide edit button
+                if (editButton) editButton.style.display = 'none';
                 return;
             }
-
-            // Update the edit button link
-            document.getElementById('edit-project-button').onclick = function() { 
-                window.location.href = 'edit-project.html?id=' + projectId; 
-            };
-
+            
+            if (role === 'teacher' && editButton) {
+                editButton.onclick = function() { window.location.href = 'edit-project.html?id=' + projectId; };
+            }
 
             try {
-                // Fetch project details from your API
-                const response = await fetch(`/api/projects/${projectId}`); // Assuming an API endpoint like /api/projects/1
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error(`Project with ID ${projectId} not found.`);
-                    }
-                    throw new Error('Failed to fetch project details.');
-                }
+                const response = await fetch(`/api/projects/${projectId}`);
+                if (!response.ok) throw new Error('Failed to fetch project details.');
                 const project = await response.json();
-
-                // Populate the page with fetched data
+                
                 document.getElementById('breadcrumb-project-name').textContent = project.name;
                 document.getElementById('project-title').textContent = project.name;
                 document.getElementById('project-description').textContent = project.description || 'No description available for this project.';
-                
-                // future table here
-                
+                // Logic to populate the data table with project.csvData would go here
             } catch (error) {
                 console.error('Error loading project details:', error);
                 document.getElementById('breadcrumb-project-name').textContent = 'Error';
                 document.getElementById('project-title').textContent = 'Error Loading Project';
                 document.getElementById('project-description').textContent = `Could not load project details. ${error.message || 'Please try again.'}`;
-                document.getElementById('edit-project-button').style.display = 'none'; // Hide edit button
+                if (editButton) editButton.style.display = 'none';
             }
         }
-
-        document.addEventListener('DOMContentLoaded', loadProjectDetails);
     </script>
 </body>
 </html>

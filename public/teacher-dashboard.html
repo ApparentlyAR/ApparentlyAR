@@ -4,29 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard - ApparentlyAR</title>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="global.css">
 </head>
-
 <body class="text-gray-800">
 
-    <!-- Header imported from header.html -->
     <div id="header-container"></div>
-    <script>
-        fetch('header.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('header-container').innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error loading header:', error);
-            });
-    </script>
 
     <main class="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
         <h2 class="text-3xl font-bold text-gray-900 mb-8">Welcome, Teacher</h2>
@@ -43,31 +29,37 @@
         </div>
 
         <h3 class="text-2xl font-semibold mb-4 text-gray-900">My Project</h3>
-        <div id="project-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            </div>
+        <div id="project-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
     </main>
 
     <script>
-        // --- Dropdown Menu Logic ---
-        
+        // --- Universal Dropdown & Header Logic ---
         function closeAllDropdowns() {
-            document.querySelectorAll('.project-dropdown').forEach(menu => {
-                menu.classList.add('hidden');
-            });
+            document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
             document.querySelectorAll('.dropdown-toggle').forEach(button => {
-                button.querySelector('.icon-open').classList.add('hidden');
-                button.querySelector('.icon-closed').classList.remove('hidden');
+                const iconOpen = button.querySelector('.icon-open');
+                const iconClosed = button.querySelector('.icon-closed');
+                if (iconOpen && iconClosed) {
+                    iconOpen.classList.add('hidden');
+                    iconClosed.classList.remove('hidden');
+                }
             });
         }
 
+        function toggleUserMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('user-menu');
+            const isHidden = menu.classList.contains('hidden');
+            closeAllDropdowns();
+            if (isHidden) menu.classList.remove('hidden');
+        }
+        
         function toggleDropdown(event, menuId) {
             event.stopPropagation();
             const button = event.currentTarget;
             const menu = document.getElementById(menuId);
             const isHidden = menu.classList.contains('hidden');
-            
-            closeAllDropdowns(); 
-            
+            closeAllDropdowns();
             if (isHidden) {
                 menu.classList.remove('hidden');
                 button.querySelector('.icon-closed').classList.add('hidden');
@@ -75,73 +67,83 @@
             }
         }
 
-        window.addEventListener('click', function(event) {
+        function logout(event) {
+            event.preventDefault();
+            console.log("User logged out.");
+            window.location.href = '/';
+        }
+
+        window.addEventListener('click', function (event) {
             if (!event.target.closest('.dropdown-toggle')) {
                 closeAllDropdowns();
             }
         });
 
-        // --- API Interaction Functions ---
-
+        // --- Page-Specific Loading & API Logic ---
+        fetch('header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header-container').innerHTML = data;
+                document.getElementById('header-dashboard-link').href = 'teacher-dashboard.html';
+            });
+        
         async function deleteProject(projectId, event) {
             event.stopPropagation();
             if (confirm('Are you sure you want to delete this project?')) {
                 try {
                     const response = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
-                    if (response.ok) loadProjects();
-                    else alert('Failed to delete project.');
+                    if (response.ok) {
+                        loadProjects();
+                    } else {
+                        alert('Failed to delete project.');
+                    }
                 } catch (error) {
                     console.error('Error deleting project:', error);
                     alert('An error occurred. Please try again.');
                 }
             }
         }
-        
+
         async function toggleProjectStatus(projectId, currentStatus, event) {
             event.stopPropagation();
             const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
             try {
-                // First, we need to get the current project to preserve its name and description
                 const projectResponse = await fetch(`/api/projects/${projectId}`);
                 if (!projectResponse.ok) {
-                    alert('Failed to fetch project details.');
+                    alert('Failed to fetch project details for update.');
                     return;
                 }
-                
                 const project = await projectResponse.json();
-                
-                // Then update the project with the new status using the existing PUT endpoint
+
                 const response = await fetch(`/api/projects/${projectId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name: project.name, 
-                        description: project.description, 
-                        status: newStatus 
+                    body: JSON.stringify({
+                        name: project.name,
+                        description: project.description,
+                        status: newStatus
                     })
                 });
-                
-                if (response.ok) loadProjects();
-                else alert('Failed to update status.');
+
+                if (response.ok) {
+                    loadProjects();
+                } else {
+                    alert('Failed to update status.');
+                }
             } catch (error) {
                 console.error('Error updating status:', error);
                 alert('An error occurred. Please try again.');
             }
         }
 
-        // --- Main Function to Load and Render Projects ---
-
         async function loadProjects() {
             const projectContainer = document.getElementById('project-container');
             projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">Loading projects...</p>';
-
             try {
                 const response = await fetch('/api/projects');
                 if (!response.ok) throw new Error('Network response was not ok');
                 const projects = await response.json();
-                
-                projectContainer.innerHTML = ''; 
-
+                projectContainer.innerHTML = '';
                 if (projects.length === 0) {
                     projectContainer.innerHTML = `<p class="text-gray-500 col-span-full">No projects created yet. Click the '+' button to get started.</p>`;
                 } else {
@@ -155,12 +157,11 @@
                             footerBg: is_active ? 'bg-green-50/50' : 'bg-red-50/50'
                         };
                         const publishText = is_active ? 'Unpublish' : 'Publish';
-
                         const projectElement = document.createElement('div');
                         projectElement.className = `bg-white rounded-lg shadow-sm ${statusClasses.borderColor} border-l-4 flex flex-col`;
                         
                         projectElement.innerHTML = `
-                            <div class="p-4 flex-grow cursor-pointer" onclick="window.location.href = 'view-project.html?id=${project.id}'">
+                            <div class="p-4 flex-grow cursor-pointer" onclick="window.location.href = 'view-project.html?id=${project.id}&role=teacher'">
                                 <div class="flex justify-between items-center">
                                     <div class="flex items-center gap-4">
                                         <div class="flex items-center gap-2 text-sm font-medium px-3 py-1 ${statusClasses.bgColor} ${statusClasses.textColor} rounded-full">
@@ -175,18 +176,18 @@
                                             <svg class="icon-open hidden h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                         </button>
                                         <div id="project-menu-${project.id}" class="project-dropdown hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-10">
-                                            <a href="view-project.html?id=${project.id}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View Project</a>
-                                            <a href="edit-project.html?id=${project.id}" class="block px-4 py-2 text-sm text-gray-400 hover:bg-gray-100">Edit Project (wip)</a>
-                                            <button onclick="toggleProjectStatus('${project.id}', '${project.status}', event)" class="w-full text-left block px-4 py-2 text-sm text-gray-400 hover:bg-gray-100">${publishText} (wip)</button>
-                                            <button onclick="deleteProject('${project.id}', event)" class="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete (wip)</button>
+                                            <a href="view-project.html?id=${project.id}&role=teacher" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View Project</a>
+                                            <a href="edit-project.html?id=${project.id}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Edit Project</a>
+                                            <button onclick="toggleProjectStatus('${project.id}', '${project.status}', event)" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">${publishText}</button>
+                                            <button onclick="deleteProject('${project.id}', event)" class="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="border-t border-gray-200 p-4 ${statusClasses.footerBg} cursor-pointer" onclick="window.location.href = 'view-project.html?id=${project.id}'">
+                            <div class="border-t border-gray-200 p-4 ${statusClasses.footerBg} cursor-pointer" onclick="window.location.href = 'view-project.html?id=${project.id}&role=teacher'">
                                 <div class="flex justify-between items-center text-sm">
                                     <p class="text-gray-600">${project.description || 'No description available.'}</p>
-                                    <p class="text-gray-500">${new Date(project.date).toLocaleDateString()}</p>
+                                    <p class="text-gray-500">${new Date(project.createdAt).toLocaleDateString()}</p>
                                 </div>
                             </div>
                         `;
@@ -198,7 +199,6 @@
                 projectContainer.innerHTML = '<p class="text-red-500 col-span-full">Failed to load projects. Please try again later.</p>';
             }
         }
-        
         document.addEventListener('DOMContentLoaded', loadProjects);
     </script>
 </body>

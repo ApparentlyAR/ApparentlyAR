@@ -275,7 +275,7 @@
       </div>
 
       <!-- Blockly Workspace -->
-      <div id="blocklyDiv" class="w-full h-full overflow-hidden bg-[#0f1324]"></div>
+      <div id="blocklyDiv" class="w-full h-full min-h-[500px] overflow-hidden bg-[#0f1324]"></div>
 
       <!-- Hidden Blockly Toolbox -->
       <xml id="toolbox" style="display: none">
@@ -443,8 +443,16 @@
           insertionMarkerColour: '#6ea8fe',
           insertionMarkerOpacity: 0.3
         }
-      }
+      },
+      renderer: 'zelos'  // Use the zelos renderer for better appearance
     });
+
+    // Add a slight delay to ensure proper initialization
+    setTimeout(() => {
+      if (workspace) {
+        workspace.scrollbar.setVisible(true);
+      }
+    }, 300);
 
     // Mobile device detection
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
@@ -454,6 +462,15 @@
     function resizeWorkspace() {
       if (workspace && document.getElementById('blocklyDiv')) {
         try {
+          const blocklyDiv = document.getElementById('blocklyDiv');
+          const mainGrid = document.getElementById('main-grid');
+          
+          // Force the blocklyDiv to take full height of its container
+          if (blocklyDiv) {
+            blocklyDiv.style.height = '100%';
+            blocklyDiv.style.width = '100%';
+          }
+          
           Blockly.svgResize(workspace);
 
           // Mobile-specific adjustments
@@ -489,8 +506,12 @@
     }
 
     // Initial resize with mobile detection
+    // Use a longer timeout to ensure DOM is fully loaded
     setTimeout(() => {
       resizeWorkspace();
+      
+      // Additional resize after a bit more time to ensure proper rendering
+      setTimeout(resizeWorkspace, 500);
 
       // Additional mobile initialization
       if (isMobile) {
@@ -500,7 +521,7 @@
           blocklyDiv.style.touchAction = 'pan-x pan-y';
         }
       }
-    }, 100);
+    }, 200);
 
     // Cleanup function for proper workspace disposal
     let workspaceDisposed = false;
