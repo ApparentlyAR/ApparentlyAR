@@ -22,6 +22,37 @@
     }
   }
 
+  // Custom field for dynamic column selection
+  class FieldColumnDropdown extends Blockly.FieldDropdown {
+    constructor(options, validator) {
+      // Start with placeholder options
+      super([['Select column...', 'column']], validator);
+      this.SERIALIZABLE = true;
+    }
+
+    static fromJson(options) {
+      return new FieldColumnDropdown(options['options'] || [['Select column...', 'column']]);
+    }
+
+    getOptions() {
+      // Get available columns from CSV data
+      const csvData = window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.data;
+      if (csvData && Array.isArray(csvData) && csvData.length > 0) {
+        const columns = Object.keys(csvData[0]);
+        return columns.map(col => [col, col]);
+      }
+      return [['No data loaded', 'column'], ['Load CSV first', 'column']];
+    }
+
+    doClassValidation_(newValue) {
+      // Always allow the selection
+      return newValue;
+    }
+  }
+
+  // Register the custom field
+  Blockly.fieldRegistry.register('field_column_dropdown', FieldColumnDropdown);
+
   function initializeStatisticsBlocks() {
     Blockly.defineBlocksWithJsonArray([
       // Descriptive Statistics Block
@@ -29,7 +60,7 @@
         "type": "descriptive_stats",
         "message0": "calculate stats for %1 in %2",
         "args0": [
-          { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Statistics",
@@ -43,7 +74,7 @@
         "type": "calculate_mean",
         "message0": "mean of %1 in %2",
         "args0": [
-          { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -57,7 +88,7 @@
         "type": "calculate_median",
         "message0": "median of %1 in %2",
         "args0": [
-          { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -71,7 +102,7 @@
         "type": "calculate_std",
         "message0": "standard deviation of %1 in %2",
         "args0": [
-          { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -85,8 +116,8 @@
         "type": "calculate_correlation",
         "message0": "correlation between %1 and %2 in %3",
         "args0": [
-          { "type": "field_input", "name": "COLUMN_X", "text": "column_x", "SERIALIZABLE": true },
-          { "type": "field_input", "name": "COLUMN_Y", "text": "column_y", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN_X", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN_Y", "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -100,7 +131,7 @@
         "type": "detect_outliers",
         "message0": "detect outliers in %1 using %2 method in %3",
         "args0": [
-          { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
           {
             "type": "field_dropdown",
             "name": "METHOD",
@@ -124,7 +155,7 @@
         "type": "frequency_count",
         "message0": "count frequencies of %1 in %2",
         "args0": [
-          { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Dataset",
@@ -151,7 +182,7 @@
             ],
             "SERIALIZABLE": true
           },
-          { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -179,9 +210,9 @@
       function getDataCode(block) {
         try {
           const dataCode = Blockly.JavaScript.valueToCode(block, 'DATA', Blockly.JavaScript.ORDER_NONE);
-          return dataCode || 'Blockly.CsvImportData.data';
+          return dataCode || '(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : [])';
         } catch (e) {
-          return 'Blockly.CsvImportData.data';
+          return '(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : [])';
         }
       }
 
@@ -211,19 +242,75 @@
       // Mean Generator
       Blockly.JavaScript['calculate_mean'] = function(block) {
         const dataCode = getDataCode(block);
-        const column = block.getFieldValue('COLUMN') || 'column';
+        let column = block.getFieldValue('COLUMN') || 'column';
+        
+        // Clean and validate column name
+        column = column.trim().replace(/^["']|["']$/g, '');
         
         const safeColumn = column.replace(/'/g, "\\'").replace(/"/g, '\\"');
         
         const code = `(async () => {
           try {
-            const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
-            if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
-            if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+            console.log('[calculate_mean] Starting execution with dataCode:', '${dataCode}');
+            
+            // Get raw data with better error handling
+            let __rawData;
+            try {
+              __rawData = ${dataCode};
+              console.log('[calculate_mean] Raw data retrieved:', __rawData ? 'has data' : 'null/undefined', 'length:', Array.isArray(__rawData) ? __rawData.length : 'not array');
+            } catch (dataError) {
+              console.error('[calculate_mean] Error getting raw data:', dataError);
+              __rawData = null;
+            }
+            
+            // Normalize the data
+            const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
+            console.log('[calculate_mean] Normalized data:', __input ? 'has data' : 'null/undefined', 'length:', Array.isArray(__input) ? __input.length : 'not array');
+            
+            if (!Array.isArray(__input)) { 
+              console.error('[calculate_mean] Input data is not an array:', typeof __input);
+              throw new Error('Input data must be an array, got: ' + typeof __input); 
+            }
+            if (__input.length === 0) { 
+              console.error('[calculate_mean] Input data is empty array');
+              throw new Error('No data available - please connect a CSV import block with data'); 
+            }
+            
+            // Check if column exists
+            const columns = Object.keys(__input[0] || {});
+            console.log('[calculate_mean] Available columns:', columns);
+            console.log('[calculate_mean] Requested column:', '${safeColumn}');
+            if (!columns.includes('${safeColumn}')) {
+              throw new Error(\`Column '\${safeColumn}' not found. Available columns: \${columns.join(', ')}\`);
+            }
+            
+            // Check if column contains numeric data
+            const columnValues = __input.map(row => row['${safeColumn}']).filter(val => val !== null && val !== undefined && val !== '');
+            const numericValues = columnValues.filter(val => !isNaN(parseFloat(val)));
+            if (numericValues.length === 0) {
+              throw new Error(\`Column '\${safeColumn}' does not contain numeric data. Cannot calculate mean for non-numeric values.\`);
+            }
+            if (numericValues.length < columnValues.length) {
+              console.warn(\`[calculate_mean] Column '\${safeColumn}' contains \${columnValues.length - numericValues.length} non-numeric values that will be ignored.\`);
+            }
+            
+            if (!window.AppApi || !window.AppApi.processData) { 
+              console.error('[calculate_mean] API not available');
+              throw new Error('API not available'); 
+            }
+            
+            console.log('[calculate_mean] Calling API with data length:', __input.length);
             const __res = await window.AppApi.processData(__input, [{ type: 'calculateMean', params: { column: '${safeColumn}' } }]);
-            return __res && __res.data ? __res.data : 0;
+            console.log('[calculate_mean] API response:', __res);
+            
+            const result = __res && __res.data ? __res.data : 0;
+            console.log('[calculate_mean] Final result:', result);
+            return result;
           } catch (error) {
-            console.error('Calculate mean error:', error);
+            console.error('[calculate_mean] Error:', error);
+            // Show error in UI if possible
+            if (window.reactSetOutput) window.reactSetOutput('Error: ' + error.message);
+            if (window.reactSetError) window.reactSetError(true);
             return 0;
           }
         })()`;

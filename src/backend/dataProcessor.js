@@ -436,12 +436,20 @@ class DataProcessor {
    */
   calculateMean(data, params) {
     const { column } = params;
+    
+    // Check if column exists
+    if (data.length > 0 && !data[0].hasOwnProperty(column)) {
+      const availableColumns = Object.keys(data[0]);
+      throw new Error(`Column '${column}' does not exist. Available columns: ${availableColumns.join(', ')}`);
+    }
+    
     const values = data
       .map(row => parseFloat(row[column]))
       .filter(v => !isNaN(v));
 
     if (values.length === 0) {
-      throw new Error(`No valid numeric values found in column '${column}'`);
+      const sampleValues = data.slice(0, 3).map(row => row[column]);
+      throw new Error(`No valid numeric values found in column '${column}'. Column contains non-numeric data like: [${sampleValues.join(', ')}]. Statistical operations require numeric data.`);
     }
 
     const mean = values.reduce((sum, v) => sum + v, 0) / values.length;

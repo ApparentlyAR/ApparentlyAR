@@ -147,10 +147,18 @@ app.post('/api/process-data', async (req, res) => {
     }
 
     const processedData = await dataProcessor.processData(data, operations);
+    
+    // For statistical operations, processedData might be a single value, not an array
+    // Only call getDataSummary if processedData is actually an array of objects
+    let summary = null;
+    if (Array.isArray(processedData) && processedData.length > 0 && typeof processedData[0] === 'object') {
+      summary = dataProcessor.getDataSummary(processedData);
+    }
+    
     res.json({ 
       success: true, 
       data: processedData,
-      summary: dataProcessor.getDataSummary(processedData)
+      summary: summary
     });
   } catch (error) {
     console.error('Data processing error:', error);
