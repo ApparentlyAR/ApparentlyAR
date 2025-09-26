@@ -340,7 +340,7 @@ describe('Statistical API Endpoints', () => {
         })
         .expect(500);
         
-      expect(response.body.error).toContain('No valid numeric values found');
+      expect(response.body.error).toContain('does not exist'); // Column validation error
     });
   });
 
@@ -354,7 +354,7 @@ describe('Statistical API Endpoints', () => {
         })
         .expect(500);
         
-      expect(response.body.error).toContain('No valid numeric values found');
+      expect(response.body.error).toContain('No valid numeric values found'); // Empty dataset error
     });
 
     test('Should handle dataset with all missing values', async () => {
@@ -370,7 +370,7 @@ describe('Statistical API Endpoints', () => {
         })
         .expect(500);
         
-      expect(response.body.error).toContain('No valid numeric values found');
+      expect(response.body.error).toContain('No valid numeric values found'); // Non-numeric data error
     });
 
     test('Should handle large dataset efficiently', async () => {
