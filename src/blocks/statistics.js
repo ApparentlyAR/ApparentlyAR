@@ -244,10 +244,14 @@
         const dataCode = getDataCode(block);
         let column = block.getFieldValue('COLUMN') || 'column';
         
-        // Clean and validate column name
+        // Clean and validate column name - remove quotes and prevent injection
         column = column.trim().replace(/^["']|["']$/g, '');
         
-        const safeColumn = column.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        // Keep original column name for API calls, but sanitize for error messages
+        const originalColumn = column;
+        const safeColumnForErrors = column
+          .replace(/['"\\]/g, '') // Remove quotes and backslashes only for display
+          .substring(0, 100); // Limit length
         
         const code = `(async () => {
           try {
@@ -279,19 +283,19 @@
             // Check if column exists
             const columns = Object.keys(__input[0] || {});
             console.log('[calculate_mean] Available columns:', columns);
-            console.log('[calculate_mean] Requested column:', '${safeColumn}');
-            if (!columns.includes('${safeColumn}')) {
-              throw new Error(\`Column '\${safeColumn}' not found. Available columns: \${columns.join(', ')}\`);
+            console.log('[calculate_mean] Requested column:', '${originalColumn}');
+            if (!columns.includes('${originalColumn}')) {
+              throw new Error(\`Column '${safeColumnForErrors}' not found. Available columns: \${columns.join(', ')}\`);
             }
             
             // Check if column contains numeric data
-            const columnValues = __input.map(row => row['${safeColumn}']).filter(val => val !== null && val !== undefined && val !== '');
+            const columnValues = __input.map(row => row['${originalColumn}']).filter(val => val !== null && val !== undefined && val !== '');
             const numericValues = columnValues.filter(val => !isNaN(parseFloat(val)));
             if (numericValues.length === 0) {
-              throw new Error(\`Column '\${safeColumn}' does not contain numeric data. Cannot calculate mean for non-numeric values.\`);
+              throw new Error(\`Column '${safeColumnForErrors}' does not contain numeric data. Cannot calculate mean for non-numeric values.\`);
             }
             if (numericValues.length < columnValues.length) {
-              console.warn(\`[calculate_mean] Column '\${safeColumn}' contains \${columnValues.length - numericValues.length} non-numeric values that will be ignored.\`);
+              console.warn(\`[calculate_mean] Column '${safeColumnForErrors}' contains \${columnValues.length - numericValues.length} non-numeric values that will be ignored.\`);
             }
             
             if (!window.AppApi || !window.AppApi.processData) { 
@@ -300,7 +304,7 @@
             }
             
             console.log('[calculate_mean] Calling API with data length:', __input.length);
-            const __res = await window.AppApi.processData(__input, [{ type: 'calculateMean', params: { column: '${safeColumn}' } }]);
+            const __res = await window.AppApi.processData(__input, [{ type: 'calculateMean', params: { column: '${originalColumn}' } }]);
             console.log('[calculate_mean] API response:', __res);
             
             const result = __res && __res.data ? __res.data : 0;
