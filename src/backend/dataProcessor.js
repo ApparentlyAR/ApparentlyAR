@@ -412,8 +412,18 @@ class DataProcessor {
     
     const min = values[0];
     const max = values[values.length - 1];
-    const q1 = values[Math.floor(values.length * 0.25)];
-    const q3 = values[Math.floor(values.length * 0.75)];
+    // Calculate quartiles using linear interpolation (consistent with calculatePercentiles)
+    const q1Index = 0.25 * (values.length - 1);
+    const q1Lower = Math.floor(q1Index);
+    const q1Upper = Math.ceil(q1Index);
+    const q1Weight = q1Index % 1;
+    const q1 = values[q1Lower] * (1 - q1Weight) + values[q1Upper] * q1Weight;
+    
+    const q3Index = 0.75 * (values.length - 1);
+    const q3Lower = Math.floor(q3Index);
+    const q3Upper = Math.ceil(q3Index);
+    const q3Weight = q3Index % 1;
+    const q3 = values[q3Lower] * (1 - q3Weight) + values[q3Upper] * q3Weight;
 
     return { 
       column, 
@@ -538,7 +548,13 @@ class DataProcessor {
       denomY += devY * devY;
     }
     
-    const correlation = numerator / Math.sqrt(denomX * denomY);
+    const denominator = Math.sqrt(denomX * denomY);
+    if (denominator === 0) {
+      // Handle case where one or both variables have zero variance
+      return 0;
+    }
+    
+    const correlation = numerator / denominator;
     return Number(correlation.toFixed(4));
   }
 
@@ -579,11 +595,15 @@ class DataProcessor {
       const mean = validValues.reduce((sum, v) => sum + v, 0) / validValues.length;
       const stdDev = Math.sqrt(validValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / validValues.length);
       
-      values.forEach((v, i) => {
-        if (!isNaN(v) && Math.abs((v - mean) / stdDev) > 3) {
-          outlierIndices.add(i);
-        }
-      });
+      // Guard against divide by zero when standard deviation is 0
+      if (stdDev > 0) {
+        values.forEach((v, i) => {
+          if (!isNaN(v) && Math.abs((v - mean) / stdDev) > 3) {
+            outlierIndices.add(i);
+          }
+        });
+      }
+      // If stdDev is 0, all values are identical, so no outliers
     }
 
     return data.map((row, i) => ({

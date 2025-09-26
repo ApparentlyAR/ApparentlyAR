@@ -137,8 +137,7 @@
             "name": "METHOD",
             "options": [
               ["IQR (Interquartile Range)", "iqr"],
-              ["Z-Score", "zscore"],
-              ["Modified Z-Score", "modified_zscore"]
+              ["Z-Score", "zscore"]
             ],
             "SERIALIZABLE": true
           },
