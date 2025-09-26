@@ -163,8 +163,9 @@ if (typeof Blockly !== 'undefined' && Blockly.Extensions && typeof Blockly.Exten
 function registerCsvImportGenerator() {
   const generator = function() {
     console.log('CSV import JavaScript generator called');
-    // Generate code to return the parsed CSV data  
-    const code = 'Blockly.CsvImportData.data';
+    console.log('Current CSV data at generation time:', Blockly.CsvImportData.data ? 'has data' : 'null/undefined');
+    // Generate code to return the parsed CSV data with better null safety
+    const code = '(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null)';
     console.log('Generated code:', code);
     return [code, Blockly.JavaScript.ORDER_ATOMIC];
   };
