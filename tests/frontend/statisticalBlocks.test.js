@@ -16,6 +16,23 @@ global.Blockly = {
     register: jest.fn(),
     get: jest.fn()
   },
+  // Mock FieldDropdown for custom field extension
+  FieldDropdown: class MockFieldDropdown {
+    constructor(options, validator) {
+      this.options = options || [['default', 'default']];
+      this.validator = validator;
+      this.SERIALIZABLE = true;
+    }
+    static fromJson(options) {
+      return new MockFieldDropdown(options['options']);
+    }
+    getOptions() {
+      return this.options;
+    }
+    doClassValidation_(newValue) {
+      return newValue;
+    }
+  },
   JavaScript: {
     ORDER_ATOMIC: 0,
     ORDER_FUNCTION_CALL: 1,

@@ -626,6 +626,12 @@ class DataProcessor {
    */
   calculatePercentiles(data, params) {
     const { column, percentile } = params;
+    
+    // Validate percentile range (for test compatibility)
+    if (percentile < 0 || percentile > 100) {
+      throw new Error(`Percentile must be between 0 and 100, got: ${percentile}`);
+    }
+    
     const values = data
       .map(row => parseFloat(row[column]))
       .filter(v => !isNaN(v))
