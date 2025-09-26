@@ -69,7 +69,7 @@ describe('Statistical Operations', () => {
     test('Should throw error for non-existent column', async () => {
       await expect(DataProcessor.processData(testData, [
         { type: 'calculateMean', params: { column: 'nonexistent' } }
-      ])).rejects.toThrow('No valid numeric values found in column \'nonexistent\'');
+      ])).rejects.toThrow('does not exist'); // Updated to match improved column validation
     });
 
     test('Should throw error for completely non-numeric column', async () => {
