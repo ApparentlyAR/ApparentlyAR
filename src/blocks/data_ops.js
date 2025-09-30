@@ -28,6 +28,28 @@
  */
 // === Data Processing Block (Backend) ===
 (function(){
+  // Helper function to get available columns from CSV data
+  function getAvailableColumns() {
+    const csvData = window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.data;
+    if (csvData && Array.isArray(csvData) && csvData.length > 0) {
+      return Object.keys(csvData[0]);
+    }
+    return [];
+  }
+
+  // Helper function to update field options with available columns
+  function updateFieldWithColumns(field, isMultiSelect = false) {
+    if (field && field.setOptions) {
+      const columns = getAvailableColumns();
+      if (columns.length > 0) {
+        const options = isMultiSelect 
+          ? [['All columns', 'all'], ...columns.map(col => [col, col])]
+          : columns.map(col => [col, col]);
+        field.setOptions(options);
+      }
+    }
+  }
+
   // Wait for Blockly to be available
   function waitForBlockly() {
     if (typeof Blockly !== 'undefined' && Blockly.JavaScript) {
@@ -70,7 +92,7 @@
       ],
       "output": "Dataset",
       "colour": 20,
-      "tooltip": "Filter data based on a condition",
+      "tooltip": "Filter data based on a condition. Use updateFieldWithColumns(block.getField('COLUMN')) to populate with available columns.",
       "helpUrl": ""
     },
     {
@@ -322,4 +344,10 @@
   
   // Start waiting for Blockly
   waitForBlockly();
+  
+  // Export helper functions for autofill functionality
+  window.BlocklyAutofill = {
+    getAvailableColumns,
+    updateFieldWithColumns
+  };
 })();
