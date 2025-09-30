@@ -80,7 +80,7 @@
       "message0": "filter %1 where %2 %3 %4",
       "args0": [
         { "type": "input_value", "name": "DATA", "check": "Dataset" },
-        { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
         { "type": "field_dropdown", "name": "OPERATOR", "options": [
           ["equals", "equals"],
           ["not equals", "not_equals"],
@@ -92,7 +92,7 @@
       ],
       "output": "Dataset",
       "colour": 20,
-      "tooltip": "Filter data based on a condition. Use updateFieldWithColumns(block.getField('COLUMN')) to populate with available columns.",
+      "tooltip": "Filter data based on a condition. Column dropdown will be populated with available columns.",
       "helpUrl": ""
     },
     {
@@ -100,24 +100,24 @@
       "message0": "sort %1 by %2 %3",
       "args0": [
         { "type": "input_value", "name": "DATA", "check": "Dataset" },
-        { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
         { "type": "field_dropdown", "name": "DIRECTION", "options": [["ascending","asc"],["descending","desc"]], "SERIALIZABLE": true }
       ],
       "output": "Dataset",
       "colour": 20,
-      "tooltip": "Sort data by a column",
+      "tooltip": "Sort data by a column. Column dropdown will be populated with available columns.",
       "helpUrl": ""
     },
     {
       "type": "select_columns",
       "message0": "select columns %1 from %2",
       "args0": [
-        { "type": "field_input", "name": "COLUMNS", "text": "col1,col2", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "COLUMNS", "options": [["col1,col2", "col1,col2"]], "SERIALIZABLE": true },
         { "type": "input_value", "name": "DATA", "check": "Dataset" }
       ],
       "output": "Dataset",
       "colour": 20,
-      "tooltip": "Select specific columns from data",
+      "tooltip": "Select specific columns from data. Dropdown will be populated with available columns.",
       "helpUrl": ""
     },
     {
@@ -125,7 +125,7 @@
       "message0": "group %1 by %2 and %3 %4 as %5",
       "args0": [
         { "type": "input_value", "name": "DATA", "check": "Dataset" },
-        { "type": "field_input", "name": "GROUP_COLUMN", "text": "group_column", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "GROUP_COLUMN", "options": [["group_column", "group_column"]], "SERIALIZABLE": true },
         { "type": "field_dropdown", "name": "AGGREGATION", "options": [
           ["sum", "sum"],
           ["average", "average"],
@@ -133,12 +133,12 @@
           ["min", "min"],
           ["max", "max"]
         ], "SERIALIZABLE": true },
-        { "type": "field_input", "name": "AGG_COLUMN", "text": "value_column", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "AGG_COLUMN", "options": [["value_column", "value_column"]], "SERIALIZABLE": true },
         { "type": "field_input", "name": "ALIAS", "text": "result", "SERIALIZABLE": true }
       ],
       "output": "Dataset",
       "colour": 20,
-      "tooltip": "Group data and apply aggregation",
+      "tooltip": "Group data and apply aggregation. Column dropdowns will be populated with available columns.",
       "helpUrl": ""
     },
     {
@@ -158,12 +158,12 @@
       "type": "drop_empty",
       "message0": "drop empty rows in %1 from %2",
       "args0": [
-        { "type": "field_input", "name": "COLUMN", "text": "column", "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
         { "type": "input_value", "name": "DATA", "check": "Dataset" }
       ],
       "output": "Dataset",
       "colour": 20,
-      "tooltip": "Remove rows with empty values",
+      "tooltip": "Remove rows with empty values. Column dropdown will be populated with available columns.",
       "helpUrl": ""
     }
   ]);
@@ -345,9 +345,98 @@
   // Start waiting for Blockly
   waitForBlockly();
   
+  // Add event listener for when blocks are created to apply autofill
+  function addBlockCreationListener() {
+    if (typeof Blockly === 'undefined' || !Blockly.getMainWorkspace) return;
+    
+    const workspace = Blockly.getMainWorkspace();
+    if (!workspace) return;
+    
+    workspace.addChangeListener((event) => {
+      if (event.type === Blockly.Events.BLOCK_CREATE) {
+        const block = workspace.getBlockById(event.blockId);
+        if (block) {
+          // Small delay to ensure the block is fully rendered
+          setTimeout(() => {
+            applyAutofillToBlock(block);
+          }, 50);
+        }
+      }
+    });
+  }
+  
+  // Try to add the listener when Blockly is available
+  setTimeout(addBlockCreationListener, 1000);
+  
+  // Function to apply autofill to blocks when they're created
+  function applyAutofillToBlock(block) {
+    if (!block || !block.type) return;
+    
+    const blockType = block.type;
+    const columns = getAvailableColumns();
+    
+    if (columns.length === 0) return; // No CSV data available
+    
+    switch (blockType) {
+      case 'filter_data':
+        updateFieldWithColumns(block.getField('COLUMN'));
+        break;
+      case 'sort_data':
+        updateFieldWithColumns(block.getField('COLUMN'));
+        break;
+      case 'select_columns':
+        // For select_columns, we want to show all columns as options
+        const selectField = block.getField('COLUMNS');
+        if (selectField && selectField.setOptions) {
+          const allColumnsOption = [['All columns', 'all']];
+          const columnOptions = columns.map(col => [col, col]);
+          selectField.setOptions([...allColumnsOption, ...columnOptions]);
+        }
+        break;
+      case 'group_by':
+        updateFieldWithColumns(block.getField('GROUP_COLUMN'));
+        updateFieldWithColumns(block.getField('AGG_COLUMN'));
+        break;
+      case 'drop_empty':
+        updateFieldWithColumns(block.getField('COLUMN'));
+        break;
+    }
+  }
+
+  // Function to update all existing blocks when CSV data is loaded
+  function updateAllBlocksWithAutofill() {
+    if (typeof Blockly === 'undefined' || !Blockly.getMainWorkspace) return;
+    
+    const workspace = Blockly.getMainWorkspace();
+    if (!workspace) return;
+    
+    const allBlocks = workspace.getAllBlocks();
+    allBlocks.forEach(block => {
+      applyAutofillToBlock(block);
+    });
+  }
+
+  // Manual trigger function for testing and frontend use
+  function triggerAutofill() {
+    console.log('🔄 Triggering autofill for all blocks...');
+    const columns = getAvailableColumns();
+    console.log('📊 Available columns:', columns);
+    
+    if (columns.length === 0) {
+      console.log('⚠️ No CSV data available for autofill');
+      return;
+    }
+    
+    updateAllBlocksWithAutofill();
+    console.log('✅ Autofill triggered for all blocks');
+  }
+
   // Export helper functions for autofill functionality
   window.BlocklyAutofill = {
     getAvailableColumns,
-    updateFieldWithColumns
+    updateFieldWithColumns,
+    applyAutofillToBlock,
+    updateAllBlocksWithAutofill,
+    triggerAutofill
   };
 })();

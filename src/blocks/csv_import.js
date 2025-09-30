@@ -73,6 +73,13 @@ class FieldFileButton extends Blockly.Field {
               Blockly.CsvImportData.data = results.data;
               Blockly.CsvImportData.filename = file.name;
               this._dialogOpen = false;
+              
+              // Trigger autofill for all existing blocks when CSV data is loaded
+              if (window.BlocklyAutofill && window.BlocklyAutofill.updateAllBlocksWithAutofill) {
+                setTimeout(() => {
+                  window.BlocklyAutofill.updateAllBlocksWithAutofill();
+                }, 100); // Small delay to ensure blocks are rendered
+              }
             }
           });
         };
