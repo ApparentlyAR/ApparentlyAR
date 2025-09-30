@@ -12,10 +12,14 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const bodyParser = require('body-parser');
+const fs = require('fs');
+const os = require('os');
+const pathModule = require('path');
 
 // Import backend modules
 const dataProcessor = require('./src/backend/dataProcessor');
 const chartGenerator = require('./src/backend/chartGenerator');
+const { parseCSV } = require('./src/backend/csvHandler');
 const { sampleData, weatherData, salesData } = require('./src/backend/testData');
 
 // Import projects manager for persistent storage -Najla
@@ -36,6 +40,10 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/src', express.static('src'));
 app.use(bodyParser.json());
+
+// Configure multer for handling multipart/form-data (file uploads)
+const multer = require('multer');
+const upload = multer({ dest: os.tmpdir() }); // Store uploads temporarily
 
 /**
  * Serve the Login application page
@@ -250,10 +258,10 @@ app.get('/api/projects/:id', (req, res) => {
 });
 
 /**
- * Endpoint to save a new project
+ * Endpoint to save a new project with optional CSV file upload
  * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
-app.post('/api/projects', (req, res) => {
+app.post('/api/projects', upload.single('csvFile'), (req, res) => {
   try {
     const { name, description } = req.body;
     
@@ -261,8 +269,30 @@ app.post('/api/projects', (req, res) => {
       return res.status(400).json({ error: 'Project name is required' });
     }
     
+    // Create the project first
     const newProject = createProject({ name, description });
-    res.status(201).json(newProject);
+    
+    // If a CSV file was uploaded, process it and add to the project
+    if (req.file) {
+      const csvPath = req.file.path;
+      const csvContent = fs.readFileSync(csvPath, 'utf8');
+      const parsedData = parseCSV(csvContent);
+      
+      // Update the project to include the CSV data
+      const updatedProject = updateProject(newProject.id, {
+        name: newProject.name,
+        description: newProject.description,
+        csvData: parsedData.data,
+        csvHeaders: parsedData.headers
+      });
+      
+      // Clean up the temporary file
+      fs.unlinkSync(csvPath);
+      
+      res.status(201).json(updatedProject);
+    } else {
+      res.status(201).json(newProject);
+    }
   } catch (error) {
     console.error('Error creating project:', error);
     res.status(500).json({ error: 'Failed to create project' });
@@ -273,12 +303,38 @@ app.post('/api/projects', (req, res) => {
  * Endpoint to update a project by ID
  * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
-app.put('/api/projects/:id', (req, res) => {
+app.put('/api/projects/:id', upload.single('csvFile'), async (req, res) => {
   try {
     const projectId = parseInt(req.params.id);
-    const { name, description, status } = req.body;
     
-    const updatedProject = updateProject(projectId, { name, description, status });
+    // Get the existing project to preserve data that isn't being updated
+    const existingProject = getProjectById(projectId);
+    if (!existingProject) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Prepare the update data
+    let updateData = {
+      name: req.body.name || existingProject.name,
+      description: req.body.description || existingProject.description,
+      status: req.body.status || existingProject.status
+    };
+    
+    // If a CSV file was uploaded, process it and add to the project
+    if (req.file) {
+      const csvPath = req.file.path;
+      const csvContent = fs.readFileSync(csvPath, 'utf8');
+      const parsedData = parseCSV(csvContent);
+      
+      // Add CSV data to the update
+      updateData.csvData = parsedData.data;
+      updateData.csvHeaders = parsedData.headers;
+      
+      // Clean up the temporary file
+      fs.unlinkSync(csvPath);
+    }
+    
+    const updatedProject = updateProject(projectId, updateData);
     
     if (updatedProject) {
       res.json(updatedProject);

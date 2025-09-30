@@ -88,6 +88,8 @@ function createProject(projectData) {
     name: projectData.name,
     description: projectData.description,
     status: 'Active',
+    csvData: projectData.csvData || null, // Store CSV data if provided
+    csvHeaders: projectData.csvHeaders || null, // Store CSV headers if provided
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
