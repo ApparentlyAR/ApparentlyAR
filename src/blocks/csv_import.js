@@ -80,6 +80,13 @@ class FieldFileButton extends Blockly.Field {
                   window.BlocklyAutofill.updateAllBlocksWithAutofill();
                 }, 100); // Small delay to ensure blocks are rendered
               }
+              
+              // Also trigger autofill for statistics blocks
+              if (window.BlocklyStatisticsAutofill && window.BlocklyStatisticsAutofill.updateAllStatisticsBlocksWithAutofill) {
+                setTimeout(() => {
+                  window.BlocklyStatisticsAutofill.updateAllStatisticsBlocksWithAutofill();
+                }, 150); // Slightly longer delay for statistics blocks
+              }
             }
           });
         };

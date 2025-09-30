@@ -22,36 +22,27 @@
     }
   }
 
-  // Custom field for dynamic column selection
-  class FieldColumnDropdown extends Blockly.FieldDropdown {
-    constructor(options, validator) {
-      // Start with placeholder options
-      super([['Select column...', 'column']], validator);
-      this.SERIALIZABLE = true;
+  // Helper function to get available columns from CSV data
+  function getAvailableColumns() {
+    const csvData = window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.data;
+    if (csvData && Array.isArray(csvData) && csvData.length > 0) {
+      return Object.keys(csvData[0]);
     }
-
-    static fromJson(options) {
-      return new FieldColumnDropdown(options['options'] || [['Select column...', 'column']]);
-    }
-
-    getOptions() {
-      // Get available columns from CSV data
-      const csvData = window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.data;
-      if (csvData && Array.isArray(csvData) && csvData.length > 0) {
-        const columns = Object.keys(csvData[0]);
-        return columns.map(col => [col, col]);
-      }
-      return [['No data loaded', 'column'], ['Load CSV first', 'column']];
-    }
-
-    doClassValidation_(newValue) {
-      // Always allow the selection
-      return newValue;
-    }
+    return [];
   }
 
-  // Register the custom field
-  Blockly.fieldRegistry.register('field_column_dropdown', FieldColumnDropdown);
+  // Helper function to update field options with available columns
+  function updateFieldWithColumns(field, isMultiSelect = false) {
+    if (field && field.setOptions) {
+      const columns = getAvailableColumns();
+      if (columns.length > 0) {
+        const options = isMultiSelect 
+          ? [['All columns', 'all'], ...columns.map(col => [col, col])]
+          : columns.map(col => [col, col]);
+        field.setOptions(options);
+      }
+    }
+  }
 
   function initializeStatisticsBlocks() {
     Blockly.defineBlocksWithJsonArray([
@@ -60,7 +51,7 @@
         "type": "descriptive_stats",
         "message0": "calculate stats for %1 in %2",
         "args0": [
-          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Statistics",
@@ -74,7 +65,7 @@
         "type": "calculate_mean",
         "message0": "mean of %1 in %2",
         "args0": [
-          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -88,7 +79,7 @@
         "type": "calculate_median",
         "message0": "median of %1 in %2",
         "args0": [
-          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -102,7 +93,7 @@
         "type": "calculate_std",
         "message0": "standard deviation of %1 in %2",
         "args0": [
-          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -116,8 +107,8 @@
         "type": "calculate_correlation",
         "message0": "correlation between %1 and %2 in %3",
         "args0": [
-          { "type": "field_column_dropdown", "name": "COLUMN_X", "SERIALIZABLE": true },
-          { "type": "field_column_dropdown", "name": "COLUMN_Y", "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN_X", "options": [["column_x", "column_x"]], "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN_Y", "options": [["column_y", "column_y"]], "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -131,7 +122,7 @@
         "type": "detect_outliers",
         "message0": "detect outliers in %1 using %2 method in %3",
         "args0": [
-          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
           {
             "type": "field_dropdown",
             "name": "METHOD",
@@ -154,7 +145,7 @@
         "type": "frequency_count",
         "message0": "count frequencies of %1 in %2",
         "args0": [
-          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Dataset",
@@ -181,7 +172,7 @@
             ],
             "SERIALIZABLE": true
           },
-          { "type": "field_column_dropdown", "name": "COLUMN", "SERIALIZABLE": true },
+          { "type": "field_dropdown", "name": "COLUMN", "options": [["column", "column"]], "SERIALIZABLE": true },
           { "type": "input_value", "name": "DATA", "check": "Dataset" }
         ],
         "output": "Number",
@@ -485,6 +476,105 @@
     console.log('[Statistics Blocks] Loaded successfully');
   }
   
+  // Function to apply autofill to statistics blocks
+  function applyAutofillToStatisticsBlock(block) {
+    if (!block || !block.type) return;
+    
+    const blockType = block.type;
+    const columns = getAvailableColumns();
+    
+    if (columns.length === 0) return; // No CSV data available
+    
+    switch (blockType) {
+      case 'descriptive_stats':
+      case 'calculate_mean':
+      case 'calculate_median':
+      case 'calculate_std':
+      case 'detect_outliers':
+      case 'frequency_count':
+      case 'calculate_percentiles':
+        updateFieldWithColumns(block.getField('COLUMN'));
+        break;
+      case 'calculate_correlation':
+        updateFieldWithColumns(block.getField('COLUMN_X'));
+        updateFieldWithColumns(block.getField('COLUMN_Y'));
+        break;
+    }
+  }
+
+  // Function to update all statistics blocks when CSV data is loaded
+  function updateAllStatisticsBlocksWithAutofill() {
+    if (typeof Blockly === 'undefined' || !Blockly.getMainWorkspace) return;
+    
+    const workspace = Blockly.getMainWorkspace();
+    if (!workspace) return;
+    
+    const allBlocks = workspace.getAllBlocks();
+    allBlocks.forEach(block => {
+      applyAutofillToStatisticsBlock(block);
+    });
+  }
+
+  // Add event listener for when blocks are created to apply autofill
+  function addStatisticsBlockCreationListener() {
+    if (typeof Blockly === 'undefined' || !Blockly.getMainWorkspace) return;
+    
+    const workspace = Blockly.getMainWorkspace();
+    if (!workspace) return;
+    
+    // Use the correct Blockly event listener API
+    if (workspace.addChangeListener) {
+      workspace.addChangeListener((event) => {
+        if (event.type === Blockly.Events.BLOCK_CREATE) {
+          const block = workspace.getBlockById(event.blockId);
+          if (block) {
+            // Small delay to ensure the block is fully rendered
+            setTimeout(() => {
+              applyAutofillToStatisticsBlock(block);
+            }, 50);
+          }
+        }
+      });
+    } else if (Blockly.Events && Blockly.Events.listen) {
+      // Alternative API for newer Blockly versions
+      Blockly.Events.listen(Blockly.Events.BLOCK_CREATE, (event) => {
+        const block = workspace.getBlockById(event.blockId);
+        if (block) {
+          setTimeout(() => {
+            applyAutofillToStatisticsBlock(block);
+          }, 50);
+        }
+      });
+    }
+  }
+
+  // Try to add the listener when Blockly is available
+  setTimeout(addStatisticsBlockCreationListener, 1000);
+
+  // Manual trigger function for testing and frontend use
+  function triggerStatisticsAutofill() {
+    console.log('🔄 Triggering autofill for all statistics blocks...');
+    const columns = getAvailableColumns();
+    console.log('📊 Available columns:', columns);
+    
+    if (columns.length === 0) {
+      console.log('⚠️ No CSV data available for autofill');
+      return;
+    }
+    
+    updateAllStatisticsBlocksWithAutofill();
+    console.log('✅ Statistics autofill triggered for all blocks');
+  }
+
+  // Export helper functions for autofill functionality
+  window.BlocklyStatisticsAutofill = {
+    getAvailableColumns,
+    updateFieldWithColumns,
+    applyAutofillToStatisticsBlock,
+    updateAllStatisticsBlocksWithAutofill,
+    triggerStatisticsAutofill
+  };
+
   // Start waiting for Blockly
   waitForBlockly();
 })();
