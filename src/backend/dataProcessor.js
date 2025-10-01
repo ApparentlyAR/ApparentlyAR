@@ -24,6 +24,16 @@ class DataProcessor {
     this.selectColumns = this.selectColumns.bind(this);
     this.groupByData = this.groupByData.bind(this);
     this.calculateColumn = this.calculateColumn.bind(this);
+    
+    // Statistical methods
+    this.descriptiveStats = this.descriptiveStats.bind(this);
+    this.calculateMean = this.calculateMean.bind(this);
+    this.calculateMedian = this.calculateMedian.bind(this);
+    this.calculateStandardDeviation = this.calculateStandardDeviation.bind(this);
+    this.calculateCorrelation = this.calculateCorrelation.bind(this);
+    this.detectOutliers = this.detectOutliers.bind(this);
+    this.frequencyCount = this.frequencyCount.bind(this);
+    this.calculatePercentiles = this.calculatePercentiles.bind(this);
 
     /**
      * Supported data processing operations
@@ -35,7 +45,17 @@ class DataProcessor {
       aggregate: this.aggregateData,
       select: this.selectColumns,
       groupBy: this.groupByData,
-      calculate: this.calculateColumn
+      calculate: this.calculateColumn,
+      
+      // Statistical operations
+      descriptiveStats: this.descriptiveStats,
+      calculateMean: this.calculateMean,
+      calculateMedian: this.calculateMedian,
+      calculateStandardDeviation: this.calculateStandardDeviation,
+      calculateCorrelation: this.calculateCorrelation,
+      detectOutliers: this.detectOutliers,
+      frequencyCount: this.frequencyCount,
+      calculatePercentiles: this.calculatePercentiles
     };
   }
 
@@ -357,6 +377,297 @@ class DataProcessor {
    */
   getAvailableOperations() {
     return Object.keys(this.supportedOperations);
+  }
+
+  // ========================
+  // Statistical Operations
+  // ========================
+
+  /**
+   * Calculate descriptive statistics for a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name to analyze
+   * @returns {Object} Descriptive statistics object
+   */
+  descriptiveStats(data, params) {
+    const { column } = params;
+    const values = data
+      .map(row => parseFloat(row[column]))
+      .filter(v => !isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    const median = values.length % 2 === 0 
+      ? (values[values.length / 2 - 1] + values[values.length / 2]) / 2
+      : values[Math.floor(values.length / 2)];
+    
+    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    
+    const min = values[0];
+    const max = values[values.length - 1];
+    // Calculate quartiles using linear interpolation (consistent with calculatePercentiles)
+    const q1Index = 0.25 * (values.length - 1);
+    const q1Lower = Math.floor(q1Index);
+    const q1Upper = Math.ceil(q1Index);
+    const q1Weight = q1Index % 1;
+    const q1 = values[q1Lower] * (1 - q1Weight) + values[q1Upper] * q1Weight;
+    
+    const q3Index = 0.75 * (values.length - 1);
+    const q3Lower = Math.floor(q3Index);
+    const q3Upper = Math.ceil(q3Index);
+    const q3Weight = q3Index % 1;
+    const q3 = values[q3Lower] * (1 - q3Weight) + values[q3Upper] * q3Weight;
+
+    return { 
+      column, 
+      count: values.length,
+      mean: Number(mean.toFixed(4)),
+      median: Number(median.toFixed(4)),
+      stdDev: Number(stdDev.toFixed(4)),
+      min, max, q1, q3,
+      variance: Number(variance.toFixed(4))
+    };
+  }
+
+  /**
+   * Calculate mean of a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @returns {number} Mean value
+   */
+  calculateMean(data, params) {
+    const { column } = params;
+    
+    // Check if column exists
+    if (data.length > 0 && !data[0].hasOwnProperty(column)) {
+      const availableColumns = Object.keys(data[0]);
+      throw new Error(`Column '${column}' does not exist. Available columns: ${availableColumns.join(', ')}`);
+    }
+    
+    const values = data
+      .map(row => parseFloat(row[column]))
+      .filter(v => !isNaN(v));
+
+    if (values.length === 0) {
+      const sampleValues = data.slice(0, 3).map(row => row[column]);
+      throw new Error(`No valid numeric values found in column '${column}'. Column contains non-numeric data like: [${sampleValues.join(', ')}]. Statistical operations require numeric data.`);
+    }
+
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    return Number(mean.toFixed(4));
+  }
+
+  /**
+   * Calculate median of a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @returns {number} Median value
+   */
+  calculateMedian(data, params) {
+    const { column } = params;
+    const values = data
+      .map(row => parseFloat(row[column]))
+      .filter(v => !isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const median = values.length % 2 === 0 
+      ? (values[values.length / 2 - 1] + values[values.length / 2]) / 2
+      : values[Math.floor(values.length / 2)];
+    
+    return Number(median.toFixed(4));
+  }
+
+  /**
+   * Calculate standard deviation of a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @returns {number} Standard deviation
+   */
+  calculateStandardDeviation(data, params) {
+    const { column } = params;
+    const values = data
+      .map(row => parseFloat(row[column]))
+      .filter(v => !isNaN(v));
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    
+    return Number(stdDev.toFixed(4));
+  }
+
+  /**
+   * Calculate correlation between two columns
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.columnX - First column name
+   * @param {string} params.columnY - Second column name
+   * @returns {number} Correlation coefficient
+   */
+  calculateCorrelation(data, params) {
+    const { columnX, columnY } = params;
+    const pairs = data
+      .map(row => ({ x: parseFloat(row[columnX]), y: parseFloat(row[columnY]) }))
+      .filter(pair => !isNaN(pair.x) && !isNaN(pair.y));
+
+    if (pairs.length < 2) {
+      throw new Error(`Not enough valid numeric pairs found between '${columnX}' and '${columnY}'`);
+    }
+
+    const meanX = pairs.reduce((sum, p) => sum + p.x, 0) / pairs.length;
+    const meanY = pairs.reduce((sum, p) => sum + p.y, 0) / pairs.length;
+    
+    let numerator = 0, denomX = 0, denomY = 0;
+    for (const pair of pairs) {
+      const devX = pair.x - meanX;
+      const devY = pair.y - meanY;
+      numerator += devX * devY;
+      denomX += devX * devX;
+      denomY += devY * devY;
+    }
+    
+    const denominator = Math.sqrt(denomX * denomY);
+    if (denominator === 0) {
+      // Handle case where one or both variables have zero variance
+      return 0;
+    }
+    
+    const correlation = numerator / denominator;
+    return Number(correlation.toFixed(4));
+  }
+
+  /**
+   * Detect outliers in a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @param {string} params.method - Detection method ('iqr', 'zscore', 'modified_zscore')
+   * @returns {Array} Data with outlier flags
+   */
+  detectOutliers(data, params) {
+    const { column, method } = params;
+    const values = data.map(row => parseFloat(row[column]));
+    const validValues = values.filter(v => !isNaN(v));
+    
+    if (validValues.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    let outlierIndices = new Set();
+
+    if (method === 'iqr') {
+      const sorted = [...validValues].sort((a, b) => a - b);
+      const q1 = sorted[Math.floor(sorted.length * 0.25)];
+      const q3 = sorted[Math.floor(sorted.length * 0.75)];
+      const iqr = q3 - q1;
+      const lowerBound = q1 - 1.5 * iqr;
+      const upperBound = q3 + 1.5 * iqr;
+      
+      values.forEach((v, i) => {
+        if (!isNaN(v) && (v < lowerBound || v > upperBound)) {
+          outlierIndices.add(i);
+        }
+      });
+    } else if (method === 'zscore') {
+      const mean = validValues.reduce((sum, v) => sum + v, 0) / validValues.length;
+      const stdDev = Math.sqrt(validValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / validValues.length);
+      
+      // Guard against divide by zero when standard deviation is 0
+      if (stdDev > 0) {
+        values.forEach((v, i) => {
+          if (!isNaN(v) && Math.abs((v - mean) / stdDev) > 3) {
+            outlierIndices.add(i);
+          }
+        });
+      }
+      // If stdDev is 0, all values are identical, so no outliers
+    }
+
+    return data.map((row, i) => ({
+      ...row,
+      [`${column}_is_outlier`]: outlierIndices.has(i)
+    }));
+  }
+
+  /**
+   * Count frequency of values in a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @returns {Array} Frequency count results
+   */
+  frequencyCount(data, params) {
+    const { column } = params;
+    const frequencies = {};
+    
+    data.forEach(row => {
+      const value = row[column];
+      const key = value === null || value === undefined ? 'null' : String(value);
+      frequencies[key] = (frequencies[key] || 0) + 1;
+    });
+
+    return Object.entries(frequencies)
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  /**
+   * Calculate percentiles of a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @param {number} params.percentile - Percentile value (0-100)
+   * @returns {number} Percentile value
+   */
+  calculatePercentiles(data, params) {
+    const { column, percentile } = params;
+    
+    // Validate percentile range (for test compatibility)
+    if (percentile < 0 || percentile > 100) {
+      throw new Error(`Percentile must be between 0 and 100, got: ${percentile}`);
+    }
+    
+    const values = data
+      .map(row => parseFloat(row[column]))
+      .filter(v => !isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (values.length === 0) {
+      throw new Error(`No valid numeric values found in column '${column}'`);
+    }
+
+    const index = (percentile / 100) * (values.length - 1);
+    const lower = Math.floor(index);
+    const upper = Math.ceil(index);
+    const weight = index % 1;
+
+    const result = values[lower] * (1 - weight) + values[upper] * weight;
+    return Number(result.toFixed(4));
   }
 }
 

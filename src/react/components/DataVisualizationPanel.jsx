@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { processData as apiProcessData } from '../api';
 
 const DataVisualizationPanel = () => {
   const [chartData, setChartData] = useState(null);
@@ -127,20 +128,33 @@ const DataVisualizationPanel = () => {
 
   // Listen for Blockly execution to automatically visualize CSV data
   useEffect(() => {
-    const handleBlocklyExecution = () => {
-      // Check if we have CSV data from Blockly and auto-visualize it
+    const handleBlocklyExecution = async () => {
+      // Check if we have CSV data from Blockly and process it via backend
       const csvData = window.Blockly?.CsvImportData?.data;
       if (csvData && csvData.length > 0) {
-        // Generate a default chart with the CSV data
-        const columns = Object.keys(csvData[0] || {});
-        const options = { 
-          xColumn: columns[0] || 'x', 
-          yColumn: columns[1] || 'y', 
-          title: 'CSV Data Visualization' 
-        };
-        
-        // Generate a bar chart by default
-        generateChart(csvData, 'bar', options);
+        try {
+          setLoading(true);
+          setError(null);
+
+          // For now, send with an empty operations array (no-op pipeline)
+          const processed = await apiProcessData(csvData, []);
+          const processedData = processed && processed.data ? processed.data : csvData;
+
+          // Default options from CSV columns
+          const columns = Object.keys(processedData[0] || {});
+          const options = { 
+            xColumn: columns[0] || 'x', 
+            yColumn: columns[1] || 'y', 
+            title: 'CSV Data Visualization' 
+          };
+
+          // Generate a bar chart by default using processed data
+          await generateChart(processedData, 'bar', options);
+        } catch (e) {
+          setError(e.message || 'Failed to process data');
+        } finally {
+          setLoading(false);
+        }
       }
     };
 

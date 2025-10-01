@@ -1,3 +1,11 @@
+/**
+ * CSV Import Blockly block and generator
+ *
+ * - Provides a custom field button to upload a CSV and parse it via PapaParse.
+ * - Stores parsed rows on Blockly.CsvImportData.data for later blocks.
+ * - Registers the generator using both legacy (obj['csv_import']) and
+ *   the newer forBlock API for maximum compatibility.
+ */
 // === CSV Import Block Definition ===
 Blockly.defineBlocksWithJsonArray([
   {
@@ -7,11 +15,13 @@ Blockly.defineBlocksWithJsonArray([
       {
         "type": "field_label",
         "name": "CSV_FILENAME",
-        "text": "No file chosen"
+        "text": "No file chosen",
+        "SERIALIZABLE": true
       },
       {
         "type": "field_file_button",
-        "name": "CSV_UPLOAD"
+        "name": "CSV_UPLOAD",
+        "SERIALIZABLE": true
       }
     ],
     "output": "Dataset",
@@ -29,6 +39,7 @@ class FieldFileButton extends Blockly.Field {
     this.fileInput_ = null;
     this.filename_ = 'No file chosen';
     this._dialogOpen = false;
+    this.SERIALIZABLE = true;
   }
 
   static fromJson(options) {
@@ -62,6 +73,20 @@ class FieldFileButton extends Blockly.Field {
               Blockly.CsvImportData.data = results.data;
               Blockly.CsvImportData.filename = file.name;
               this._dialogOpen = false;
+              
+              // Trigger autofill for all existing blocks when CSV data is loaded
+              if (window.BlocklyAutofill && window.BlocklyAutofill.updateAllBlocksWithAutofill) {
+                setTimeout(() => {
+                  window.BlocklyAutofill.updateAllBlocksWithAutofill();
+                }, 100); // Small delay to ensure blocks are rendered
+              }
+              
+              // Also trigger autofill for statistics blocks
+              if (window.BlocklyStatisticsAutofill && window.BlocklyStatisticsAutofill.updateAllStatisticsBlocksWithAutofill) {
+                setTimeout(() => {
+                  window.BlocklyStatisticsAutofill.updateAllStatisticsBlocksWithAutofill();
+                }, 150); // Slightly longer delay for statistics blocks
+              }
             }
           });
         };
@@ -120,6 +145,18 @@ class FieldFileButton extends Blockly.Field {
   getDisplayText_() {
     return ''; // Return empty string to prevent default text rendering
   }
+
+  // Serialization methods
+  saveState() {
+    return {
+      filename: this.filename_
+    };
+  }
+
+  loadState(state) {
+    this.filename_ = state.filename || 'No file chosen';
+    this.render_();
+  }
 }
 
 Blockly.fieldRegistry.register('field_file_button', FieldFileButton);
@@ -140,8 +177,9 @@ if (typeof Blockly !== 'undefined' && Blockly.Extensions && typeof Blockly.Exten
 function registerCsvImportGenerator() {
   const generator = function() {
     console.log('CSV import JavaScript generator called');
-    // Generate code to return the parsed CSV data  
-    const code = 'Blockly.CsvImportData.data';
+    console.log('Current CSV data at generation time:', Blockly.CsvImportData.data ? 'has data' : 'null/undefined');
+    // Generate code to return the parsed CSV data with better null safety
+    const code = '(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null)';
     console.log('Generated code:', code);
     return [code, Blockly.JavaScript.ORDER_ATOMIC];
   };

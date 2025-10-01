@@ -42,27 +42,32 @@
     console.log('Blockly.JavaScript available:', !!window.Blockly.JavaScript);
     console.log('Available JavaScript generators before CSV import:', Object.keys(window.Blockly.JavaScript || {}));
   </script>
+  <script src="../src/react/api.js"></script>
   <script src="../src/blocks/csv_import.js"></script>
   <script src="../src/blocks/to_json.js"></script>
+  <script src="../src/blocks/data_ops.js"></script>
+  <script src="../src/blocks/statistics.js"></script>
   <script>
-    // Check if CSV import generator was registered
+    // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
-    console.log('CSV import generator type:', typeof window.Blockly.JavaScript['csv_import']);
+    console.log('filter_data generator registered after loading:', !!(window.Blockly.JavaScript && window.Blockly.JavaScript['filter_data']));
+    console.log('AppApi available:', !!window.AppApi);
+    console.log('AppApi.processData available:', !!window.AppApi?.processData);
 
     // Show all available generators that might be block-related
     const allKeys = Object.keys(window.Blockly.JavaScript || {});
     const blockKeys = allKeys.filter(key => !key.startsWith('ORDER_') && !key.startsWith('STATEMENT_') && !key.startsWith('FUNCTION_') && !key.startsWith('INFINITE_') && !key.startsWith('INDENT') && !key.startsWith('COMMENT_') && !key.startsWith('RESERVED_') && key.length > 2);
     console.log('Block-related generators:', blockKeys);
 
-    // Test the generator directly
+    // Test the generators directly
     setTimeout(() => {
       if (window.Blockly.JavaScript['csv_import']) {
         try {
           console.log('Testing CSV generator directly...');
           const result = window.Blockly.JavaScript['csv_import']();
-          console.log('Direct generator test result:', result);
+          console.log('Direct CSV generator test result:', result);
         } catch (e) {
-          console.error('Direct generator test failed:', e);
+          console.error('Direct CSV generator test failed:', e);
         }
       }
     }, 200);
@@ -271,7 +276,7 @@
       </div>
 
       <!-- Blockly Workspace -->
-      <div id="blocklyDiv" class="w-full h-full overflow-hidden bg-[#0f1324]"></div>
+      <div id="blocklyDiv" class="w-full h-full min-h-[500px] overflow-hidden bg-[#0f1324]"></div>
 
       <!-- Hidden Blockly Toolbox -->
       <xml id="toolbox" style="display: none">
@@ -309,6 +314,78 @@
           <block type="csv_import"></block>
           <block type="to_json">
             <value name="VALUE">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="filter_data">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="sort_data">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="select_columns">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="group_by">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_column">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="drop_empty">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Statistical Analysis" colour="40">
+          <block type="descriptive_stats">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_mean">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_median">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_std">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_correlation">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="detect_outliers">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="frequency_count">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_percentiles">
+            <value name="DATA">
               <block type="csv_import"></block>
             </value>
           </block>
@@ -409,8 +486,16 @@
           insertionMarkerColour: '#6ea8fe',
           insertionMarkerOpacity: 0.3
         }
-      }
+      },
+      renderer: 'zelos'  // Use the zelos renderer for better appearance
     });
+
+    // Add a slight delay to ensure proper initialization
+    setTimeout(() => {
+      if (workspace) {
+        workspace.scrollbar.setVisible(true);
+      }
+    }, 300);
 
     // Mobile device detection
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
@@ -420,6 +505,15 @@
     function resizeWorkspace() {
       if (workspace && document.getElementById('blocklyDiv')) {
         try {
+          const blocklyDiv = document.getElementById('blocklyDiv');
+          const mainGrid = document.getElementById('main-grid');
+          
+          // Force the blocklyDiv to take full height of its container
+          if (blocklyDiv) {
+            blocklyDiv.style.height = '100%';
+            blocklyDiv.style.width = '100%';
+          }
+          
           Blockly.svgResize(workspace);
 
           // Mobile-specific adjustments
@@ -455,8 +549,12 @@
     }
 
     // Initial resize with mobile detection
+    // Use a longer timeout to ensure DOM is fully loaded
     setTimeout(() => {
       resizeWorkspace();
+      
+      // Additional resize after a bit more time to ensure proper rendering
+      setTimeout(resizeWorkspace, 500);
 
       // Additional mobile initialization
       if (isMobile) {
@@ -466,7 +564,7 @@
           blocklyDiv.style.touchAction = 'pan-x pan-y';
         }
       }
-    }, 100);
+    }, 200);
 
     // Cleanup function for proper workspace disposal
     let workspaceDisposed = false;
@@ -624,7 +722,20 @@
     }, 200);
 
     // Bridge functions for React components to call vanilla JS Blockly functions
-    window.executeBlocklyCode = function () {
+    async function waitForGenerators(requiredKeys, timeoutMs = 3000) {
+      const start = Date.now();
+      return new Promise((resolve, reject) => {
+        (function poll() {
+          const js = window.Blockly && window.Blockly.JavaScript;
+          const ready = !!js && requiredKeys.every(k => !!js[k]);
+          if (ready) return resolve(true);
+          if (Date.now() - start > timeoutMs) return reject(new Error('Generators not ready'));
+          setTimeout(poll, 50);
+        })();
+      });
+    }
+
+    window.executeBlocklyCode = async function () {
       if (!workspace) return;
 
       // Update React state - executing
@@ -634,8 +745,11 @@
       console.log('Run button clicked via React');
 
       try {
+        // Ensure our custom generators are registered before codegen
+        await waitForGenerators(['csv_import','filter_data','sort_data','select_columns','group_by','calculate_column','drop_empty']).catch(() => {});
         console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
         console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
+        console.log('filter_data generator available:', !!Blockly.JavaScript['filter_data']);
         console.log('Calling workspaceToCode...');
 
         const code = Blockly.JavaScript.workspaceToCode(workspace);
@@ -648,11 +762,15 @@
           return;
         }
 
+        // Evaluate possibly-async code and await if Promise-like
         // eslint-disable-next-line no-eval
-        const result = eval(code);
+        let result = eval(code);
+        if (result && typeof result.then === 'function') {
+          result = await result;
+        }
         console.log('Execution result:', result);
 
-        if (window.reactSetOutput) window.reactSetOutput(result !== undefined ? String(result) : 'Code executed successfully');
+        if (window.reactSetOutput) window.reactSetOutput(result !== undefined ? String(JSON.stringify(result, null, 2)) : 'Code executed successfully');
         if (window.reactSetError) window.reactSetError(false);
 
         // Dispatch event for automatic visualization of CSV data

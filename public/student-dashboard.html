@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - ApparentlyAR</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="global.css">
+</head>
+<body class="text-gray-800">
+
+    <div id="header-container"></div>
+
+    <main class="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Welcome, Student</h2>
+
+        <div class="relative w-full max-w-xs mb-6">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+            <input type="text" placeholder="Search Project" class="block w-full bg-white border border-gray-300 rounded-md py-2 pl-10 pr-3 text-sm placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <h3 class="text-2xl font-semibold mb-4 text-gray-900">My Project</h3>
+        <div id="projects-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            </div>
+    </main>
+
+    <script>
+        // --- Universal Dropdown & Header Logic ---
+        function closeAllDropdowns() {
+            // This primarily targets the user menu on this page
+            document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
+        }
+
+        function toggleUserMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('user-menu');
+            const isHidden = menu.classList.contains('hidden');
+            closeAllDropdowns();
+            if (isHidden) menu.classList.remove('hidden');
+        }
+
+        function logout(event) {
+            event.preventDefault();
+            console.log("User logged out.");
+            window.location.href = '/';
+        }
+
+        window.addEventListener('click', function (event) {
+            if (!event.target.closest('.dropdown-toggle')) {
+                closeAllDropdowns();
+            }
+        });
+
+        // --- Page-Specific Loading & API Logic ---
+        fetch('header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header-container').innerHTML = data;
+                // Set the dynamic dashboard link in the loaded header
+                document.getElementById('header-dashboard-link').href = 'student-dashboard.html';
+            });
+
+        async function loadProjects() {
+            const projectContainer = document.getElementById('projects-container');
+            projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">Loading projects...</p>';
+
+            try {
+                const response = await fetch('/api/projects');
+                const projects = await response.json();
+                
+                const activeProjects = projects.filter(project => project.status === 'Active');
+                projectContainer.innerHTML = ''; 
+
+                if (activeProjects.length === 0) {
+                    projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">No active projects available yet.</p>';
+                } else {
+                    const styles = [
+                        { icon: 'chart-bar', colors: { bg: 'bg-pink-100', text: 'bg-pink-500' } },
+                        { icon: 'moon', colors: { bg: 'bg-yellow-100', text: 'bg-yellow-500' } },
+                        { icon: 'table', colors: { bg: 'bg-blue-100', text: 'bg-blue-500' } },
+                    ];
+
+                    activeProjects.forEach((project, index) => {
+                        const style = styles[index % styles.length];
+                        const projectElement = document.createElement('a');
+                        
+                        projectElement.href = `view-project.html?id=${project.id}&role=student`;
+                        projectElement.className = 'block rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300';
+                        
+                        const formattedDate = new Date(project.createdAt).toLocaleDateString('en-GB', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                        });
+                        
+                        const icons = {
+                            'chart-bar': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>',
+                            'moon': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>',
+                            'table': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>',
+                        };
+
+                        projectElement.innerHTML = `
+                            <div class="${style.colors.bg} h-32 flex items-center justify-center">
+                                ${icons[style.icon] || ''}
+                            </div>
+                            <div class="p-4 ${style.colors.text} text-white">
+                                <h4 class="font-bold">${project.name}</h4>
+                                <p class="text-sm">${formattedDate}</p>
+                            </div>
+                        `;
+                        projectContainer.appendChild(projectElement);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                projectContainer.innerHTML = '<p class="text-red-500 col-span-full">Failed to load projects.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadProjects);
+    </script>
+</body>
+</html>
