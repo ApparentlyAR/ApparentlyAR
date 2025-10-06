@@ -15,7 +15,8 @@ class HybridARController {
     this.handTracking = new HandTracking(
       this.gestureDetector,
       this.chartManager,
-      this.updateStatus.bind(this)
+      this.updateStatus.bind(this),
+      this.coordinateSystem
     );
 
     // Bind methods
@@ -24,9 +25,12 @@ class HybridARController {
     this.stopHandTracking = this.stopHandTracking.bind(this);
     this.clearHandCharts = this.clearHandCharts.bind(this);
     this.selectChart = this.selectChart.bind(this);
-    
-    // Make selectChart available globally for HTML onclick handlers
+
+    // Make functions available globally for HTML onclick handlers
     window.selectChart = this.selectChart;
+    window.setDebugVisualization = (enabled) => this.handTracking.setDebugVisualization(enabled);
+    window.setCalibration = (x, y) => this.coordinateSystem.setCalibration(x, y);
+    window.resetCalibration = () => this.coordinateSystem.resetCalibration();
   }
 
   /**

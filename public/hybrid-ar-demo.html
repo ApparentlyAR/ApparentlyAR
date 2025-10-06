@@ -170,6 +170,44 @@
       background: #666 !important;
       margin-bottom: 15px;
     }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #555;
+      outline: none;
+      border-radius: 4px;
+      height: 6px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #4CAF50;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: #4CAF50;
+      cursor: pointer;
+      border-radius: 50%;
+      border: none;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    label {
+      cursor: pointer;
+      user-select: none;
+    }
   </style>
 </head>
 
@@ -281,7 +319,74 @@
         <div>Video resolution: <span id="video-resolution">-</span></div>
       </div>
     </div>
+
+    <div class="stats">
+      <h3>Debug Controls</h3>
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="debug-visualization" checked onchange="setDebugVisualization(this.checked)">
+          Show Debug Crosshair
+        </label>
+      </div>
+    </div>
+
+    <div class="stats">
+      <h3>Raycast Debug</h3>
+      <div id="raycast-debug" style="font-size: 10px; font-family: monospace;">
+        <div>No data</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <h3>Calibration</h3>
+      <div class="control-group">
+        <label for="calibration-x">X Offset: <span id="calibration-x-value">0.0</span></label>
+        <input type="range" id="calibration-x" min="-10" max="10" value="0" step="0.5"
+          oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
+
+        <label for="calibration-y">Y Offset: <span id="calibration-y-value">0.0</span></label>
+        <input type="range" id="calibration-y" min="-10" max="10" value="0" step="0.5"
+          oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
+
+        <button onclick="resetCalibrationUI()" style="width: 100%; background: #666;">Reset Calibration</button>
+      </div>
+    </div>
   </div>
+
+  <script>
+    // Calibration UI functions
+    function updateCalibration() {
+      const x = parseFloat(document.getElementById('calibration-x').value);
+      const y = parseFloat(document.getElementById('calibration-y').value);
+      document.getElementById('calibration-x-value').textContent = (x / 10).toFixed(1);
+      document.getElementById('calibration-y-value').textContent = (y / 10).toFixed(1);
+      setCalibration(x / 10, y / 10);
+    }
+
+    function resetCalibrationUI() {
+      document.getElementById('calibration-x').value = 0;
+      document.getElementById('calibration-y').value = 0;
+      document.getElementById('calibration-x-value').textContent = '0.0';
+      document.getElementById('calibration-y-value').textContent = '0.0';
+      resetCalibration();
+    }
+
+    // Load saved calibration on page load
+    window.addEventListener('load', () => {
+      const savedX = localStorage.getItem('ar_calibration_x');
+      const savedY = localStorage.getItem('ar_calibration_y');
+      if (savedX !== null) {
+        const x = parseFloat(savedX);
+        document.getElementById('calibration-x').value = x * 10;
+        document.getElementById('calibration-x-value').textContent = x.toFixed(1);
+      }
+      if (savedY !== null) {
+        const y = parseFloat(savedY);
+        document.getElementById('calibration-y').value = y * 10;
+        document.getElementById('calibration-y-value').textContent = y.toFixed(1);
+      }
+    });
+  </script>
 
   <!-- AR JavaScript modules -->
   <script src="../src/ar/coordinate-system.js"></script>

@@ -182,9 +182,44 @@ class ChartManager {
       return;
     }
 
-    const x = uv.x * canvas.width;
-    const y = (1 - uv.y) * canvas.height; // flip V to canvas Y
+    // CRITICAL FIX: Map UV to actual chart area (excludes padding/margins)
+    // Chart.js renders the chart within a smaller area due to legends, titles, padding
+    const chartArea = chart.chartArea;
+
+    // If chart isn't fully initialized yet, use fallback to full canvas
+    if (!chartArea || !chartArea.left || !chartArea.right || !chartArea.top || !chartArea.bottom) {
+      console.warn('Chart area not available, using full canvas mapping');
+      const x = uv.x * canvas.width;
+      const y = (1 - uv.y) * canvas.height;
+      const pos = { x, y };
+
+      // Early exit with basic mapping
+      const MAX_DISTANCE_THRESHOLD = 50;
+      return this.findAndActivateTooltip(chart, entity, pos, MAX_DISTANCE_THRESHOLD);
+    }
+
+    // Map UV coordinates (0-1) to the actual chart rendering area
+    // chartArea = { left, right, top, bottom } in canvas pixels
+    const x = chartArea.left + uv.x * (chartArea.right - chartArea.left);
+    const y = chartArea.top + (1 - uv.y) * (chartArea.bottom - chartArea.top); // flip V to canvas Y
     const pos = { x, y };
+
+    // Maximum distance threshold (in pixels) for tooltip activation
+    const MAX_DISTANCE_THRESHOLD = 50;
+
+    this.findAndActivateTooltip(chart, entity, pos, MAX_DISTANCE_THRESHOLD);
+  }
+
+  /**
+   * Find nearest chart element and activate tooltip
+   * Extracted as separate method for clarity
+   *
+   * @param {Chart} chart - Chart.js instance
+   * @param {Element} entity - A-Frame entity
+   * @param {Object} pos - Canvas position {x, y}
+   * @param {number} maxDistance - Maximum distance threshold
+   */
+  findAndActivateTooltip(chart, entity, pos, maxDistance) {
     try {
       // Manually find nearest element to avoid needing a DOM event
       const active = [];
@@ -197,22 +232,31 @@ class ChartManager {
         (meta.data || []).forEach((el, i) => {
           const p = (typeof el.getProps === 'function') ? el.getProps(['x', 'y'], true) : el;
           const ex = p.x, ey = p.y;
+
+          // Priority 1: Exact in-range hit (uses Chart.js built-in hit testing)
           if (typeof el.inRange === 'function' && el.inRange(pos.x, pos.y, 'nearest')) {
-            // Prefer exact in-range hit
-            const d2 = 0;
+            const d2 = 0; // In-range hits have priority (distance = 0)
             if (d2 <= best.dist2) {
               best = { dist2: d2, datasetIndex: dsIndex ?? meta._datasetIndex ?? 0, index: i };
             }
-          } else if (Number.isFinite(ex) && Number.isFinite(ey)) {
+          }
+          // Priority 2: Distance-based hit, but only within threshold
+          else if (Number.isFinite(ex) && Number.isFinite(ey)) {
             const dx = pos.x - ex;
             const dy = pos.y - ey;
             const d2 = dx * dx + dy * dy;
-            if (d2 < best.dist2) best = { dist2: d2, datasetIndex: dsIndex ?? meta._datasetIndex ?? 0, index: i };
+            const distance = Math.sqrt(d2);
+
+            // Only consider elements within the distance threshold
+            if (distance <= maxDistance && d2 < best.dist2) {
+              best = { dist2: d2, datasetIndex: dsIndex ?? meta._datasetIndex ?? 0, index: i };
+            }
           }
         });
       });
 
-      if (best.datasetIndex >= 0) {
+      // Only activate tooltip if we found an element within threshold
+      if (best.datasetIndex >= 0 && best.dist2 <= maxDistance * maxDistance) {
         active.push({ datasetIndex: best.datasetIndex, index: best.index });
       }
 
@@ -221,6 +265,7 @@ class ChartManager {
       this.forceMaterialRefresh(entity);
     } catch (e) {
       // Silently ignore tooltip errors to avoid breaking AR loop
+      console.warn('Tooltip error:', e);
     }
   }
 
@@ -353,17 +398,48 @@ class ChartManager {
    */
   generateChart(canvas, type, data) {
     const ctx = canvas.getContext('2d');
-    
+
     let chartConfig = {
       type: type,
       data: {},
       options: {
         responsive: false,
         animation: false,
+        layout: {
+          padding: {
+            top: 5,
+            right: 5,
+            bottom: 5,
+            left: 5
+          }
+        },
         plugins: {
-          legend: { display: true },
-          title: { display: true, text: `${type.toUpperCase()} Chart` }
-        }
+          legend: {
+            display: true,
+            labels: {
+              padding: 5,
+              boxWidth: 12
+            }
+          },
+          title: {
+            display: true,
+            text: `${type.toUpperCase()} Chart`,
+            padding: {
+              top: 5,
+              bottom: 5
+            }
+          }
+        },
+        scales: type === 'bar' || type === 'line' || type === 'scatter' ? {
+          x: {
+            grid: { display: true },
+            ticks: { padding: 2 }
+          },
+          y: {
+            grid: { display: true },
+            ticks: { padding: 2 }
+          }
+        } : undefined
       }
     };
     
