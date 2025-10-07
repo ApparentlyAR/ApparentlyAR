@@ -73,6 +73,20 @@ class FieldFileButton extends Blockly.Field {
               Blockly.CsvImportData.data = results.data;
               Blockly.CsvImportData.filename = file.name;
               this._dialogOpen = false;
+              
+              // Trigger autofill for all existing blocks when CSV data is loaded
+              if (window.BlocklyAutofill && window.BlocklyAutofill.updateAllBlocksWithAutofill) {
+                setTimeout(() => {
+                  window.BlocklyAutofill.updateAllBlocksWithAutofill();
+                }, 100); // Small delay to ensure blocks are rendered
+              }
+              
+              // Also trigger autofill for statistics blocks
+              if (window.BlocklyStatisticsAutofill && window.BlocklyStatisticsAutofill.updateAllStatisticsBlocksWithAutofill) {
+                setTimeout(() => {
+                  window.BlocklyStatisticsAutofill.updateAllStatisticsBlocksWithAutofill();
+                }, 150); // Slightly longer delay for statistics blocks
+              }
             }
           });
         };
@@ -163,8 +177,9 @@ if (typeof Blockly !== 'undefined' && Blockly.Extensions && typeof Blockly.Exten
 function registerCsvImportGenerator() {
   const generator = function() {
     console.log('CSV import JavaScript generator called');
-    // Generate code to return the parsed CSV data  
-    const code = 'Blockly.CsvImportData.data';
+    console.log('Current CSV data at generation time:', Blockly.CsvImportData.data ? 'has data' : 'null/undefined');
+    // Generate code to return the parsed CSV data with better null safety
+    const code = '(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null)';
     console.log('Generated code:', code);
     return [code, Blockly.JavaScript.ORDER_ATOMIC];
   };
