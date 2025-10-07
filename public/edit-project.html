@@ -5,81 +5,167 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Project - ApparentlyAR</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+        rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="global.css">
 </head>
 
 <body class="text-gray-800">
-    <main class="max-w-screen-md mx-auto p-4 sm:p-6 lg:p-8">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8">Edit Project</h2>
-        <form id="edit-project-form" class="space-y-6">
-            <div>
-                <label for="project-name" class="block text-sm font-medium text-gray-700">Project Name</label>
-                <input type="text" id="project-name" name="name"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    required>
-            </div>
-            <div>
-                <label for="project-description" class="block text-sm font-medium text-gray-700">Description</label>
-                <textarea id="project-description" name="description" rows="4"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-            </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Save
-                Changes</button>
-        </form>
-    </main>
-
+    <!-- Header imported from header.html -->
+    <div id="header-container"></div>
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const projectId = urlParams.get('id'); // Get the project ID from the URL
-
-        // Fetch the current project details
-        async function fetchProject() {
-            try {
-                const response = await fetch(`/api/projects/${projectId}`);
-                if (!response.ok) throw new Error('Failed to fetch project details');
-                const project = await response.json();
-
-                // Populate the form with the current project details
-                document.getElementById('project-name').value = project.name;
-                document.getElementById('project-description').value = project.description;
-            } catch (error) {
-                console.error('Error fetching project:', error);
-                alert('Failed to load project details. Please try again.');
-            }
-        }
-
-        // Handle form submission
-        document.getElementById('edit-project-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            const name = document.getElementById('project-name').value;
-            const description = document.getElementById('project-description').value;
-
-            try {
-                // Delete the current project
-                const deleteResponse = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
-                if (!deleteResponse.ok) throw new Error('Failed to delete the current project');
-
-                // Create a new project with the updated data
-                const createResponse = await fetch('/api/projects', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, description })
-                });
-                if (!createResponse.ok) throw new Error('Failed to create the updated project');
-
-                // Redirect back to the teacher dashboard
-                window.location.href = 'teacher-dashboard.html';
-            } catch (error) {
-                console.error('Error saving changes:', error);
-                alert('Failed to save changes. Please try again.');
-            }
-        });
-
-        // Load the current project details when the page loads
-        document.addEventListener('DOMContentLoaded', fetchProject);
+        fetch('header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header-container').innerHTML = data;
+            })
+            .catch(error => {
+                console.error('Error loading header:', error);
+            });
     </script>
+
+    <main class="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="flex flex-row items-center p-4">
+            <button onclick="window.location.href='teacher-dashboard.html'">
+                <svg class="icon-closed w-14" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+
+            <p class="block text-2xl font-bold mb-2">Edit Project</p>
+        </div>
+
+        <form id="edit-project-form">
+            <div class="mb-6">
+                <label for="projectName" class="block text-xl font-medium mt-8 mb-4">Project Name</label>
+                <input type="text" id="projectName" name="projectName" placeholder="Enter project title..."
+                    class="block w-full bg-white border border-gray-300 rounded-md p-4 text-sm placeholder-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+            </div>
+
+            <div class="mb-6">
+                <label for="description" class="block text-xl font-medium mt-8 mb-4">Description</label>
+                <input type="text" id="description" name="description" placeholder="Enter project description..."
+                    class="block w-full bg-white border border-gray-300 rounded-md p-4 text-sm placeholder-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div class="mb-6">
+                <label for="csvFileUpload" class="block text-xl font-semibold text-gray-900 mt-8 mb-4">CSV File
+                    Upload</label>
+                <div
+                    class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md max-w">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="file-upload"
+                                class="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                <span>Upload your file here</span>
+                                <input id="file-upload" name="file-upload" type="file" class="sr-only" accept=".csv">
+                            </label>
+                        </div>
+                        <p id="file-name" class="mt-2 text-sm text-gray-500">No file selected</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-5 text-right">
+                <button type="submit"
+                    class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Save
+                </button>
+            </div>
+        </form>
+
+        <script>
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('id'); // Get the project ID from the URL
+
+            // Handle file input changes to display the selected file name
+            const fileInput = document.getElementById('file-upload');
+            const fileNameDisplay = document.getElementById('file-name');
+            
+            fileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    fileNameDisplay.textContent = this.files[0].name + " - Uploaded!";
+                    fileNameDisplay.classList.add('text-green-600');
+                    fileNameDisplay.classList.remove('text-gray-500');
+                } else {
+                    fileNameDisplay.textContent = "No file selected";
+                    fileNameDisplay.classList.remove('text-green-600');
+                    fileNameDisplay.classList.add('text-gray-500');
+                }
+            });
+
+            // Fetch the current project details
+            async function fetchProject() {
+                try {
+                    const response = await fetch(`/api/projects/${projectId}`);
+                    if (!response.ok) throw new Error('Failed to fetch project details');
+                    const project = await response.json();
+
+                    // Populate the form with the current project details
+                    document.getElementById('projectName').value = project.name;
+                    document.getElementById('description').value = project.description;
+                    
+                    // Display existing file info if available
+                    if (project.csvHeaders) {
+                        fileNameDisplay.textContent = "File already uploaded";
+                        fileNameDisplay.classList.add('text-green-600');
+                        fileNameDisplay.classList.remove('text-gray-500');
+                    }
+                } catch (error) {
+                    console.error('Error fetching project:', error);
+                    alert('Failed to load project details. Please try again.');
+                }
+            }
+
+            // Handle form submission
+            document.getElementById('edit-project-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const name = document.getElementById('projectName').value;
+                const description = document.getElementById('description').value;
+                const fileInput = document.getElementById('file-upload');
+                
+                // Create FormData object to include the file
+                const formData = new FormData();
+                formData.append('name', name);
+                formData.append('description', description);
+                
+                if (fileInput.files[0]) {
+                    formData.append('csvFile', fileInput.files[0]);
+                }
+
+                try {
+                    // Update the project with the new data
+                    const response = await fetch(`/api/projects/${projectId}`, {
+                        method: 'PUT',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to update the project');
+
+                    // Redirect back to the teacher dashboard
+                    window.location.href = 'teacher-dashboard.html';
+                } catch (error) {
+                    console.error('Error saving changes:', error);
+                    alert('Failed to save changes. Please try again.');
+                }
+            });
+
+            // Load the current project details when the page loads
+            document.addEventListener('DOMContentLoaded', fetchProject);
+        </script>
+    </main>
 </body>
 
 </html>
