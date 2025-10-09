@@ -47,6 +47,7 @@
   <script src="../src/blocks/to_json.js"></script>
   <script src="../src/blocks/data_ops.js"></script>
   <script src="../src/blocks/statistics.js"></script>
+  <script src="../src/blocks/visualization.js"></script>
   <script>
     // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -385,6 +386,52 @@
             </value>
           </block>
           <block type="calculate_percentiles">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Visualization" colour="330">
+          <block type="set_chart_type"></block>
+          <block type="set_axes">
+            <value name="CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="chart_options">
+            <value name="CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="advanced_chart_options">
+            <value name="CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+          </block>
+          <block type="generate_visualization">
+            <value name="CONFIG">
+              <block type="set_chart_type"></block>
+            </value>
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="quick_chart">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="histogram_config">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="boxplot_config">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="heatmap_config">
             <value name="DATA">
               <block type="csv_import"></block>
             </value>
