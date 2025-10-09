@@ -48,6 +48,7 @@
   <script src="../src/blocks/data_ops.js"></script>
   <script src="../src/blocks/statistics.js"></script>
   <script src="../src/blocks/visualization.js"></script>
+  <script src="../src/blocks/advanced_statistics.js"></script>
   <script>
     // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -432,6 +433,48 @@
             </value>
           </block>
           <block type="heatmap_config">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Advanced Mathematics" colour="210">
+          <label text="Matrix Operations"></label>
+          <block type="matrix_multiply"></block>
+          <block type="matrix_transpose"></block>
+          <block type="matrix_determinant"></block>
+          <block type="matrix_inverse"></block>
+          <label text="Trigonometry"></label>
+          <block type="apply_trig_function">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <label text="Logarithms"></label>
+          <block type="apply_logarithm">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <label text="Time Series"></label>
+          <block type="exponential_smoothing">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <label text="Regression"></label>
+          <block type="polynomial_fit">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <label text="Calculus"></label>
+          <block type="calculate_derivative">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_integral">
             <value name="DATA">
               <block type="csv_import"></block>
             </value>
