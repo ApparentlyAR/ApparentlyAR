@@ -396,7 +396,14 @@
         const code = `(async () => {
   try {
     const config = ${configCode};
-    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+    let __rawData = ${dataCode};
+    
+    // If the data is a Promise (from async data blocks), await it
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    
+    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
       console.error('[generate_visualization] No data available');
@@ -456,7 +463,14 @@
 
         const code = `(async () => {
   try {
-    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+    let __rawData = ${dataCode};
+    
+    // If the data is a Promise (from async data blocks), await it
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    
+    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
       console.error('[quick_chart] No data available');
@@ -521,7 +535,14 @@
 
         const code = `(async () => {
   try {
-    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+    let __rawData = ${dataCode};
+    
+    // If the data is a Promise (from async data blocks), await it
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    
+    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
       throw new Error('No data available');
@@ -571,7 +592,14 @@
 
         const code = `(async () => {
   try {
-    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+    let __rawData = ${dataCode};
+    
+    // If the data is a Promise (from async data blocks), await it
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    
+    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
       throw new Error('No data available');
@@ -624,7 +652,14 @@
 
         const code = `(async () => {
   try {
-    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+    let __rawData = ${dataCode};
+    
+    // If the data is a Promise (from async data blocks), await it
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    
+    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
       throw new Error('No data available');
