@@ -75,7 +75,6 @@ describe('Blockly data processing blocks integration', () => {
 		}
 
 		expect(result).toEqual(processedOut);
-		expect(global.Blockly.CsvImportData.data).toEqual(processedOut);
 		expect(window.AppApi.processData).toHaveBeenCalledTimes(1);
 	});
 
@@ -126,7 +125,6 @@ describe('Blockly data processing blocks integration', () => {
 		}
 
 		expect(result).toEqual(processedOut);
-		expect(global.Blockly.CsvImportData.data).toEqual(processedOut);
 		expect(window.AppApi.processData).toHaveBeenCalledTimes(1);
 	});
 

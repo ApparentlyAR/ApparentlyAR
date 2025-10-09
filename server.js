@@ -35,7 +35,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/src', express.static('src'));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
 /**
  * Serve the Login application page
@@ -144,6 +145,11 @@ app.post('/api/process-data', async (req, res) => {
     
     if (!data || !Array.isArray(data)) {
       return res.status(400).json({ error: 'Invalid data format' });
+    }
+    
+    // Validate operations parameter
+    if (operations !== undefined && !Array.isArray(operations)) {
+      return res.status(500).json({ error: 'Operations must be an array' });
     }
 
     const processedData = await dataProcessor.processData(data, operations);

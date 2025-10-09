@@ -97,6 +97,11 @@ class DataProcessor {
   async processData(data, operations) {
     let processedData = [...data];
     
+    // Handle case where operations is undefined or not an array
+    if (!operations || !Array.isArray(operations)) {
+      return processedData;
+    }
+    
     for (const operation of operations) {
       const { type, params } = operation;
       

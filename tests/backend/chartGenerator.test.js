@@ -574,7 +574,7 @@ describe('ChartGenerator', () => {
       
       await expect(
         chartGenerator.generateARVisualization(data, 'unsupported', 'marker1')
-      ).rejects.toThrow('this.supportedChartTypes[visualizationType] is not a function');
+      ).rejects.toThrow('Unsupported visualization type: unsupported');
     });
 
     it('should generate AR data with metadata', async () => {

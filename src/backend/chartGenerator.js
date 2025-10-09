@@ -519,6 +519,10 @@ class ChartGenerator {
    * @returns {Promise<Object>} AR visualization data
    */
   async generateARVisualization(data, visualizationType, markerId) {
+    if (!this.supportedChartTypes[visualizationType]) {
+      throw new Error(`Unsupported visualization type: ${visualizationType}`);
+    }
+    
     const chartConfig = await this.supportedChartTypes[visualizationType](data, {
       title: `AR Chart - Marker ${markerId}`
     });

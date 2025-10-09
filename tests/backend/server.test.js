@@ -162,7 +162,7 @@ describe('Server Routes', () => {
         .send({ data: testData, visualizationType, markerId });
 
       expect(response.status).toBe(500);
-      expect(response.body.error).toContain('is not a function');
+      expect(response.body.error).toBe('Unsupported visualization type: unsupported');
     });
   });
 
