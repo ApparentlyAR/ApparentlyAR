@@ -208,6 +208,11 @@
       cursor: pointer;
       user-select: none;
     }
+
+    /* Video mirroring */
+    video.mirrored {
+      transform: scaleX(-1);
+    }
   </style>
 </head>
 
@@ -222,37 +227,40 @@
       <canvas id="chart-texture-canvas" width="400" height="300"></canvas>
     </a-assets>
 
-    <!-- Marker-based objects from Multi-AR-Example -->
+    <!-- AR World wrapper for scene-level mirroring -->
+    <a-entity id="ar-world">
+      <!-- Marker-based objects from Multi-AR-Example -->
 
-    <!-- Marker 0: Dynamic chart plane anchored to marker (updated via ChartManager) -->
-    <a-marker id="marker-0" type="barcode" value="0">
-      <!-- Plane will be injected by script based on selected chart/data -->
-      <!-- Hidden primitive kept to satisfy structure tests that expect a-box presence -->
-      <a-box position="0 0 0" material="opacity: 0; transparent: true" scale="0 0 0"></a-box>
-    </a-marker>
+      <!-- Marker 0: Dynamic chart plane anchored to marker (updated via ChartManager) -->
+      <a-marker id="marker-0" type="barcode" value="0">
+        <!-- Plane will be injected by script based on selected chart/data -->
+        <!-- Hidden primitive kept to satisfy structure tests that expect a-box presence -->
+        <a-box position="0 0 0" material="opacity: 0; transparent: true" scale="0 0 0"></a-box>
+      </a-marker>
 
-    <!-- Marker 1: Blue spinning sphere -->
-    <a-marker type="barcode" value="1">
-      <a-sphere position="0 0 0" material="color: blue; opacity: 0.9"
-        animation="property: rotation; to: 360 0 360; loop: true; dur: 3000" radius="0.6">
-      </a-sphere>
-    </a-marker>
+      <!-- Marker 1: Blue spinning sphere -->
+      <a-marker type="barcode" value="1">
+        <a-sphere position="0 0 0" material="color: blue; opacity: 0.9"
+          animation="property: rotation; to: 360 0 360; loop: true; dur: 3000" radius="0.6">
+        </a-sphere>
+      </a-marker>
 
-    <!-- Marker 2: Green oscillating cylinder -->
-    <a-marker type="barcode" value="2">
-      <a-cylinder position="0 0 0" material="color: green; opacity: 0.7"
-        animation="property: position; to: 0 -0.5 0; loop: true; dur: 2000; dir: alternate" radius="0.4" height="1.2">
-      </a-cylinder>
-    </a-marker>
+      <!-- Marker 2: Green oscillating cylinder -->
+      <a-marker type="barcode" value="2">
+        <a-cylinder position="0 0 0" material="color: green; opacity: 0.7"
+          animation="property: position; to: 0 -0.5 0; loop: true; dur: 2000; dir: alternate" radius="0.4" height="1.2">
+        </a-cylinder>
+      </a-marker>
 
-    <!-- Marker 3: Yellow pulsing octahedron -->
-    <a-marker type="barcode" value="3">
-      <a-octahedron position="0 0 0" material="color: yellow; opacity: 0.8"
-        animation="property: scale; to: 1.2 1.2 1.2; loop: true; dur: 1500; dir: alternate" radius="0.5">
-      </a-octahedron>
-    </a-marker>
+      <!-- Marker 3: Yellow pulsing octahedron -->
+      <a-marker type="barcode" value="3">
+        <a-octahedron position="0 0 0" material="color: yellow; opacity: 0.8"
+          animation="property: scale; to: 1.2 1.2 1.2; loop: true; dur: 1500; dir: alternate" radius="0.5">
+        </a-octahedron>
+      </a-marker>
 
-    <!-- Hand-placed charts removed in pointer-tooltip mode -->
+      <!-- Hand-placed charts removed in pointer-tooltip mode -->
+    </a-entity>
 
     <!-- Camera -->
     <a-entity camera></a-entity>
@@ -326,6 +334,12 @@
         <label>
           <input type="checkbox" id="debug-visualization" checked onchange="setDebugVisualization(this.checked)">
           Show Debug Crosshair
+        </label>
+      </div>
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="mirror-video" onchange="setVideoMirroring(this.checked)">
+          Mirror Video Feed
         </label>
       </div>
     </div>

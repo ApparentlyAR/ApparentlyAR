@@ -43,6 +43,9 @@ class HandTracking {
     /** @type {boolean} Debug visualization enabled */
     this.debugVisualization = true;
 
+    /** @type {boolean} Video feed mirroring enabled */
+    this.videoMirrored = false;
+
     /** @type {Object|null} Last raycast hit for debugging */
     this.lastRaycastHit = null;
     // Tooltip locking removed per UI request (no pinch behavior)
@@ -243,9 +246,11 @@ class HandTracking {
           // IMPROVED: Direct conversion from MediaPipe normalized coords to NDC
           // MediaPipe: x,y in [0,1], origin top-left
           // NDC: x,y in [-1,1], origin center
-          // Selfie mode is already handled by MediaPipe, so we mirror X
-          let ndcX = (1 - tip.x) * 2 - 1;  // Mirror for selfie mode: (1-x) maps [0,1] to [1,0], then to [1,-1]
-          let ndcY = -(tip.y * 2 - 1);     // Flip Y: screen Y down = NDC Y up
+          // When video is CSS-mirrored, coordinates don't need the selfie mode flip
+          let ndcX = this.videoMirrored
+            ? tip.x * 2 - 1              // Video mirrored: use direct mapping
+            : (1 - tip.x) * 2 - 1;       // Normal: mirror for selfie mode
+          let ndcY = -(tip.y * 2 - 1);   // Flip Y: screen Y down = NDC Y up
 
           // Apply calibration offset if coordinate system is available
           if (this.coordinateSystem) {
@@ -343,7 +348,9 @@ class HandTracking {
    */
   drawDebugVisualization(ctx, tip, canvas, uv, markerId, camera, planeEntity) {
     // Calculate screen position of finger tip
-    const screenX = (1 - tip.x) * canvas.width;
+    const screenX = this.videoMirrored
+      ? tip.x * canvas.width              // Video mirrored: use direct mapping
+      : (1 - tip.x) * canvas.width;       // Normal: mirror for selfie mode
     const screenY = tip.y * canvas.height;
 
     // 1. Draw projected chart plane boundary (yellow dashed)
@@ -546,6 +553,27 @@ class HandTracking {
   setDebugVisualization(enabled) {
     this.debugVisualization = enabled;
     console.log(`Debug visualization: ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
+   * Toggle video mirroring
+   *
+   * @param {boolean} mirrored - Enable mirror mode
+   */
+  setVideoMirroring(mirrored) {
+    this.videoMirrored = mirrored;
+
+    // Apply/remove CSS class to video element
+    const video = document.querySelector('video');
+    if (video) {
+      if (mirrored) {
+        video.classList.add('mirrored');
+      } else {
+        video.classList.remove('mirrored');
+      }
+    }
+
+    console.log(`Video mirroring: ${mirrored ? 'enabled' : 'disabled'}`);
   }
 
   /**

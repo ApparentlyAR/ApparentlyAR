@@ -29,6 +29,11 @@ class HybridARController {
     // Make functions available globally for HTML onclick handlers
     window.selectChart = this.selectChart;
     window.setDebugVisualization = (enabled) => this.handTracking.setDebugVisualization(enabled);
+    window.setVideoMirroring = (mirrored) => {
+      this.handTracking.setVideoMirroring(mirrored);
+      this.gestureDetector.setVideoMirroring(mirrored);
+      this.mirrorARWorld(mirrored);
+    };
     window.setCalibration = (x, y) => this.coordinateSystem.setCalibration(x, y);
     window.resetCalibration = () => this.coordinateSystem.resetCalibration();
   }
@@ -240,7 +245,7 @@ class HybridARController {
 
   /**
    * Update status display
-   * 
+   *
    * @param {string} message - Status message
    * @param {string} type - Status type ('ready', 'detecting', 'error')
    */
@@ -248,6 +253,26 @@ class HybridARController {
     const statusEl = document.getElementById('status');
     statusEl.textContent = message;
     statusEl.className = `status ${type}`;
+  }
+
+  /**
+   * Mirror the entire AR world (all markers) at scene level
+   * This fixes position, rotation, and visual inversion issues
+   *
+   * @param {boolean} mirrored - Enable mirror mode
+   */
+  mirrorARWorld(mirrored) {
+    const arWorld = document.getElementById('ar-world');
+    if (!arWorld) {
+      console.warn('ar-world entity not found');
+      return;
+    }
+
+    // Apply scale to entire AR world to mirror marker tracking
+    const scaleX = mirrored ? -1 : 1;
+    arWorld.setAttribute('scale', `${scaleX} 1 1`);
+
+    console.log(`AR world mirroring: ${mirrored ? 'enabled' : 'disabled'}`);
   }
 
   /**

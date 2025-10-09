@@ -10,12 +10,15 @@ class GestureDetector {
   constructor() {
     /** @type {number} Pinch detection thresholds */
     this.PINCH_THRESHOLD = 0.05;
-    
+
     /** @type {boolean} Pinch state tracking */
     this.isPinching = false;
-    
+
     /** @type {Object|null} Currently selected chart */
     this.selectedChart = null;
+
+    /** @type {boolean} Video feed mirroring enabled */
+    this.videoMirrored = false;
   }
 
   /**
@@ -28,17 +31,19 @@ class GestureDetector {
     ctx.strokeStyle = '#00FF00';
     ctx.lineWidth = 2;
     ctx.fillStyle = '#FF0000';
-    
+
     // Draw landmarks
     for (let i = 0; i < landmarks.length; i++) {
-      const x = (1 - landmarks[i].x) * ctx.canvas.width;
+      const x = this.videoMirrored
+        ? landmarks[i].x * ctx.canvas.width              // Video mirrored: use direct mapping
+        : (1 - landmarks[i].x) * ctx.canvas.width;       // Normal: mirror for selfie mode
       const y = landmarks[i].y * ctx.canvas.height;
-      
+
       ctx.beginPath();
       ctx.arc(x, y, 3, 0, 2 * Math.PI);
       ctx.fill();
     }
-    
+
     // Draw connections
     const connections = [
       [0, 1], [1, 2], [2, 3], [3, 4],
@@ -47,14 +52,18 @@ class GestureDetector {
       [0, 13], [13, 14], [14, 15], [15, 16],
       [0, 17], [17, 18], [18, 19], [19, 20]
     ];
-    
+
     ctx.beginPath();
     for (const [start, end] of connections) {
-      const startX = (1 - landmarks[start].x) * ctx.canvas.width;
+      const startX = this.videoMirrored
+        ? landmarks[start].x * ctx.canvas.width          // Video mirrored: use direct mapping
+        : (1 - landmarks[start].x) * ctx.canvas.width;   // Normal: mirror for selfie mode
       const startY = landmarks[start].y * ctx.canvas.height;
-      const endX = (1 - landmarks[end].x) * ctx.canvas.width;
+      const endX = this.videoMirrored
+        ? landmarks[end].x * ctx.canvas.width            // Video mirrored: use direct mapping
+        : (1 - landmarks[end].x) * ctx.canvas.width;     // Normal: mirror for selfie mode
       const endY = landmarks[end].y * ctx.canvas.height;
-      
+
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
     }
@@ -91,9 +100,11 @@ class GestureDetector {
   handlePinchGesture(landmarks, handCharts, coordinateSystem) {
     const palmCenter = landmarks[9];
     const canvas = document.getElementById('hand-overlay');
-    
-    const x = (1 - palmCenter.x) * canvas.width;
-    const y = palmCenter.y * canvas.height; // Remove Y inversion - MediaPipe Y matches screen Y
+
+    const x = this.videoMirrored
+      ? palmCenter.x * canvas.width              // Video mirrored: use direct mapping
+      : (1 - palmCenter.x) * canvas.width;       // Normal: mirror for selfie mode
+    const y = palmCenter.y * canvas.height;      // Y coordinate unchanged
     
     if (!this.isPinching) {
       // Start pinching - try to select a chart
@@ -179,6 +190,16 @@ class GestureDetector {
   reset() {
     this.isPinching = false;
     this.selectedChart = null;
+  }
+
+  /**
+   * Toggle video mirroring
+   *
+   * @param {boolean} mirrored - Enable mirror mode
+   */
+  setVideoMirroring(mirrored) {
+    this.videoMirrored = mirrored;
+    console.log(`GestureDetector video mirroring: ${mirrored ? 'enabled' : 'disabled'}`);
   }
 }
 
