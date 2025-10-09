@@ -7,6 +7,10 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
   <title>ApparentlyAR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+    rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -46,7 +50,6 @@
   <script src="../src/blocks/csv_import.js"></script>
   <script src="../src/blocks/to_json.js"></script>
   <script src="../src/blocks/data_ops.js"></script>
-  <script src="../src/blocks/statistics.js"></script>
   <script>
     // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -203,6 +206,38 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+    
+    /* Header styles to override dark theme */
+    header {
+      background-color: #ffffff !important;
+      border-bottom: 1px solid #e5e7eb !important;
+    }
+    
+    header h1 {
+      color: #1f2937 !important;
+    }
+    
+    header .dropdown-toggle {
+      color: #6b7280 !important;
+    }
+    
+    header .dropdown-toggle:hover {
+      color: #374151 !important;
+    }
+    
+    #user-menu {
+      background-color: #ffffff !important;
+      border: 1px solid #e5e7eb !important;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    #user-menu a {
+      color: #374151 !important;
+    }
+    
+    #user-menu a:hover {
+      background-color: #f9fafb !important;
+    }
   </style>
 </head>
 
@@ -220,51 +255,48 @@
       style="grid-row: 2; grid-column: 3; margin-left: -4px; z-index: 10;"></div>
     <!-- Topbar -->
     <header style="grid-area: topbar"
-      class="flex items-center gap-3 px-3 py-2 bg-gradient-to-b from-[#151a2a] to-[#111624] border-b border-border">
-      <div class="flex items-center gap-2 font-bold">
-        <div
-          class="w-6 h-6 rounded-md bg-gradient-to-br from-accent to-[#b28bff] grid place-items-center text-[#0a0d18] text-xs">
-          AR
+      class="bg-white shadow-sm">
+      <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center gap-4">
+            <!-- Breadcrumb Menu -->
+            <nav class="flex items-center space-x-2 text-sm">
+              <a href="teacher-dashboard.html" class="text-gray-500 hover:text-gray-700">My Projects</a>
+              <span class="text-gray-400">></span>
+              <span class="text-gray-900 font-medium">[Project Name]</span>
+              <span class="text-gray-400">></span>
+              <span class="text-blue-600 font-medium">Simulation</span>
+            </nav>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <!-- Control Buttons -->
+            <button id="show-code-btn" onclick="showBlocklyCode()" 
+              class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 hover:bg-panel2 transition-colors">
+              Show Code
+            </button>
+            <button id="run-blockly-btn" onclick="executeBlocklyCode()" 
+              class="rounded-lg border border-[#2a4bff] bg-gradient-to-b from-[#2a4bff] to-[#2140d9] text-white text-sm px-3 py-1.5 flex items-center gap-2">
+              <div id="run-spinner" class="hidden animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+              <span id="run-text">Run Blockly</span>
+            </button>
+            <button id="enter-ar-btn" onclick="window.location.href='ar-demo.html'"
+              class="rounded-lg border border-[#2a4bff] bg-gradient-to-b from-[#2a4bff] to-[#2140d9] text-white text-sm px-3 py-1.5">
+              Enter AR
+            </button>
+            
+            <!-- User Menu -->
+            <div class="relative">
+              <button onclick="toggleUserMenu(event)" type="button" class="dropdown-toggle p-1 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </button>
+              
+              <div id="user-menu" class="project-dropdown hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20">
+                <a href="#" onclick="logout(event)" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+              </div>
+            </div>
+          </div>
         </div>
-        <span>ApparentlyAR</span>
-      </div>
-      <div class="w-px h-7 bg-border mx-2"></div>
-
-      <div class="flex items-center gap-2">
-        <span class="text-sm text-muted">Project:</span>
-        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
-          My AR Viz
-        </button>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
-          Student
-        </button>
-        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
-          Teacher
-        </button>
-      </div>
-
-
-      <div class="w-px h-7 bg-border mx-2"></div>
-
-      <!-- React Button Panel Mount Point -->
-      <div id="buttons-root" class="flex items-center gap-2"></div>
-
-
-      <div class="ml-auto flex items-center gap-2">
-        <button
-          class="rounded-lg border border-accent bg-accent/10 text-accent text-sm px-3 py-1.5 hover:bg-accent/20 transition-colors font-medium"
-          onclick="window.location.href='/hybrid-ar'">
-          Enter AR
-        </button>
-        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
-          Simulate
-        </button>
-        <button class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5">
-          Snapshot
-        </button>
       </div>
     </header>
 
@@ -343,48 +375,6 @@
             </value>
           </block>
           <block type="drop_empty">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-        </category>
-        <category name="Statistical Analysis" colour="40">
-          <block type="descriptive_stats">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="calculate_mean">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="calculate_median">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="calculate_std">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="calculate_correlation">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="detect_outliers">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="frequency_count">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="calculate_percentiles">
             <value name="DATA">
               <block type="csv_import"></block>
             </value>
@@ -799,10 +789,36 @@
       if (window.reactSetError) window.reactSetError(false);
     };
 
+    // --- Universal Dropdown Logic ---
+    function closeAllDropdowns() {
+      document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
+    }
+    function toggleUserMenu(event) {
+      event.stopPropagation();
+      const menu = document.getElementById('user-menu');
+      const isHidden = menu.classList.contains('hidden');
+      closeAllDropdowns();
+      if (isHidden) menu.classList.remove('hidden');
+    }
+    function logout(event) {
+      event.preventDefault();
+      console.log("User logged out.");
+      window.location.href = '/';
+    }
+    window.addEventListener('click', function (event) {
+      if (!event.target.closest('.dropdown-toggle')) {
+        closeAllDropdowns();
+      }
+    });
+
+    // Initialize the header after the page has loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      // Header is now integrated directly in the HTML, no need to fetch
+    });
   </script>
 
-  <!-- Include React bundle -->
-  <script src="react-bundle.js"></script>
+  <!-- Include component scripts -->
+  <script src="components.js"></script>
 </body>
 
 </html>
