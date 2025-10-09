@@ -29,6 +29,9 @@ class ChartManager {
     /** @type {CoordinateSystem} Coordinate conversion utility */
     this.coordinateSystem = coordinateSystem;
 
+    /** @type {Object<string, {canvas: HTMLCanvasElement, chart: any, entity: any}>} Per-marker chart state */
+    this.markerCharts = {};
+
     /**
      * Sample datasets for chart generation
      */
@@ -55,6 +58,215 @@ class ChartManager {
         { product: 'Phone', sales: 180, revenue: 108000, region: 'South' }
       ]
     };
+  }
+
+  /**
+   * Create or update a chart anchored to a specific AR.js marker.
+   * The chart type and dataset must be provided. Subsequent calls update
+   * the existing canvas texture and reuse the plane entity.
+   *
+   * @param {string} markerId - DOM id of the <a-marker> (e.g., 'marker-0')
+   * @param {string} chartType - Chart.js type ('bar' | 'line' | 'pie' | 'scatter')
+   * @param {string} datasetName - One of sample datasets keys ('students'|'weather'|'sales')
+   */
+  createOrUpdateMarkerChart(markerId, chartType, datasetName) {
+    const marker = document.getElementById(markerId);
+    if (!marker) {
+      console.warn(`Marker not found: ${markerId}`);
+      return;
+    }
+
+    const assets = document.querySelector('a-assets');
+    if (!assets) {
+      console.warn('No <a-assets> found for chart textures');
+      return;
+    }
+
+    const key = markerId;
+    const existing = this.markerCharts[key];
+    const canvasId = `marker-chart-${markerId}`;
+
+    // Ensure canvas exists
+    let canvas = existing?.canvas || document.getElementById(canvasId);
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.id = canvasId;
+      canvas.width = 400;
+      canvas.height = 300;
+      assets.appendChild(canvas);
+    }
+
+    // (Re)generate Chart.js on the canvas
+    if (existing?.chart) {
+      try { existing.chart.destroy(); } catch (_) {}
+    }
+    const chart = this.generateChart(canvas, chartType, this.sampleData[datasetName]);
+
+    // Ensure a plane entity exists under the marker and points to our canvas
+    let entity = existing?.entity || marker.querySelector('[data-marker-chart]');
+    if (!entity) {
+      entity = document.createElement('a-plane');
+      entity.setAttribute('data-marker-chart', '');
+      entity.setAttribute('width', '4');
+      entity.setAttribute('height', '3');
+      // Keep it slightly above marker origin to avoid z-fighting with marker plane
+      entity.setAttribute('position', '0 2 0');
+      marker.appendChild(entity);
+    }
+    entity.setAttribute('material', `shader: flat; src: #${canvas.id}; transparent: true; side: double`);
+    // Force the underlying texture to refresh after canvas redraw
+    this.forceMaterialRefresh(entity);
+
+    // Save state
+    this.markerCharts[key] = { canvas, chart, entity };
+
+    // Log for debugging
+    console.log(`Marker chart updated on ${markerId}: ${chartType} using ${datasetName}`);
+  }
+
+  /**
+   * Ensure A-Frame updates the CanvasTexture after we redraw the canvas.
+   * @param {Element} entity - A-Frame entity with material component
+   */
+  forceMaterialRefresh(entity) {
+    const mesh = entity.getObject3D && entity.getObject3D('mesh');
+    if (mesh) {
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      materials.forEach((m) => {
+        if (m && m.map) {
+          m.map.needsUpdate = true;
+        }
+        if (m) {
+          m.needsUpdate = true;
+        }
+      });
+    } else {
+      // As a fallback, toggle the material src attribute to force a refresh
+      const current = entity.getAttribute('material')?.src;
+      if (current) {
+        entity.setAttribute('material', 'src', null);
+        setTimeout(() => entity.setAttribute('material', 'src', current), 0);
+      }
+    }
+  }
+
+  /**
+   * Helper to read control panel selections and update marker 0 chart.
+   * @param {string} markerId
+   */
+  updateMarkerChartFromControls(markerId = 'marker-0') {
+    const typeSel = document.getElementById('chart-type');
+    const dataSel = document.getElementById('sample-data');
+    const chartType = typeSel ? typeSel.value : 'bar';
+    const datasetName = dataSel ? dataSel.value : 'students';
+    this.createOrUpdateMarkerChart(markerId, chartType, datasetName);
+  }
+
+  /**
+   * Drive Chart.js tooltip on a marker-anchored chart using an A-Frame UV hit.
+   * Pass null/undefined uv to hide the tooltip.
+   * @param {string} markerId
+   * @param {{x:number,y:number}|null} uv
+   */
+  showMarkerTooltipAtUV(markerId, uv) {
+    const entry = this.markerCharts?.[markerId];
+    if (!entry || !entry.chart || !entry.canvas) return;
+    const { chart, canvas, entity } = entry;
+
+    if (!uv) {
+      try {
+        chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+        chart.update('none');
+        this.forceMaterialRefresh(entity);
+      } catch (_) {}
+      return;
+    }
+
+    // CRITICAL FIX: Map UV to actual chart area (excludes padding/margins)
+    // Chart.js renders the chart within a smaller area due to legends, titles, padding
+    const chartArea = chart.chartArea;
+
+    // If chart isn't fully initialized yet, use fallback to full canvas
+    if (!chartArea || !chartArea.left || !chartArea.right || !chartArea.top || !chartArea.bottom) {
+      console.warn('Chart area not available, using full canvas mapping');
+      const x = uv.x * canvas.width;
+      const y = (1 - uv.y) * canvas.height;
+      const pos = { x, y };
+
+      // Early exit with basic mapping
+      const MAX_DISTANCE_THRESHOLD = 20;
+      return this.findAndActivateTooltip(chart, entity, pos, MAX_DISTANCE_THRESHOLD);
+    }
+
+    // Map UV coordinates (0-1) to the actual chart rendering area
+    // chartArea = { left, right, top, bottom } in canvas pixels
+    const x = chartArea.left + uv.x * (chartArea.right - chartArea.left);
+    const y = chartArea.top + (1 - uv.y) * (chartArea.bottom - chartArea.top); // flip V to canvas Y
+    const pos = { x, y };
+
+    // Maximum distance threshold (in pixels) for tooltip activation
+    const MAX_DISTANCE_THRESHOLD = 50;
+
+    this.findAndActivateTooltip(chart, entity, pos, MAX_DISTANCE_THRESHOLD);
+  }
+
+  /**
+   * Find nearest chart element and activate tooltip
+   * Extracted as separate method for clarity
+   *
+   * @param {Chart} chart - Chart.js instance
+   * @param {Element} entity - A-Frame entity
+   * @param {Object} pos - Canvas position {x, y}
+   * @param {number} maxDistance - Maximum distance threshold
+   */
+  findAndActivateTooltip(chart, entity, pos, maxDistance) {
+    try {
+      // Manually find nearest element to avoid needing a DOM event
+      const active = [];
+      const metas = chart.getSortedVisibleDatasetMetas ? chart.getSortedVisibleDatasetMetas() :
+        chart.data.datasets.map((_, idx) => chart.getDatasetMeta(idx)).filter(m => !m.hidden);
+
+      let best = { dist2: Infinity, datasetIndex: -1, index: -1 };
+      metas.forEach((meta) => {
+        const dsIndex = meta.index != null ? meta.index : meta.dataset?.index; // fallback
+        (meta.data || []).forEach((el, i) => {
+          const p = (typeof el.getProps === 'function') ? el.getProps(['x', 'y'], true) : el;
+          const ex = p.x, ey = p.y;
+
+          // Priority 1: Exact in-range hit (uses Chart.js built-in hit testing)
+          if (typeof el.inRange === 'function' && el.inRange(pos.x, pos.y, 'nearest')) {
+            const d2 = 0; // In-range hits have priority (distance = 0)
+            if (d2 <= best.dist2) {
+              best = { dist2: d2, datasetIndex: dsIndex ?? meta._datasetIndex ?? 0, index: i };
+            }
+          }
+          // Priority 2: Distance-based hit, but only within threshold
+          else if (Number.isFinite(ex) && Number.isFinite(ey)) {
+            const dx = pos.x - ex;
+            const dy = pos.y - ey;
+            const d2 = dx * dx + dy * dy;
+            const distance = Math.sqrt(d2);
+
+            // Only consider elements within the distance threshold
+            if (distance <= maxDistance && d2 < best.dist2) {
+              best = { dist2: d2, datasetIndex: dsIndex ?? meta._datasetIndex ?? 0, index: i };
+            }
+          }
+        });
+      });
+
+      // Only activate tooltip if we found an element within threshold
+      if (best.datasetIndex >= 0 && best.dist2 <= maxDistance * maxDistance) {
+        active.push({ datasetIndex: best.datasetIndex, index: best.index });
+      }
+
+      chart.tooltip.setActiveElements(active, pos);
+      chart.update('none');
+      this.forceMaterialRefresh(entity);
+    } catch (e) {
+      // Silently ignore tooltip errors to avoid breaking AR loop
+      console.warn('Tooltip error:', e);
+    }
   }
 
   /**
@@ -186,17 +398,48 @@ class ChartManager {
    */
   generateChart(canvas, type, data) {
     const ctx = canvas.getContext('2d');
-    
+
     let chartConfig = {
       type: type,
       data: {},
       options: {
         responsive: false,
         animation: false,
+        layout: {
+          padding: {
+            top: 5,
+            right: 5,
+            bottom: 5,
+            left: 5
+          }
+        },
         plugins: {
-          legend: { display: true },
-          title: { display: true, text: `${type.toUpperCase()} Chart` }
-        }
+          legend: {
+            display: true,
+            labels: {
+              padding: 5,
+              boxWidth: 12
+            }
+          },
+          title: {
+            display: true,
+            text: `${type.toUpperCase()} Chart`,
+            padding: {
+              top: 5,
+              bottom: 5
+            }
+          }
+        },
+        scales: type === 'bar' || type === 'line' || type === 'scatter' ? {
+          x: {
+            grid: { display: true },
+            ticks: { padding: 2 }
+          },
+          y: {
+            grid: { display: true },
+            ticks: { padding: 2 }
+          }
+        } : undefined
       }
     };
     

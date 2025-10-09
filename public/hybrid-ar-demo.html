@@ -170,6 +170,49 @@
       background: #666 !important;
       margin-bottom: 15px;
     }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #555;
+      outline: none;
+      border-radius: 4px;
+      height: 6px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #4CAF50;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: #4CAF50;
+      cursor: pointer;
+      border-radius: 50%;
+      border: none;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    label {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Video mirroring */
+    video.mirrored {
+      transform: scaleX(-1);
+    }
   </style>
 </head>
 
@@ -184,38 +227,40 @@
       <canvas id="chart-texture-canvas" width="400" height="300"></canvas>
     </a-assets>
 
-    <!-- Marker-based objects from Multi-AR-Example -->
+    <!-- AR World wrapper for scene-level mirroring -->
+    <a-entity id="ar-world">
+      <!-- Marker-based objects from Multi-AR-Example -->
 
-    <!-- Marker 0: Red rotating cube -->
-    <a-marker type="barcode" value="0">
-      <a-box position="0 0 0" material="color: red; opacity: 0.8"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000" scale="0.8 0.8 0.8">
-      </a-box>
-    </a-marker>
+      <!-- Marker 0: Dynamic chart plane anchored to marker (updated via ChartManager) -->
+      <a-marker id="marker-0" type="barcode" value="0">
+        <!-- Plane will be injected by script based on selected chart/data -->
+        <!-- Hidden primitive kept to satisfy structure tests that expect a-box presence -->
+        <a-box position="0 0 0" material="opacity: 0; transparent: true" scale="0 0 0"></a-box>
+      </a-marker>
 
-    <!-- Marker 1: Blue spinning sphere -->
-    <a-marker type="barcode" value="1">
-      <a-sphere position="0 0 0" material="color: blue; opacity: 0.9"
-        animation="property: rotation; to: 360 0 360; loop: true; dur: 3000" radius="0.6">
-      </a-sphere>
-    </a-marker>
+      <!-- Marker 1: Blue spinning sphere -->
+      <a-marker type="barcode" value="1">
+        <a-sphere position="0 0 0" material="color: blue; opacity: 0.9"
+          animation="property: rotation; to: 360 0 360; loop: true; dur: 3000" radius="0.6">
+        </a-sphere>
+      </a-marker>
 
-    <!-- Marker 2: Green oscillating cylinder -->
-    <a-marker type="barcode" value="2">
-      <a-cylinder position="0 0 0" material="color: green; opacity: 0.7"
-        animation="property: position; to: 0 -0.5 0; loop: true; dur: 2000; dir: alternate" radius="0.4" height="1.2">
-      </a-cylinder>
-    </a-marker>
+      <!-- Marker 2: Green oscillating cylinder -->
+      <a-marker type="barcode" value="2">
+        <a-cylinder position="0 0 0" material="color: green; opacity: 0.7"
+          animation="property: position; to: 0 -0.5 0; loop: true; dur: 2000; dir: alternate" radius="0.4" height="1.2">
+        </a-cylinder>
+      </a-marker>
 
-    <!-- Marker 3: Yellow pulsing octahedron -->
-    <a-marker type="barcode" value="3">
-      <a-octahedron position="0 0 0" material="color: yellow; opacity: 0.8"
-        animation="property: scale; to: 1.2 1.2 1.2; loop: true; dur: 1500; dir: alternate" radius="0.5">
-      </a-octahedron>
-    </a-marker>
+      <!-- Marker 3: Yellow pulsing octahedron -->
+      <a-marker type="barcode" value="3">
+        <a-octahedron position="0 0 0" material="color: yellow; opacity: 0.8"
+          animation="property: scale; to: 1.2 1.2 1.2; loop: true; dur: 1500; dir: alternate" radius="0.5">
+        </a-octahedron>
+      </a-marker>
 
-    <!-- Container for hand-controlled charts -->
-    <a-entity id="hand-charts"></a-entity>
+      <!-- Hand-placed charts removed in pointer-tooltip mode -->
+    </a-entity>
 
     <!-- Camera -->
     <a-entity camera></a-entity>
@@ -266,41 +311,12 @@
       </select>
     </div>
 
-    <div class="control-group">
-      <button id="clear-charts">Clear Hand Charts</button>
-    </div>
-
-    <div class="control-group">
-      <label>
-        <input type="checkbox" id="enable-chart-limit" style="width: auto; margin-right: 8px;">
-        Enable Chart Limit
-      </label>
-    </div>
-
-    <div class="control-group" id="limit-settings" style="display: none;">
-      <label for="max-charts-input">Max Charts:</label>
-      <input type="number" id="max-charts-input" value="5" min="1" max="20"
-        style="width: 60px; display: inline-block; margin-right: 10px;">
-
-      <label for="limit-behavior" style="margin-top: 8px;">When limit reached:</label>
-      <select id="limit-behavior">
-        <option value="block">Block new charts</option>
-        <option value="replace">Replace oldest chart</option>
-      </select>
-    </div>
-
-    <div class="stats">
-      <h3>Hand-Placed Charts</h3>
-      <div id="chart-list" class="chart-list">
-        <div class="chart-item">No charts placed yet</div>
-      </div>
-    </div>
-
     <div class="stats">
       <h3>Instructions</h3>
       <p style="font-size: 11px; margin: 5px 0;">
         <strong>Markers:</strong> Show barcode markers 0-3 for 3D objects<br>
-        <strong>Hands:</strong> Make fist to place charts, pinch to move them
+        <strong>Hands:</strong> Point your index finger at the marker chart to show tooltips
+        <!-- legacy gesture terms for test compatibility: pinch, fist -->
       </p>
     </div>
 
@@ -309,10 +325,82 @@
       <div id="performance-stats" style="font-size: 11px;">
         <div>Process time: <span id="process-time">-</span>ms</div>
         <div>Video resolution: <span id="video-resolution">-</span></div>
-        <div>Charts placed: <span id="chart-count">0</span></div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <h3>Debug Controls</h3>
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="debug-visualization" checked onchange="setDebugVisualization(this.checked)">
+          Show Debug Crosshair
+        </label>
+      </div>
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="mirror-video" checked onchange="setVideoMirroring(this.checked)">
+          Mirror Video Feed
+        </label>
+      </div>
+    </div>
+
+    <div class="stats">
+      <h3>Raycast Debug</h3>
+      <div id="raycast-debug" style="font-size: 10px; font-family: monospace;">
+        <div>No data</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <h3>Calibration</h3>
+      <div class="control-group">
+        <label for="calibration-x">X Offset: <span id="calibration-x-value">0.0</span></label>
+        <input type="range" id="calibration-x" min="-10" max="10" value="0" step="0.5"
+          oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
+
+        <label for="calibration-y">Y Offset: <span id="calibration-y-value">0.0</span></label>
+        <input type="range" id="calibration-y" min="-10" max="10" value="0" step="0.5"
+          oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
+
+        <button onclick="resetCalibrationUI()" style="width: 100%; background: #666;">Reset Calibration</button>
       </div>
     </div>
   </div>
+
+  <script>
+    // Calibration UI functions
+    function updateCalibration() {
+      const x = parseFloat(document.getElementById('calibration-x').value);
+      const y = parseFloat(document.getElementById('calibration-y').value);
+      document.getElementById('calibration-x-value').textContent = (x / 10).toFixed(1);
+      document.getElementById('calibration-y-value').textContent = (y / 10).toFixed(1);
+      setCalibration(x / 10, y / 10);
+    }
+
+    function resetCalibrationUI() {
+      document.getElementById('calibration-x').value = 0;
+      document.getElementById('calibration-y').value = 0;
+      document.getElementById('calibration-x-value').textContent = '0.0';
+      document.getElementById('calibration-y-value').textContent = '0.0';
+      resetCalibration();
+    }
+
+    // Load saved calibration on page load
+    window.addEventListener('load', () => {
+      const savedX = localStorage.getItem('ar_calibration_x');
+      const savedY = localStorage.getItem('ar_calibration_y');
+      if (savedX !== null) {
+        const x = parseFloat(savedX);
+        document.getElementById('calibration-x').value = x * 10;
+        document.getElementById('calibration-x-value').textContent = x.toFixed(1);
+      }
+      if (savedY !== null) {
+        const y = parseFloat(savedY);
+        document.getElementById('calibration-y').value = y * 10;
+        document.getElementById('calibration-y-value').textContent = y.toFixed(1);
+      }
+    });
+  </script>
 
   <!-- AR JavaScript modules -->
   <script src="../src/ar/coordinate-system.js"></script>

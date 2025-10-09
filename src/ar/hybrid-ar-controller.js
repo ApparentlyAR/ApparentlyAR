@@ -15,7 +15,8 @@ class HybridARController {
     this.handTracking = new HandTracking(
       this.gestureDetector,
       this.chartManager,
-      this.updateStatus.bind(this)
+      this.updateStatus.bind(this),
+      this.coordinateSystem
     );
 
     // Bind methods
@@ -24,9 +25,17 @@ class HybridARController {
     this.stopHandTracking = this.stopHandTracking.bind(this);
     this.clearHandCharts = this.clearHandCharts.bind(this);
     this.selectChart = this.selectChart.bind(this);
-    
-    // Make selectChart available globally for HTML onclick handlers
+
+    // Make functions available globally for HTML onclick handlers
     window.selectChart = this.selectChart;
+    window.setDebugVisualization = (enabled) => this.handTracking.setDebugVisualization(enabled);
+    window.setVideoMirroring = (mirrored) => {
+      this.handTracking.setVideoMirroring(mirrored);
+      this.gestureDetector.setVideoMirroring(mirrored);
+      this.mirrorARWorld(mirrored);
+    };
+    window.setCalibration = (x, y) => this.coordinateSystem.setCalibration(x, y);
+    window.resetCalibration = () => this.coordinateSystem.resetCalibration();
   }
 
   /**
@@ -35,19 +44,25 @@ class HybridARController {
   async init() {
     try {
       this.updateStatus('Initializing hybrid AR...', 'detecting');
-      
-      // Load chart limit settings from localStorage
-      this.loadChartLimitSettings();
-      
-      // Setup chart limit controls
-      this.setupChartLimitControls();
-      
+
       // Wait for AR.js to initialize and start camera
       await this.waitForArjsInit();
+
+      const mirrorCheckbox = document.getElementById('mirror-video');
+      if (mirrorCheckbox) {
+        mirrorCheckbox.checked = true;
+      }
+      const mirrorEnabled = true;
+      this.handTracking.setVideoMirroring(mirrorEnabled);
+      this.gestureDetector.setVideoMirroring(mirrorEnabled);
+      this.mirrorARWorld(mirrorEnabled);
       
       // Initialize MediaPipe
       await this.handTracking.initialize();
-      
+
+      // Initialize marker-anchored chart (marker 0) based on current controls
+      this.chartManager.updateMarkerChartFromControls('marker-0');
+
       this.updateStatus('Hybrid AR ready - markers active, start hand tracking when ready', 'ready');
       
     } catch (error) {
@@ -239,7 +254,7 @@ class HybridARController {
 
   /**
    * Update status display
-   * 
+   *
    * @param {string} message - Status message
    * @param {string} type - Status type ('ready', 'detecting', 'error')
    */
@@ -250,15 +265,55 @@ class HybridARController {
   }
 
   /**
+   * Mirror the entire AR world (all markers) at scene level
+   * This fixes position, rotation, and visual inversion issues
+   *
+   * @param {boolean} mirrored - Enable mirror mode
+   */
+  mirrorARWorld(mirrored) {
+    const arWorld = document.getElementById('ar-world');
+    if (!arWorld) {
+      console.warn('ar-world entity not found');
+      return;
+    }
+
+    // Apply scale to entire AR world to mirror marker tracking
+    const scaleX = mirrored ? -1 : 1;
+    arWorld.setAttribute('scale', `${scaleX} 1 1`);
+
+    console.log(`AR world mirroring: ${mirrored ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
    * Setup event listeners
    */
   setupEventListeners() {
     document.getElementById('start-hands').addEventListener('click', this.startHandTracking);
     document.getElementById('stop-hands').addEventListener('click', this.stopHandTracking);
-    document.getElementById('clear-charts').addEventListener('click', this.clearHandCharts);
+
+    const mirrorCheckbox = document.getElementById('mirror-video');
+    if (mirrorCheckbox) {
+      mirrorCheckbox.checked = true;
+      this.handTracking.setVideoMirroring(true);
+      this.gestureDetector.setVideoMirroring(true);
+      this.mirrorARWorld(true);
+    }
 
     // Monitor marker detection periodically
     setInterval(this.monitorMarkers.bind(this), 500);
+
+    // Update marker 0 chart when controls change
+    const typeSel = document.getElementById('chart-type');
+    const dataSel = document.getElementById('sample-data');
+    const handler = () => this.chartManager.updateMarkerChartFromControls('marker-0');
+    if (typeSel) {
+      typeSel.addEventListener('change', handler);
+      typeSel.addEventListener('input', handler);
+    }
+    if (dataSel) {
+      dataSel.addEventListener('change', handler);
+      dataSel.addEventListener('input', handler);
+    }
   }
 }
 
