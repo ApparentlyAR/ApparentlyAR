@@ -44,7 +44,7 @@ class HandTracking {
     this.debugVisualization = true;
 
     /** @type {boolean} Video feed mirroring enabled */
-    this.videoMirrored = false;
+    this.videoMirrored = true;
 
     /** @type {Object|null} Last raycast hit for debugging */
     this.lastRaycastHit = null;
@@ -136,6 +136,12 @@ class HandTracking {
       
       this.setupHandOverlay();
       window.addEventListener('resize', this.setupHandOverlay.bind(this));
+
+      if (this.videoMirrored) {
+        video.classList.add('mirrored');
+      } else {
+        video.classList.remove('mirrored');
+      }
 
       // Use requestAnimationFrame for processing instead of Camera class
       // to avoid conflicts with AR.js video handling
@@ -353,94 +359,9 @@ class HandTracking {
       : (1 - tip.x) * canvas.width;       // Normal: mirror for selfie mode
     const screenY = tip.y * canvas.height;
 
-    // 1. Draw projected chart plane boundary (yellow dashed)
+    // 1. Project chart plane corners for UV mapping (no outline rendering)
     const projectedCorners = this.projectPlaneToScreen(camera, planeEntity, canvas);
-    if (projectedCorners && projectedCorners[0].visible) {
-      ctx.strokeStyle = '#FFFF00';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([10, 5]); // Dashed line
-      ctx.beginPath();
-      ctx.moveTo(projectedCorners[0].x, projectedCorners[0].y);
-      ctx.lineTo(projectedCorners[1].x, projectedCorners[1].y);
-      ctx.lineTo(projectedCorners[2].x, projectedCorners[2].y);
-      ctx.lineTo(projectedCorners[3].x, projectedCorners[3].y);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.setLineDash([]); // Reset
-
-      // Label corners with UV coordinates
-      ctx.fillStyle = '#FFFF00';
-      ctx.font = '9px monospace';
-      ctx.fillText('UV(0,1)', projectedCorners[0].x - 35, projectedCorners[0].y + 15);
-      ctx.fillText('UV(1,1)', projectedCorners[1].x + 5, projectedCorners[1].y + 15);
-      ctx.fillText('UV(1,0)', projectedCorners[2].x + 5, projectedCorners[2].y - 5);
-      ctx.fillText('UV(0,0)', projectedCorners[3].x - 35, projectedCorners[3].y - 5);
-
-      // Label plane boundary
-      const centerX = (projectedCorners[0].x + projectedCorners[2].x) / 2;
-      const topY = Math.min(projectedCorners[2].y, projectedCorners[3].y) - 15;
-      ctx.fillText('Canvas 400x300', centerX - 50, topY);
-    }
-
-    // 2. Draw chart area boundary (cyan solid) - nested inside plane
-    const chartEntry = this.chartManager?.markerCharts?.[markerId];
-    if (chartEntry && chartEntry.chart && chartEntry.chart.chartArea && projectedCorners) {
-      const chartArea = chartEntry.chart.chartArea;
-      const chartCanvas = chartEntry.canvas;
-
-      // Calculate chart area as percentage of full canvas
-      const leftPercent = chartArea.left / chartCanvas.width;
-      const rightPercent = chartArea.right / chartCanvas.width;
-      const topPercent = chartArea.top / chartCanvas.height;
-      const bottomPercent = chartArea.bottom / chartCanvas.height;
-
-      // Map percentages to projected plane space
-      const bl = projectedCorners[0]; // bottom-left
-      const br = projectedCorners[1]; // bottom-right
-      const tr = projectedCorners[2]; // top-right
-      const tl = projectedCorners[3]; // top-left
-
-      // Interpolate chart area corners within the projected plane
-      const chartCorners = [
-        { // Bottom-left of chart area
-          x: bl.x + (br.x - bl.x) * leftPercent,
-          y: bl.y + (tl.y - bl.y) * (1 - bottomPercent)
-        },
-        { // Bottom-right of chart area
-          x: bl.x + (br.x - bl.x) * rightPercent,
-          y: br.y + (tr.y - br.y) * (1 - bottomPercent)
-        },
-        { // Top-right of chart area
-          x: tl.x + (tr.x - tl.x) * rightPercent,
-          y: tl.y + (bl.y - tl.y) * topPercent
-        },
-        { // Top-left of chart area
-          x: tl.x + (tr.x - tl.x) * leftPercent,
-          y: tl.y + (bl.y - tl.y) * topPercent
-        }
-      ];
-
-      ctx.strokeStyle = '#00FFFF';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(chartCorners[0].x, chartCorners[0].y);
-      ctx.lineTo(chartCorners[1].x, chartCorners[1].y);
-      ctx.lineTo(chartCorners[2].x, chartCorners[2].y);
-      ctx.lineTo(chartCorners[3].x, chartCorners[3].y);
-      ctx.closePath();
-      ctx.stroke();
-
-      // Label chart area
-      ctx.fillStyle = '#00FFFF';
-      ctx.font = '9px monospace';
-      const chartWidth = Math.round(chartArea.right - chartArea.left);
-      const chartHeight = Math.round(chartArea.bottom - chartArea.top);
-      const chartCenterX = (chartCorners[0].x + chartCorners[2].x) / 2;
-      const chartTopY = Math.min(chartCorners[2].y, chartCorners[3].y) - 5;
-      ctx.fillText(`Chart Area ${chartWidth}x${chartHeight}px`, chartCenterX - 65, chartTopY);
-    }
-
-    // 3. Draw UV hit point (if hit detected)
+    // 2. Draw UV hit point (if hit detected)
     if (uv && projectedCorners) {
       const bl = projectedCorners[0];
       const br = projectedCorners[1];
@@ -483,7 +404,7 @@ class HandTracking {
       ctx.fillText(`${Math.round(distance)}px`, (screenX + hitX) / 2, (screenY + hitY) / 2 - 5);
     }
 
-    // 4. Draw crosshair at finger tip
+    // 3. Draw crosshair at finger tip
     ctx.strokeStyle = uv ? '#00FF00' : '#FF0000'; // Green if hit, red if miss
     ctx.lineWidth = 2;
 

@@ -18,7 +18,7 @@ class GestureDetector {
     this.selectedChart = null;
 
     /** @type {boolean} Video feed mirroring enabled */
-    this.videoMirrored = false;
+    this.videoMirrored = true;
   }
 
   /**

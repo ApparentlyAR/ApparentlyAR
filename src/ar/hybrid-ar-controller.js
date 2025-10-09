@@ -47,6 +47,15 @@ class HybridARController {
 
       // Wait for AR.js to initialize and start camera
       await this.waitForArjsInit();
+
+      const mirrorCheckbox = document.getElementById('mirror-video');
+      if (mirrorCheckbox) {
+        mirrorCheckbox.checked = true;
+      }
+      const mirrorEnabled = true;
+      this.handTracking.setVideoMirroring(mirrorEnabled);
+      this.gestureDetector.setVideoMirroring(mirrorEnabled);
+      this.mirrorARWorld(mirrorEnabled);
       
       // Initialize MediaPipe
       await this.handTracking.initialize();
@@ -281,6 +290,14 @@ class HybridARController {
   setupEventListeners() {
     document.getElementById('start-hands').addEventListener('click', this.startHandTracking);
     document.getElementById('stop-hands').addEventListener('click', this.stopHandTracking);
+
+    const mirrorCheckbox = document.getElementById('mirror-video');
+    if (mirrorCheckbox) {
+      mirrorCheckbox.checked = true;
+      this.handTracking.setVideoMirroring(true);
+      this.gestureDetector.setVideoMirroring(true);
+      this.mirrorARWorld(true);
+    }
 
     // Monitor marker detection periodically
     setInterval(this.monitorMarkers.bind(this), 500);
