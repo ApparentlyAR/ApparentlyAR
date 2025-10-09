@@ -194,7 +194,7 @@ class ChartManager {
       const pos = { x, y };
 
       // Early exit with basic mapping
-      const MAX_DISTANCE_THRESHOLD = 50;
+      const MAX_DISTANCE_THRESHOLD = 20;
       return this.findAndActivateTooltip(chart, entity, pos, MAX_DISTANCE_THRESHOLD);
     }
 

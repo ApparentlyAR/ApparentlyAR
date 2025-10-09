@@ -444,7 +444,7 @@ class HandTracking {
       const bottom = { x: bl.x + (br.x - bl.x) * uv.x, y: bl.y + (br.y - bl.y) * uv.x };
       const top = { x: tl.x + (tr.x - tl.x) * uv.x, y: tl.y + (tr.y - tl.y) * uv.x };
       const hitX = bottom.x + (top.x - bottom.x) * (1 - uv.y);
-      const hitY = bottom.y + (top.y - bottom.y) * (1 - uv.y);
+      const hitY = bottom.y + (top.y - bottom.y) * uv.y;
 
       // Draw hit point
       ctx.fillStyle = '#00FF00';
