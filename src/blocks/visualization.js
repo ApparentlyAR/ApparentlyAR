@@ -22,25 +22,70 @@
     }
   }
 
-  // Helper function to get available columns from CSV data
+  // Use existing autofill infrastructure from data_ops.js
   function getAvailableColumns() {
-    const csvData = window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.data;
-    if (csvData && Array.isArray(csvData) && csvData.length > 0) {
-      return Object.keys(csvData[0]);
+    console.log('📊 [Visualization getAvailableColumns] Checking for available columns...');
+    
+    // Use the global autofill system if available
+    if (window.BlocklyAutofill && window.BlocklyAutofill.getAvailableColumns) {
+      console.log('📊 [Visualization getAvailableColumns] Using global BlocklyAutofill system');
+      const columns = window.BlocklyAutofill.getAvailableColumns();
+      console.log('📊 [Visualization getAvailableColumns] Got columns from global system:', columns);
+      return columns;
     }
+    
+    console.log('📊 [Visualization getAvailableColumns] Using fallback - direct CSV access');
+    
+    // Fallback to direct access
+    const csvData = window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.data;
+    console.log('📊 [Visualization getAvailableColumns] CSV data available:', !!csvData, 'isArray:', Array.isArray(csvData), 'length:', csvData ? csvData.length : 0);
+    
+    if (csvData && Array.isArray(csvData) && csvData.length > 0) {
+      const columns = Object.keys(csvData[0]);
+      console.log('📊 [Visualization getAvailableColumns] Extracted columns from CSV:', columns);
+      return columns;
+    }
+    
+    console.log('📊 [Visualization getAvailableColumns] No columns found');
     return [];
   }
 
-  // Helper function to update field options with available columns
+  // Use existing updateFieldWithColumns from data_ops.js
   function updateFieldWithColumns(field, isMultiSelect = false) {
+    console.log('🔧 [Visualization updateFieldWithColumns] Called with field:', !!field, 'isMultiSelect:', isMultiSelect);
+    
+    if (!field) {
+      console.log('🔧 [Visualization updateFieldWithColumns] No field provided');
+      return;
+    }
+    
+    console.log('🔧 [Visualization updateFieldWithColumns] Field type:', typeof field, 'has setOptions:', !!field.setOptions);
+    
+    // Use the global autofill system if available
+    if (window.BlocklyAutofill && window.BlocklyAutofill.updateFieldWithColumns) {
+      console.log('🔧 [Visualization updateFieldWithColumns] Using global BlocklyAutofill system');
+      return window.BlocklyAutofill.updateFieldWithColumns(field, isMultiSelect);
+    }
+    
+    console.log('🔧 [Visualization updateFieldWithColumns] Using fallback implementation');
+    
+    // Fallback implementation
     if (field && field.setOptions) {
       const columns = getAvailableColumns();
+      console.log('🔧 [Visualization updateFieldWithColumns] Available columns:', columns);
+      
       if (columns.length > 0) {
         const options = isMultiSelect
           ? [['All columns', 'all'], ...columns.map(col => [col, col])]
           : columns.map(col => [col, col]);
+        console.log('🔧 [Visualization updateFieldWithColumns] Setting options:', options);
         field.setOptions(options);
+        console.log('🔧 [Visualization updateFieldWithColumns] Options set successfully');
+      } else {
+        console.log('🔧 [Visualization updateFieldWithColumns] No columns available');
       }
+    } else {
+      console.log('🔧 [Visualization updateFieldWithColumns] Field does not have setOptions method');
     }
   }
 
@@ -646,100 +691,198 @@
     console.log('[Visualization Blocks] Loaded successfully');
   }
 
-  // Function to apply autofill to visualization blocks
+  // Function to apply autofill to visualization blocks - integrates with data_ops autofill system
   function applyAutofillToVisualizationBlock(block) {
     if (!block || !block.type) return;
 
     const blockType = block.type;
     const columns = getAvailableColumns();
 
-    if (columns.length === 0) return;
+    // Only process visualization blocks
+    const visualizationBlocks = [
+      'set_axes', 'quick_chart', 'histogram_config', 
+      'boxplot_config', 'heatmap_config'
+    ];
+    
+    if (!visualizationBlocks.includes(blockType)) {
+      return; // Not a visualization block
+    }
+
+    console.log('🔧 [Visualization Autofill] Processing block:', blockType, 'with columns:', columns);
+
+    if (columns.length === 0) {
+      console.log('🔧 [Visualization Autofill] No columns available for block:', blockType);
+      return; // No CSV data available
+    }
+
+    console.log('🔧 [Visualization Autofill] Updating fields for block:', blockType);
 
     switch (blockType) {
       case 'set_axes':
-        updateFieldWithColumns(block.getField('X_COLUMN'));
-        updateFieldWithColumns(block.getField('Y_COLUMN'));
+        console.log('🔧 [Visualization Autofill] Updating set_axes fields');
+        const xField = block.getField('X_COLUMN');
+        const yField = block.getField('Y_COLUMN');
+        console.log('🔧 [Visualization Autofill] X_COLUMN field:', !!xField, 'Y_COLUMN field:', !!yField);
+        updateFieldWithColumns(xField);
+        updateFieldWithColumns(yField);
         break;
       case 'quick_chart':
+        console.log('🔧 [Visualization Autofill] Updating quick_chart fields');
         updateFieldWithColumns(block.getField('X_COLUMN'));
         updateFieldWithColumns(block.getField('Y_COLUMN'));
         break;
       case 'histogram_config':
+        console.log('🔧 [Visualization Autofill] Updating histogram_config fields');
         updateFieldWithColumns(block.getField('VALUE_COLUMN'));
         break;
       case 'boxplot_config':
+        console.log('🔧 [Visualization Autofill] Updating boxplot_config fields');
         updateFieldWithColumns(block.getField('VALUE_COLUMN'));
         const groupField = block.getField('GROUP_COLUMN');
         if (groupField && groupField.setOptions) {
           const options = [['none', 'none'], ...columns.map(col => [col, col])];
           groupField.setOptions(options);
+          console.log('🔧 [Visualization Autofill] Updated GROUP_COLUMN options');
         }
         break;
       case 'heatmap_config':
+        console.log('🔧 [Visualization Autofill] Updating heatmap_config fields');
         updateFieldWithColumns(block.getField('X_COLUMN'));
         updateFieldWithColumns(block.getField('Y_COLUMN'));
         updateFieldWithColumns(block.getField('VALUE_COLUMN'));
         break;
     }
+    
+    console.log('🔧 [Visualization Autofill] Finished processing block:', blockType);
   }
 
   // Function to update all visualization blocks when CSV data is loaded
   function updateAllVisualizationBlocksWithAutofill() {
-    if (typeof Blockly === 'undefined' || !Blockly.getMainWorkspace) return;
-
+    console.log('📊 [Visualization Autofill] updateAllVisualizationBlocksWithAutofill called');
+    const columns = getAvailableColumns();
+    console.log('📊 [Visualization Autofill] Available columns:', columns);
+    
+    // Always use the fallback implementation to ensure visualization blocks are processed
+    // The integrated system may not be calling the extended function properly
+    console.log('📊 [Visualization Autofill] Using direct fallback implementation to ensure processing');
+    if (typeof Blockly === 'undefined' || !Blockly.getMainWorkspace) {
+      console.warn('📊 [Visualization Autofill] Blockly or workspace not available');
+      return;
+    }
     const workspace = Blockly.getMainWorkspace();
-    if (!workspace) return;
-
+    if (!workspace) {
+      console.warn('📊 [Visualization Autofill] No workspace found');
+      return;
+    }
     const allBlocks = workspace.getAllBlocks();
+    console.log('📊 [Visualization Autofill] Processing', allBlocks.length, 'blocks');
+    
+    let visualizationBlocksFound = 0;
     allBlocks.forEach(block => {
+      if (block && block.type && [
+        'set_axes', 'quick_chart', 'histogram_config', 
+        'boxplot_config', 'heatmap_config'
+      ].includes(block.type)) {
+        visualizationBlocksFound++;
+        console.log('📊 [Visualization Autofill] Found visualization block:', block.type);
+      }
       applyAutofillToVisualizationBlock(block);
     });
+    
+    console.log('📊 [Visualization Autofill] Total visualization blocks found:', visualizationBlocksFound);
+    
+    // Also trigger the integrated system for data blocks
+    if (window.BlocklyAutofill && window.BlocklyAutofill.updateAllBlocksWithAutofill) {
+      console.log('📊 [Visualization Autofill] Also triggering integrated system for data blocks');
+      window.BlocklyAutofill.updateAllBlocksWithAutofill();
+    }
   }
 
-  // Add event listener for when blocks are created
-  function addVisualizationBlockCreationListener() {
-    if (typeof Blockly === 'undefined' || !Blockly.getMainWorkspace) return;
-
-    const workspace = Blockly.getMainWorkspace();
-    if (!workspace) return;
-
-    workspace.addChangeListener((event) => {
-      if (event.type === Blockly.Events.BLOCK_CREATE) {
-        const block = workspace.getBlockById(event.blockId);
-        if (block) {
-          setTimeout(() => {
-            applyAutofillToVisualizationBlock(block);
-          }, 50);
-        }
-      }
-    });
-  }
-
-  // Try to add the listener when Blockly is available
-  setTimeout(addVisualizationBlockCreationListener, 1000);
-
-  // Manual trigger function
-  function triggerVisualizationAutofill() {
-    console.log('🔄 Triggering autofill for visualization blocks...');
-    const columns = getAvailableColumns();
-    console.log('📊 Available columns:', columns);
-
-    if (columns.length === 0) {
-      console.log('⚠️ No CSV data available for autofill');
+  // Extend the existing BlocklyAutofill system to include visualization blocks
+  function extendBlocklyAutofillSystem() {
+    // Wait for the existing autofill system to be available
+    if (!window.BlocklyAutofill) {
+      setTimeout(extendBlocklyAutofillSystem, 100);
       return;
     }
 
-    updateAllVisualizationBlocksWithAutofill();
-    console.log('✅ Visualization autofill triggered');
+    // Only extend if not already extended
+    if (window.BlocklyAutofill._visualizationExtended) {
+      return;
+    }
+
+    // Store the original applyAutofillToBlock function
+    const originalApplyAutofill = window.BlocklyAutofill.applyAutofillToBlock;
+    
+    // Extend it to handle visualization blocks
+    window.BlocklyAutofill.applyAutofillToBlock = function(block) {
+      // Call the original function for data blocks
+      originalApplyAutofill(block);
+      
+      // Apply visualization-specific autofill
+      applyAutofillToVisualizationBlock(block);
+    };
+    
+    // Mark as extended to prevent double extension
+    window.BlocklyAutofill._visualizationExtended = true;
+    
+    console.log('[Visualization Blocks] Integrated with BlocklyAutofill system');
   }
 
-  // Export helper functions
+  // Try to extend the existing autofill system multiple times for robustness
+  setTimeout(extendBlocklyAutofillSystem, 500);
+  setTimeout(extendBlocklyAutofillSystem, 1200);
+  setTimeout(extendBlocklyAutofillSystem, 2000);
+
+  // Manual trigger function - uses existing autofill system
+  function triggerVisualizationAutofill() {
+    console.log('🔄 Triggering autofill for all blocks (including visualization)...');
+    
+    // Use the existing global autofill system if available
+    if (window.BlocklyAutofill && window.BlocklyAutofill.triggerAutofill) {
+      window.BlocklyAutofill.triggerAutofill();
+    } else {
+      // Fallback implementation
+      const columns = getAvailableColumns();
+      console.log('📊 Available columns:', columns);
+
+      if (columns.length === 0) {
+        console.log('⚠️ No CSV data available for autofill');
+        return;
+      }
+
+      updateAllVisualizationBlocksWithAutofill();
+      console.log('✅ Visualization autofill triggered');
+    }
+  }
+
+  // Export helper functions - delegates to existing BlocklyAutofill system when available
   window.BlocklyVisualizationAutofill = {
     getAvailableColumns,
     updateFieldWithColumns,
     applyAutofillToVisualizationBlock,
     updateAllVisualizationBlocksWithAutofill,
-    triggerVisualizationAutofill
+    triggerVisualizationAutofill,
+    // Delegate to existing system when available
+    triggerAutofill: () => {
+      if (window.BlocklyAutofill && window.BlocklyAutofill.triggerAutofill) {
+        window.BlocklyAutofill.triggerAutofill();
+      } else {
+        triggerVisualizationAutofill();
+      }
+    },
+    // Manual test function for browser console
+    testAutofill: () => {
+      console.log('🧪 Testing visualization autofill...');
+      console.log('Available CSV data:', window.Blockly?.CsvImportData?.data);
+      console.log('Available columns:', getAvailableColumns());
+      console.log('BlocklyAutofill system:', window.BlocklyAutofill ? 'Available' : 'Not available');
+      console.log('Visualization extended:', window.BlocklyAutofill?._visualizationExtended ? 'Yes' : 'No');
+      
+      // Force trigger autofill
+      updateAllVisualizationBlocksWithAutofill();
+      console.log('✅ Autofill triggered manually');
+    }
   };
 
   // Start waiting for Blockly

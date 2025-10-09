@@ -74,18 +74,36 @@ class FieldFileButton extends Blockly.Field {
               Blockly.CsvImportData.filename = file.name;
               this._dialogOpen = false;
               
+              console.log('[CSV Import] Data loaded, triggering autofill for all systems...');
+              
               // Trigger autofill for all existing blocks when CSV data is loaded
               if (window.BlocklyAutofill && window.BlocklyAutofill.updateAllBlocksWithAutofill) {
+                console.log('[CSV Import] Triggering data blocks autofill');
                 setTimeout(() => {
                   window.BlocklyAutofill.updateAllBlocksWithAutofill();
                 }, 100); // Small delay to ensure blocks are rendered
+              } else {
+                console.warn('[CSV Import] BlocklyAutofill not available');
               }
               
               // Also trigger autofill for statistics blocks
               if (window.BlocklyStatisticsAutofill && window.BlocklyStatisticsAutofill.updateAllStatisticsBlocksWithAutofill) {
+                console.log('[CSV Import] Triggering statistics blocks autofill');
                 setTimeout(() => {
                   window.BlocklyStatisticsAutofill.updateAllStatisticsBlocksWithAutofill();
                 }, 150); // Slightly longer delay for statistics blocks
+              } else {
+                console.warn('[CSV Import] BlocklyStatisticsAutofill not available');
+              }
+              
+              // Also trigger autofill for visualization blocks
+              if (window.BlocklyVisualizationAutofill && window.BlocklyVisualizationAutofill.updateAllVisualizationBlocksWithAutofill) {
+                console.log('[CSV Import] Triggering visualization blocks autofill');
+                setTimeout(() => {
+                  window.BlocklyVisualizationAutofill.updateAllVisualizationBlocksWithAutofill();
+                }, 200); // Slightly longer delay for visualization blocks
+              } else {
+                console.warn('[CSV Import] BlocklyVisualizationAutofill not available');
               }
             }
           });
