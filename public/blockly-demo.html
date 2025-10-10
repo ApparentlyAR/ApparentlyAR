@@ -112,7 +112,32 @@
     .blocklyToolboxDiv {
         background-color: #F3F4F6;
         border-right: 1px solid #E5E7EB;
+        overflow-y: hidden !important; /* Remove toolbox category scrollbar */
     }
+    
+    .blocklyFlyout {
+      overflow: hidden !important;
+    }
+    
+    .blocklyFlyoutScrollbar {
+      display: none !important;
+    }
+
+    /* Ensure proper sizing for Blockly workspace */
+    .blocklySvg {
+      display: block;
+    }
+
+    /* Fix for scrollbars appearing when not needed */
+    .blocklyToolboxDiv::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .blocklyToolboxDiv {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
     .blocklyTreeRow.blocklyTreeSelected {
         background-color: #E0E7FF !important;
     }
@@ -338,10 +363,9 @@
     (function(){if(typeof Blockly==='undefined')return;Blockly.defineBlocksWithJsonArray([{"type":"csv_import","message0":"import CSV %1 %2","args0":[{"type":"field_label","name":"CSV_FILENAME","text":""},{"type":"field_file_button","name":"CSV_UPLOAD"}],"output":"Dataset","colour":230,"tooltip":"Import a CSV file."}]);class FieldFileButton extends Blockly.Field{constructor(val,valid){super(val,valid);this.SERIALIZABLE=!0;this.filename_="No file chosen"}static fromJson(opts){return new FieldFileButton(opts.value)}showEditor_(){this.fileInput_=document.createElement("input");this.fileInput_.type="file";this.fileInput_.accept=".csv";this.fileInput_.style.display="none";this.fileInput_.addEventListener("change",e=>{const file=e.target.files[0];if(file){this.filename_=file.name;const field=this.sourceBlock_.getField("CSV_FILENAME");if(field)field.setValue(file.name);const reader=new FileReader;reader.onload=event=>{Papa.parse(event.target.result,{header:!0,skipEmptyLines:!0,complete:results=>{Blockly.CsvImportData.data=results.data;Blockly.CsvImportData.filename=file.name;window.dispatchEvent(new CustomEvent("csvDataChanged",{detail:{filename:file.name}}))}})};reader.readAsText(file);this.sourceBlock_.render()}},!1);this.fileInput_.click()}render_(){super.render_();const group=this.getSvgRoot();if(!group)return;if(this.button_)this.button_.remove();this.button_=document.createElementNS("http://www.w3.org/2000/svg","foreignObject");this.button_.setAttribute("width",24);this.button_.setAttribute("height",24);this.button_.innerHTML='<button style="height:24px;width:24px;border-radius:50%;border:none;background:#4F46E5;color:white;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>';const btn=this.button_.querySelector("button");const stopAll=e=>{e.preventDefault();e.stopPropagation()};btn.addEventListener("mousedown",stopAll);btn.addEventListener("click",e=>{stopAll(e);this.showEditor_()});group.appendChild(this.button_)}saveState(){return{filename:this.filename_}}loadState(state){this.filename_=state.filename||"No file chosen";if(this.sourceBlock_&&this.filename_!=="No file chosen"){const field=this.sourceBlock_.getField("CSV_FILENAME");if(field)field.setValue(this.filename_)}}}Blockly.fieldRegistry.register("field_file_button",FieldFileButton);Blockly.CsvImportData={data:null,filename:null};Blockly.JavaScript.forBlock={csv_import:()=>["(window.Blockly&&window.Blockly.CsvImportData?window.Blockly.CsvImportData.data:null)",Blockly.JavaScript.ORDER_ATOMIC]}})();
     (function(){function getCols(){const d=window.Blockly&&window.Blockly.CsvImportData&&window.Blockly.CsvImportData.data;return d&&Array.isArray(d)&&d.length>0?Object.keys(d[0]):[]}function updateField(field,multi){if(field&&field.setOptions){const cols=getCols();if(cols.length>0){const opts=multi?[["All columns","all"],...cols.map(c=>[c,c])]:cols.map(c=>[c,c]);field.setOptions(opts)}}}function init(){Blockly.defineBlocksWithJsonArray([{"type":"filter_data","message0":"filter %1 where %2 %3 %4","args0":[{"type":"input_value","name":"DATA","check":"Dataset"},{"type":"field_dropdown","name":"COLUMN","options":[["column","column"]]},{"type":"field_dropdown","name":"OPERATOR","options":[["equals","="],["not equals","!="],["greater than",">"],["less than","<"],["contains","contains"]]},{"type":"field_input","name":"VALUE","text":"value"}],"output":"Dataset","colour":20},{"type":"sort_data","message0":"sort %1 by %2 %3","args0":[{"type":"input_value","name":"DATA","check":"Dataset"},{"type":"field_dropdown","name":"COLUMN","options":[["column","column"]]},{"type":"field_dropdown","name":"DIRECTION","options":[["ascending","asc"],["descending","desc"]]}],"output":"Dataset","colour":20},{"type":"select_columns","message0":"select columns %1 from %2","args0":[{"type":"field_dropdown","name":"COLUMNS","options":[["col1,col2","col1,col2"]]},{"type":"input_value","name":"DATA","check":"Dataset"}],"output":"Dataset","colour":20,"tooltip":"Select specific columns."},{"type":"group_by","message0":"group %1 by %2 and %3 %4 as %5","args0":[{"type":"input_value","name":"DATA","check":"Dataset"},{"type":"field_dropdown","name":"GROUP_COLUMN","options":[["group_column","group_column"]]},{"type":"field_dropdown","name":"AGGREGATION","options":[["sum","sum"],["average","average"],["count","count"],["min","min"],["max","max"]]},{"type":"field_dropdown","name":"AGG_COLUMN","options":[["value_column","value_column"]]},{"type":"field_input","name":"ALIAS","text":"result"}],"output":"Dataset","colour":20,"tooltip":"Group data and aggregate."},{"type":"calculate_column","message0":"calculate %1 as %2 from %3","args0":[{"type":"field_input","name":"EXPRESSION","text":"col1 + col2"},{"type":"field_input","name":"NEW_COLUMN","text":"new_column"},{"type":"input_value","name":"DATA","check":"Dataset"}],"output":"Dataset","colour":20,"tooltip":"Calculate a new column."},{"type":"drop_empty","message0":"drop empty rows in %1 from %2","args0":[{"type":"field_dropdown","name":"COLUMN","options":[["column","column"]]},{"type":"input_value","name":"DATA","check":"Dataset"}],"output":"Dataset","colour":20}]);if(Blockly.JavaScript){window.BlocklyNormalizeData=d=>Array.isArray(d)?d:d&&Array.isArray(d.data)?d.data:"string"==typeof d?JSON.parse(d):[];const getCode=b=>Blockly.JavaScript.valueToCode(b,"DATA",Blockly.JavaScript.ORDER_NONE)||"Blockly.CsvImportData.data";Blockly.JavaScript.forBlock.filter_data=b=>{const d=getCode(b),c=b.getFieldValue("COLUMN"),o=b.getFieldValue("OPERATOR"),v=b.getFieldValue("VALUE");return[`((${d}||[]).filter(r=>String(r['${c}']).includes('${v}')))`,Blockly.JavaScript.ORDER_FUNCTION_CALL]};Blockly.JavaScript.forBlock.sort_data=b=>{const d=getCode(b),c=b.getFieldValue("COLUMN"),dir=b.getFieldValue("DIRECTION");return[`([...(${d}||[])].sort((a,b)=>{const va=a['${c}'],vb=b['${c}'];return va<vb?${"asc"===dir?-1:1}:va>vb?${"asc"===dir?1:-1}:0}))`,Blockly.JavaScript.ORDER_FUNCTION_CALL]};Blockly.JavaScript.forBlock.drop_empty=b=>{const d=getCode(b),c=b.getFieldValue("COLUMN");return[`((${d}||[]).filter(r=>r['${c}']!=null&&r['${c}']!==""))`,Blockly.JavaScript.ORDER_FUNCTION_CALL]};}}typeof Blockly<"u"&&Blockly.JavaScript?init():setTimeout(init,10);function autoFill(b){if(b&&b.type){const t=b.type,cols=getCols();if(0!==cols.length)switch(t){case"filter_data":updateField(b.getField("COLUMN"));break;case"sort_data":updateField(b.getField("COLUMN"));break;case"drop_empty":updateField(b.getField("COLUMN"))}}}function updateAll(){if(typeof Blockly>"u"||!Blockly.getMainWorkspace)return;const ws=Blockly.getMainWorkspace();ws&&ws.getAllBlocks().forEach(b=>autoFill(b))}window.BlocklyAutofill={updateAllBlocksWithAutofill:updateAll}})();
     (function(){if(typeof Blockly<"u"){Blockly.defineBlocksWithJsonArray([{"type":"to_json","message0":"to JSON %1","args0":[{"type":"input_value","name":"VALUE","check":"Dataset"}],"output":"String","colour":20}]);if(Blockly.JavaScript)Blockly.JavaScript.forBlock.to_json=b=>[`JSON.stringify(${Blockly.JavaScript.valueToCode(b,"VALUE",Blockly.JavaScript.ORDER_NONE)||"null"},null,2)`,Blockly.JavaScript.ORDER_FUNCTION_CALL]}})();
-  </script>
+  
 
   <!-- MAIN APPLICATION SCRIPT -->
-  <script>
     let workspace;
     let chartInstance;
     
