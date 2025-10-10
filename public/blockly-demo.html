@@ -1,167 +1,233 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <title>ApparentlyAR • Simulation (Light)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" href="favicon.ico" />
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+  <title>ApparentlyAR - Simulation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Tailwind config for the new light theme
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: '#F8F9FA', // Light grey background
+            panel: '#FFFFFF',      // White panels
+            border: '#E5E7EB',    // Light grey border
+            text: '#1F2937',        // Dark text
+            muted: '#6B7280',     // Grey for muted text
+            primary: '#22C55E',   // Vibrant green for play button
+            'primary-hover': '#16A34A',
+            secondary: '#4F46E5', // Accent color for Blockly
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        },
+      },
+    };
+  </script>
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
   <style>
-    :root{
-      --bg:#f6f8fb; --panel:#fff; --ink:#1f2a37; --muted:#5a6b7b; --line:#e6e9ef;
-      --accent:#2f7dd6; --success:#12a150; --radius:14px;
-      --shadow:0 2px 10px rgba(20,33,61,.06), 0 1px 3px rgba(20,33,61,.05);
-      --tab:#eef5ff;
+    /* Custom styles for the new layout */
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F8F9FA;
+      user-select: none; /* Prevent text selection during drag */
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
 
-    /* Top toolbar only (no site header) */
-    .toolbar{background:var(--panel);box-shadow:var(--shadow);position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line)}
-    .toolbar-inner{max-width:1400px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center}
-    .breadcrumb{display:flex;gap:8px;align-items:center;color:var(--muted);flex:1;font-size:14px}
-    .breadcrumb a{color:var(--muted);text-decoration:none}
-    .breadcrumb .chev{opacity:.5}
-    .btn{border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-    .btn.success{background:var(--success);border-color:var(--success);color:#fff}
-
-    /* Main 3-column layout with two splitters */
-    .wrap{max-width:1400px;margin:16px auto 24px;padding:0 8px}
-    .grid{
-      display:grid;
-      grid-template-columns:minmax(360px, 1fr) 10px minmax(460px, 1.3fr) 10px minmax(340px, 0.9fr);
-      gap:0 0;
-      height:calc(100vh - 160px);
+    #main-content-grid {
+        display: grid;
+        grid-template-columns: 320px 8px 1fr 8px 360px; /* Panels and resizers */
     }
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;min-width:240px}
-
-    /* Splitters */
-    .splitter{cursor:col-resize;display:flex;align-items:center;justify-content:center}
-    .splitbar{width:2px;height:70%;background:var(--line);border-radius:2px;position:relative}
-    .splitbar:after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:6px;height:56px;border-radius:6px;background:var(--line)}
-
-    /* LEFT: Blockly */
-    #blocklyCard{display:flex;flex-direction:column;min-height:380px}
-    #blocklySearch{border:none;border-bottom:1px solid var(--line);padding:12px 14px;font-size:14px;outline:none}
-    #blocklyArea{flex:1;min-height:0}
-    #blocklyDiv{height:100%;width:100%}
-
-    /* MIDDLE: Viz */
-    #vizCard{display:grid;grid-template-rows:auto 1fr;min-width:380px}
-    .vizTop{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:10px 14px;background:linear-gradient(#fff,#fcfdff)}
-    .vizTop .type{display:flex;align-items:center;gap:8px}
-    .vizType{appearance:none;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;min-width:140px}
-    .fileLabel{font-size:14px;color:var(--muted)}
-    #vizCanvasWrap{padding:12px 14px}
-    #vizCanvas{width:100%;height:100%}
-
-    /* RIGHT: Data (collapsible + resizable when open) */
-    #dataShell{position:relative}
-    #dataCard{display:grid;grid-template-rows:auto 1fr;height:100%}
-    .dataHead{border-bottom:1px solid var(--line);padding:10px 14px;background:linear-gradient(#fff,#fcfdff);font-weight:600}
-    .dataBody{overflow:auto}
-    table{border-collapse:collapse;width:100%}
-    th,td{border-bottom:1px solid var(--line);padding:8px 10px;font-size:13px;text-align:left;white-space:nowrap}
-    thead th{position:sticky;top:0;background:#fff}
-    .dataToggle{
-      position:absolute;left:-14px;top:50%;transform:translateY(-50%);
-      width:28px;height:48px;border-radius:10px 0 0 10px;background:var(--tab);border:1px solid var(--line);
-      display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);z-index:2
+    
+    /* This class will be toggled to provide smooth animation only when not dragging */
+    .grid-transition {
+        transition: grid-template-columns 0.3s ease-in-out;
     }
-    .dataToggle span{font-size:18px;color:var(--accent)}
-    .collapsed #dataCard{display:none}
-    .collapsed{border:1px dashed var(--line)}
-    .collapsed .dataToggle{left:-14px}
 
-    /* Code viewer */
-    #codeWrap{max-width:1400px;margin:12px auto 28px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);display:none;overflow:hidden}
-    #codeHead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
-    #codeArea{padding:12px 14px;max-height:340px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:#fbfcff}
+    /* Resizer handle styles */
+    .resizer {
+      background: #F8F9FA;
+      cursor: col-resize;
+      z-index: 10;
+      position: relative;
+    }
+    .resizer:hover::after, .resizer.is-dragging::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 3px;
+      width: 2px;
+      height: 100%;
+      background: #4F46E5; /* secondary color */
+    }
+    
+    /* Allow panels to shrink to zero */
+    #blocks-panel, #data-panel {
+        min-width: 0;
+    }
 
-    @media (max-width:1200px){
-      .grid{grid-template-columns:minmax(300px, 1fr) 10px minmax(440px, 1.1fr) 10px minmax(300px, 0.9fr)}
+    #toggle-data-panel-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 20;
+        transition: right 0.3s ease-in-out;
+    }
+
+    #main-content-grid.data-closed #data-panel {
+        overflow: hidden;
+    }
+
+    /* Code panel toggle transition */
+    #code-panel {
+      transition: height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+      height: 200px;
+      opacity: 1;
+      overflow: hidden;
+    }
+    #code-panel.hidden {
+      height: 0;
+      opacity: 0;
+      padding: 0;
+    }
+    #code-panel pre {
+        background-color: #F3F4F6;
+        border: 1px solid #E5E7EB;
+        color: #111827;
+    }
+
+    /* Tweak Blockly's appearance */
+    .blocklyToolboxDiv {
+        background-color: #F3F4F6;
+        border-right: 1px solid #E5E7EB;
+    }
+    .blocklyTreeRow.blocklyTreeSelected {
+        background-color: #E0E7FF !important;
+    }
+     .blocklyTreeRow:not(.blocklyTreeSelected):hover {
+        background-color: #EFF6FF !important;
+    }
+    
+    /* Fix for data panel header */
+    #data-panel-content th {
+        position: sticky;
+        top: 0;
+        z-index: 1; /* Ensures header is above scrolling content */
+        background-color: #F9FAFB; /* Added background to fix the "hole" */
     }
   </style>
-
-  <!-- Blockly + CSV + Chart -->
-  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <!-- Your blocks (unchanged; only theme colours adjusted) -->
-  <script src="../src/blocks/csv_import.js"></script>
-  <script src="../src/blocks/data_ops.js"></script>
-  <script src="../src/blocks/statistics.js"></script>
-  <script src="../src/blocks/to_json.js"></script>
 </head>
-<body>
-  <!-- Toolbar (no site header) -->
-  <div class="toolbar">
-    <div class="toolbar-inner">
-      <nav class="breadcrumb">
-        <a href="view-project.html">My Projects</a><span class="chev">›</span>
-        <a href="#">[Project Name]</a><span class="chev">›</span>
-        <strong>Simulation</strong>
-      </nav>
-      <button id="btnShowCode" class="btn">Show code</button>
-      <button id="btnPlay" class="btn primary">▶︎ Play</button>
-      <a class="btn success" href="ar-demo.html">Enter AR</a>
-    </div>
-  </div>
 
-  <div class="wrap">
-    <div id="grid" class="grid">
-      <!-- LEFT: Blockly -->
-      <section id="blocklyCard" class="card">
-        <input id="blocklySearch" type="search" placeholder="Search blocks…" />
-        <div id="blocklyArea"><div id="blocklyDiv"></div></div>
-      </section>
+<body class="text-text bg-background">
 
-      <!-- Splitter 1 (between Blockly and Viz) -->
-      <div id="split1" class="splitter"><div class="splitbar"></div></div>
+  <div id="header-container"></div>
 
-      <!-- MIDDLE: Visualisation -->
-      <section id="vizCard" class="card">
-        <div class="vizTop">
-          <div class="type">
-            <label for="vizType" style="font-weight:600">Type</label>
-            <select id="vizType" class="vizType">
-              <option value="bar">Bar Chart</option>
-              <option value="line" selected>Line Chart</option>
-              <option value="scatter">Scatter</option>
-            </select>
+  <div class="flex flex-col h-screen">
+    <!-- Top Bar -->
+    <header class="bg-panel border-b border-border shadow-sm flex-shrink-0">
+      <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center gap-4">
+            <nav class="hidden md:flex items-center space-x-2 text-sm">
+              <a href="#" class="text-muted hover:text-text">My Project</a>
+              <span class="text-gray-300">></span>
+              <a href="#" class="text-muted hover:text-text">Visualisation 1</a>
+              <span class="text-gray-300">></span>
+              <span class="text-text font-medium">Simulation</span>
+            </nav>
           </div>
-          <div class="fileLabel" id="fileLabel">No file chosen</div>
+          <div class="flex items-center gap-3">
+             <button onclick="executeBlocklyCode()"
+              class="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </button>
+            <button onclick="window.location.href='ar-demo.html'"
+              class="bg-panel border border-border text-white text-text hover:bg-yellow-500 bg-yellow-400 font-medium py-2 px-4 rounded-lg transition-colors">
+              Enter AR
+            </button>
+             <button id="show-code-btn" onclick="toggleCodePanel()"
+              class="bg-panel border border-border text-white text-text hover:bg-red-300 bg-red-400 font-medium py-2 px-4 rounded-lg transition-colors">
+              Show code
+            </button>
+          </div>
         </div>
-        <div id="vizCanvasWrap"><canvas id="vizCanvas"></canvas></div>
-      </section>
+      </div>
+    </header>
 
-      <!-- Splitter 2 (between Viz and Data) -->
-      <div id="split2" class="splitter"><div class="splitbar"></div></div>
+    <!-- Main Content Area -->
+    <div class="flex-1 relative overflow-hidden">
+      <main id="main-content-grid" class="h-full">
+        <!-- Blocks Panel -->
+        <aside id="blocks-panel" class="flex flex-col bg-panel overflow-hidden">
+          <div class="p-2 border-b border-border">
+            <input class="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-text placeholder-muted focus:outline-none focus:ring-2 focus:ring-secondary"
+              placeholder="Search blocks..." />
+          </div>
+          <div id="blocklyDiv" class="w-full h-full flex-1"></div>
+        </aside>
+  
+        <!-- Left Resizer -->
+        <div class="resizer" id="resizer-left"></div>
 
-      <!-- RIGHT: Data Panel -->
-      <aside id="dataShell" class="card">
-        <div class="dataToggle" id="dataToggle" title="Collapse / expand"><span>‹</span></div>
-        <section id="dataCard">
-          <div class="dataHead">Data Panel</div>
-          <div class="dataBody">
-            <table id="dataTable"><thead></thead><tbody></tbody></table>
+        <!-- Middle Panel: Visualization -->
+        <section id="viz-panel" class="flex flex-col bg-background overflow-hidden">
+          <div class="flex items-center justify-between gap-2 p-2.5 border-b border-border bg-panel flex-shrink-0">
+              <span id="csv-filename" class="text-sm font-medium text-text">No file loaded</span>
+              <div class="flex items-center gap-2">
+                  <select id="chart-type-select" class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1 focus:outline-none focus:ring-2 focus:ring-secondary">
+                  </select>
+              </div>
+          </div>
+          <div class="flex-1 p-4 min-h-0">
+               <div id="react-chart-container" class="w-full h-full bg-panel rounded-lg border border-border flex items-center justify-center text-muted p-4 relative">
+                  Visualization will appear here when blocks are executed
+              </div>
           </div>
         </section>
-      </aside>
+
+        <!-- Right Resizer -->
+        <div class="resizer" id="resizer-right"></div>
+  
+        <!-- Right Panel: Data -->
+        <aside id="data-panel" class="bg-panel flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between p-2.5 border-b border-border">
+              <strong class="text-sm font-medium">Data Panel</strong>
+            </div>
+          <div id="data-panel-content" class="overflow-auto flex-1 p-2">
+              <div class="text-sm text-muted text-center py-8">
+              Data will appear here when imported.
+              </div>
+          </div>
+        </aside>
+      </main>
+
+      <!-- Toggle button -->
+      <button id="toggle-data-panel-btn" onclick="toggleDataPanel()" class="bg-panel hover:bg-gray-100 text-muted hover:text-text rounded-full shadow-md w-6 h-10 flex items-center justify-center border border-border">
+        <svg id="toggle-icon" class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+
     </div>
+
+     <!-- Bottom Panel: Code Output -->
+    <footer id="code-panel" class="bg-panel border-t border-border p-2 hidden flex-shrink-0">
+      <pre id="output-root" class="h-full w-full rounded-md p-2 text-sm font-mono overflow-auto"></pre>
+    </footer>
+
   </div>
 
-  <!-- Code viewer -->
-  <section id="codeWrap" aria-hidden="true">
-    <div id="codeHead">
-      <strong>Generated JavaScript</strong>
-      <button id="btnCloseCode" class="btn">Close</button>
-    </div>
-    <pre id="codeArea"></pre>
-  </section>
-
+  <!-- Blockly Toolbox Definition -->
   <xml id="toolbox" style="display: none">
     <category name="Logic" colour="210">
       <block type="controls_if"></block>
@@ -233,160 +299,283 @@
     </category>
   </xml>
 
+  <!-- BLOCK DEFINITIONS AND GENERATORS SCRIPT (minified for brevity) -->
   <script>
-    /* LIGHT THEME (only colours) */
-    const LIGHT_THEME = Blockly.Theme.defineTheme('apparentlyLight', {
-      base: Blockly.Themes.Classic,
-      componentStyles:{
-        toolboxForegroundColour:'#354355', toolboxBackgroundColour:'#eef3fa',
-        flyoutBackgroundColour:'#fff', flyoutForegroundColour:'#4c5d70', flyoutOpacity:1,
-        insertionMarkerOpacity:.3, scrollbarColour:'#cdd6e1'
-      },
-      categoryStyles:{
-        logic_category:{colour:'#6aa84f'}, loops_category:{colour:'#3d85c6'}, math_category:{colour:'#674ea7'},
-        text_category:{colour:'#a64d79'}, lists_category:{colour:'#bf9000'}, variables_category:{colour:'#2d8cf0'},
-        functions_category:{colour:'#0b7a75'}, data_category:{colour:'#ff8a3d'}, misc_category:{colour:'#708090'}
-      },
-      blockStyles:{
-        logic_blocks:{colourPrimary:'#6aa84f'}, loop_blocks:{colourPrimary:'#3d85c6'},
-        math_blocks:{colourPrimary:'#674ea7'}, text_blocks:{colourPrimary:'#a64d79'},
-        list_blocks:{colourPrimary:'#bf9000'}, variable_blocks:{colourPrimary:'#2d8cf0'},
-        procedure_blocks:{colourPrimary:'#0b7a75'}
+    // --- Universal Dropdown Logic ---
+    function closeAllDropdowns() {
+      document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
+    }
+    function toggleUserMenu(event) {
+      event.stopPropagation();
+      const menu = document.getElementById('user-menu');
+      const isHidden = menu.classList.contains('hidden');
+      closeAllDropdowns();
+      if (isHidden) menu.classList.remove('hidden');
+    }
+    function logout(event) {
+      event.preventDefault();
+      console.log("User logged out.");
+      window.location.href = '/';
+    }
+    window.addEventListener('click', function (event) {
+      if (!event.target.closest('.dropdown-toggle')) {
+        closeAllDropdowns();
       }
     });
 
-    /* Inject Blockly */
-    const workspace = Blockly.inject('blocklyDiv', {
-      theme: LIGHT_THEME,
-      grid:{spacing:20,length:3,colour:'#e9eef5',snap:true},
-      zoom:{controls:true,wheel:true,startScale:0.95,maxScale:2,minScale:0.5,pinch:true},
-      move:{wheel:true,drag:true,scrollbars:true},
-      renderer:'zelos',
-      toolbox: document.getElementById('toolbox').childNodes.length ? document.getElementById('toolbox') : undefined
+    // --- Page Header Logic ---
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-container').innerHTML = data;
+        // Once header is loaded, run the main page logic
+        initializeApp();
+      });
+    });
+    
+    // === START: csv_import.js (Bug Fix Applied) ===
+    (function(){if(typeof Blockly==='undefined')return;Blockly.defineBlocksWithJsonArray([{"type":"csv_import","message0":"import CSV %1 %2","args0":[{"type":"field_label","name":"CSV_FILENAME","text":""},{"type":"field_file_button","name":"CSV_UPLOAD"}],"output":"Dataset","colour":230,"tooltip":"Import a CSV file."}]);class FieldFileButton extends Blockly.Field{constructor(val,valid){super(val,valid);this.SERIALIZABLE=!0;this.filename_="No file chosen"}static fromJson(opts){return new FieldFileButton(opts.value)}showEditor_(){this.fileInput_=document.createElement("input");this.fileInput_.type="file";this.fileInput_.accept=".csv";this.fileInput_.style.display="none";this.fileInput_.addEventListener("change",e=>{const file=e.target.files[0];if(file){this.filename_=file.name;const field=this.sourceBlock_.getField("CSV_FILENAME");if(field)field.setValue(file.name);const reader=new FileReader;reader.onload=event=>{Papa.parse(event.target.result,{header:!0,skipEmptyLines:!0,complete:results=>{Blockly.CsvImportData.data=results.data;Blockly.CsvImportData.filename=file.name;window.dispatchEvent(new CustomEvent("csvDataChanged",{detail:{filename:file.name}}))}})};reader.readAsText(file);this.sourceBlock_.render()}},!1);this.fileInput_.click()}render_(){super.render_();const group=this.getSvgRoot();if(!group)return;if(this.button_)this.button_.remove();this.button_=document.createElementNS("http://www.w3.org/2000/svg","foreignObject");this.button_.setAttribute("width",24);this.button_.setAttribute("height",24);this.button_.innerHTML='<button style="height:24px;width:24px;border-radius:50%;border:none;background:#4F46E5;color:white;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>';const btn=this.button_.querySelector("button");const stopAll=e=>{e.preventDefault();e.stopPropagation()};btn.addEventListener("mousedown",stopAll);btn.addEventListener("click",e=>{stopAll(e);this.showEditor_()});group.appendChild(this.button_)}saveState(){return{filename:this.filename_}}loadState(state){this.filename_=state.filename||"No file chosen";if(this.sourceBlock_&&this.filename_!=="No file chosen"){const field=this.sourceBlock_.getField("CSV_FILENAME");if(field)field.setValue(this.filename_)}}}Blockly.fieldRegistry.register("field_file_button",FieldFileButton);Blockly.CsvImportData={data:null,filename:null};Blockly.JavaScript.forBlock={csv_import:()=>["(window.Blockly&&window.Blockly.CsvImportData?window.Blockly.CsvImportData.data:null)",Blockly.JavaScript.ORDER_ATOMIC]}})();
+    (function(){function getCols(){const d=window.Blockly&&window.Blockly.CsvImportData&&window.Blockly.CsvImportData.data;return d&&Array.isArray(d)&&d.length>0?Object.keys(d[0]):[]}function updateField(field,multi){if(field&&field.setOptions){const cols=getCols();if(cols.length>0){const opts=multi?[["All columns","all"],...cols.map(c=>[c,c])]:cols.map(c=>[c,c]);field.setOptions(opts)}}}function init(){Blockly.defineBlocksWithJsonArray([{"type":"filter_data","message0":"filter %1 where %2 %3 %4","args0":[{"type":"input_value","name":"DATA","check":"Dataset"},{"type":"field_dropdown","name":"COLUMN","options":[["column","column"]]},{"type":"field_dropdown","name":"OPERATOR","options":[["equals","="],["not equals","!="],["greater than",">"],["less than","<"],["contains","contains"]]},{"type":"field_input","name":"VALUE","text":"value"}],"output":"Dataset","colour":20},{"type":"sort_data","message0":"sort %1 by %2 %3","args0":[{"type":"input_value","name":"DATA","check":"Dataset"},{"type":"field_dropdown","name":"COLUMN","options":[["column","column"]]},{"type":"field_dropdown","name":"DIRECTION","options":[["ascending","asc"],["descending","desc"]]}],"output":"Dataset","colour":20},{"type":"select_columns","message0":"select columns %1 from %2","args0":[{"type":"field_dropdown","name":"COLUMNS","options":[["col1,col2","col1,col2"]]},{"type":"input_value","name":"DATA","check":"Dataset"}],"output":"Dataset","colour":20,"tooltip":"Select specific columns."},{"type":"group_by","message0":"group %1 by %2 and %3 %4 as %5","args0":[{"type":"input_value","name":"DATA","check":"Dataset"},{"type":"field_dropdown","name":"GROUP_COLUMN","options":[["group_column","group_column"]]},{"type":"field_dropdown","name":"AGGREGATION","options":[["sum","sum"],["average","average"],["count","count"],["min","min"],["max","max"]]},{"type":"field_dropdown","name":"AGG_COLUMN","options":[["value_column","value_column"]]},{"type":"field_input","name":"ALIAS","text":"result"}],"output":"Dataset","colour":20,"tooltip":"Group data and aggregate."},{"type":"calculate_column","message0":"calculate %1 as %2 from %3","args0":[{"type":"field_input","name":"EXPRESSION","text":"col1 + col2"},{"type":"field_input","name":"NEW_COLUMN","text":"new_column"},{"type":"input_value","name":"DATA","check":"Dataset"}],"output":"Dataset","colour":20,"tooltip":"Calculate a new column."},{"type":"drop_empty","message0":"drop empty rows in %1 from %2","args0":[{"type":"field_dropdown","name":"COLUMN","options":[["column","column"]]},{"type":"input_value","name":"DATA","check":"Dataset"}],"output":"Dataset","colour":20}]);if(Blockly.JavaScript){window.BlocklyNormalizeData=d=>Array.isArray(d)?d:d&&Array.isArray(d.data)?d.data:"string"==typeof d?JSON.parse(d):[];const getCode=b=>Blockly.JavaScript.valueToCode(b,"DATA",Blockly.JavaScript.ORDER_NONE)||"Blockly.CsvImportData.data";Blockly.JavaScript.forBlock.filter_data=b=>{const d=getCode(b),c=b.getFieldValue("COLUMN"),o=b.getFieldValue("OPERATOR"),v=b.getFieldValue("VALUE");return[`((${d}||[]).filter(r=>String(r['${c}']).includes('${v}')))`,Blockly.JavaScript.ORDER_FUNCTION_CALL]};Blockly.JavaScript.forBlock.sort_data=b=>{const d=getCode(b),c=b.getFieldValue("COLUMN"),dir=b.getFieldValue("DIRECTION");return[`([...(${d}||[])].sort((a,b)=>{const va=a['${c}'],vb=b['${c}'];return va<vb?${"asc"===dir?-1:1}:va>vb?${"asc"===dir?1:-1}:0}))`,Blockly.JavaScript.ORDER_FUNCTION_CALL]};Blockly.JavaScript.forBlock.drop_empty=b=>{const d=getCode(b),c=b.getFieldValue("COLUMN");return[`((${d}||[]).filter(r=>r['${c}']!=null&&r['${c}']!==""))`,Blockly.JavaScript.ORDER_FUNCTION_CALL]};}}typeof Blockly<"u"&&Blockly.JavaScript?init():setTimeout(init,10);function autoFill(b){if(b&&b.type){const t=b.type,cols=getCols();if(0!==cols.length)switch(t){case"filter_data":updateField(b.getField("COLUMN"));break;case"sort_data":updateField(b.getField("COLUMN"));break;case"drop_empty":updateField(b.getField("COLUMN"))}}}function updateAll(){if(typeof Blockly>"u"||!Blockly.getMainWorkspace)return;const ws=Blockly.getMainWorkspace();ws&&ws.getAllBlocks().forEach(b=>autoFill(b))}window.BlocklyAutofill={updateAllBlocksWithAutofill:updateAll}})();
+    (function(){if(typeof Blockly<"u"){Blockly.defineBlocksWithJsonArray([{"type":"to_json","message0":"to JSON %1","args0":[{"type":"input_value","name":"VALUE","check":"Dataset"}],"output":"String","colour":20}]);if(Blockly.JavaScript)Blockly.JavaScript.forBlock.to_json=b=>[`JSON.stringify(${Blockly.JavaScript.valueToCode(b,"VALUE",Blockly.JavaScript.ORDER_NONE)||"null"},null,2)`,Blockly.JavaScript.ORDER_FUNCTION_CALL]}})();
+  </script>
+
+  <!-- MAIN APPLICATION SCRIPT -->
+  <script>
+    let workspace;
+    let chartInstance;
+    
+    // Blockly theme
+    const lightTheme = Blockly.Theme.defineTheme('lightTheme', {
+      'base': Blockly.Themes.Classic,
+      'componentStyles': {
+        'workspaceBackgroundColour': '#FFFFFF', 'toolboxBackgroundColour': '#F3F4F6',
+        'toolboxForegroundColour': '#1F2937', 'flyoutBackgroundColour': '#FFFFFF',
+        'flyoutForegroundColour': '#1F2937', 'scrollbarColour': '#D1D5DB',
+      },
     });
 
-    document.getElementById('blocklySearch').addEventListener('input', e=>{
-      const q=e.target.value.trim().toLowerCase(); const tb=workspace.getToolbox(); if(!tb) return;
-      if(!q){ tb.clearSearch?.(); return; } tb.search?.(q);
+    // Initialize Blockly Workspace
+    workspace = Blockly.inject('blocklyDiv', {
+      toolbox: document.getElementById('toolbox'),
+      grid: { spacing: 25, length: 2, colour: '#F1F5F9', snap: true },
+      zoom: { controls: true, wheel: true, startScale: 0.8, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
+      move: { scrollbars: false, drag: true, wheel: true },
+      trashcan: true,
+      theme: lightTheme,
+      renderer: 'zelos'
     });
+    
+    // --- UI Interaction Functions ---
+    const mainGrid = document.getElementById('main-content-grid');
+    const toggleBtn = document.getElementById('toggle-data-panel-btn');
 
-    /* Persist workspace */
-    const STORAGE_KEY='apparently.blockly.workspace';
-    try{
-      const saved=localStorage.getItem(STORAGE_KEY);
-      if(saved) Blockly.serialization.workspaces.load(JSON.parse(saved), workspace);
-      workspace.addChangeListener(()=> localStorage.setItem(STORAGE_KEY, JSON.stringify(Blockly.serialization.workspaces.save(workspace))));
-    }catch{}
-
-    /* Two splitters for resizing */
-    function setupSplitter(splitId, leftIndex, rightIndex, minLeft, minRight){
-      const grid=document.getElementById('grid'); const split=document.getElementById(splitId);
-      let drag=false,startX=0,colsStart=[];
-      split.addEventListener('mousedown', e=>{
-        drag=true; startX=e.clientX;
-        colsStart=getComputedStyle(grid).gridTemplateColumns.split(' ').map(v=>v.endsWith('px')?parseFloat(v):v);
-        document.body.style.cursor='col-resize'; e.preventDefault();
-      });
-      window.addEventListener('mousemove', e=>{
-        if(!drag) return;
-        const dx=e.clientX-startX;
-        const L=Math.max(minLeft, parseFloat(colsStart[leftIndex]) + dx);
-        const R=Math.max(minRight, parseFloat(colsStart[rightIndex]) - dx);
-        const cols=[...colsStart];
-        cols[leftIndex]=`${L}px`; cols[rightIndex]=`${R}px`;
-        grid.style.gridTemplateColumns=cols.join(' ');
-        Blockly.svgResize(workspace);
-      });
-      window.addEventListener('mouseup', ()=>{ if(!drag) return; drag=false; document.body.style.cursor=''; Blockly.svgResize(workspace); });
+    function updateToggleButtonPosition() {
+        const dataPanel = document.getElementById('data-panel');
+        const resizerRight = document.getElementById('resizer-right');
+        const isClosed = mainGrid.classList.contains('data-closed');
+        if (isClosed) {
+            toggleBtn.style.right = '0px';
+        } else {
+            toggleBtn.style.right = `${dataPanel.offsetWidth + resizerRight.offsetWidth}px`;
+        }
     }
-    // grid columns: [0]=left, [2]=middle, [4]=right
-    setupSplitter('split1', 0, 2, 320, 420);
-    setupSplitter('split2', 2, 4, 420, 320);
+    
+    function toggleDataPanel() {
+        const isClosing = !mainGrid.classList.contains('data-closed');
+        if (isClosing) {
+            // Store the current width before closing
+            dataPanelWidth = document.getElementById('data-panel').offsetWidth;
+        }
 
-    /* Collapsible data panel */
-    (function(){
-      const shell=document.getElementById('dataShell'); const tab=document.getElementById('dataToggle');
-      let open=true; const setIcon=()=> tab.firstElementChild.textContent=open?'‹':'›';
-      tab.addEventListener('click', ()=>{
-        open=!open; shell.classList.toggle('collapsed', !open);
-        // when collapsed, also widen the middle column a bit
-        const grid=document.getElementById('grid');
-        const cols=getComputedStyle(grid).gridTemplateColumns.split(' ');
-        if(!open){ cols[4]='320px'; } // keep a reasonable right min (hidden)
-        grid.style.gridTemplateColumns=cols.join(' ');
-        setIcon(); Blockly.svgResize(workspace);
-      });
-      setIcon();
-    })();
+        mainGrid.classList.add('grid-transition');
+        mainGrid.classList.toggle('data-closed');
+        
+        const blocksPanelWidth = document.getElementById('blocks-panel').offsetWidth;
+        const currentDataWidth = isClosing ? 0 : dataPanelWidth;
+        mainGrid.style.gridTemplateColumns = `${blocksPanelWidth}px 8px 1fr 8px ${currentDataWidth}px`;
 
-    /* Chart.js rendering */
-    let chart; const ctx=document.getElementById('vizCanvas').getContext('2d');
-    function renderChart(rows){
-      const type=document.getElementById('vizType').value || 'line';
-      if(chart){ chart.destroy(); chart=null; }
-      const cols = rows?.length ? Object.keys(rows[0]) : [];
-      const numeric = cols.filter(c => rows.some(r => !isNaN(parseFloat(r[c]))));
-      const xKey = cols[0] || 'Row'; const yKey=numeric[0] || null;
-      const labels = rows.map((r,i)=> r[xKey] ?? i+1);
-      const data = yKey ? rows.map(r=>parseFloat(r[yKey])) : [];
-      chart = new Chart(ctx,{
-        type:(type==='scatter'?'scatter':type),
-        data:{
-          labels:(type==='scatter'?undefined:labels),
-          datasets:[{
-            label:yKey||'Value',
-            data:(type==='scatter')
-              ? rows.map((r,i)=>({x:i+1,y:yKey?parseFloat(r[yKey]):1}))
-              : (data.length?data:rows.map(()=>1)),
-            tension:.25, pointRadius:3
-          }]
-        },
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}
-      });
+        document.getElementById('toggle-icon').innerHTML = isClosing 
+            ? '<polyline points="15 18 9 12 15 6"></polyline>' // Left arrow
+            : '<polyline points="9 18 15 12 9 6"></polyline>';  // Right arrow
+        
+        mainGrid.addEventListener('transitionend', () => {
+            window.dispatchEvent(new Event('resize')); 
+            mainGrid.classList.remove('grid-transition');
+        }, { once: true });
     }
 
-    /* Data table */
-    function renderTable(rows){
-      const th=document.querySelector('#dataTable thead'); const tb=document.querySelector('#dataTable tbody');
-      th.innerHTML=tb.innerHTML=''; if(!rows?.length) return;
-      const cols=Object.keys(rows[0]); th.innerHTML='<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
-      const MAX=500; const frag=document.createDocumentFragment();
-      rows.slice(0,MAX).forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=cols.map(c=>`<td>${r[c]??''}</td>`).join(''); frag.appendChild(tr); });
-      tb.appendChild(frag);
+    function toggleCodePanel() {
+        document.getElementById('code-panel').classList.toggle('hidden');
+    }
+    
+    // --- Blockly Code Execution ---
+    async function executeBlocklyCode() {
+      try {
+        const code = Blockly.JavaScript.workspaceToCode(workspace);
+        updateCodeOutput(code);
+        if (!code.trim()) return;
+
+        const asyncWrapper = `(async () => { return ${code} })();`;
+        let result = await eval(asyncWrapper);
+        if (result === undefined && Blockly.CsvImportData) {
+            result = Blockly.CsvImportData.data;
+        }
+        renderDataPanel(result);
+        renderDataVisualization(result);
+      } catch (e) {
+        console.error('Error executing Blockly code:', e);
+        updateCodeOutput(`Error: ${e.message}`);
+      }
+    }
+    
+    function updateCodeOutput(content) {
+        document.getElementById('output-root').textContent = content || "Workspace is empty.";
     }
 
-    /* Play */
-    const codeArea=document.getElementById('codeArea');
-    async function runBlocks(){
-      const code=Blockly.JavaScript.workspaceToCode(workspace);
-      codeArea.textContent=code;
-      const fname=(Blockly.CsvImportData&&Blockly.CsvImportData.filename)||'No file chosen';
-      document.getElementById('fileLabel').textContent=fname;
-
-      let resultRows=null;
-      try{
-        const f=new Function(`return (async()=>{ ${code}; return (typeof result!=='undefined'?result:(window.Blockly && Blockly.CsvImportData && Blockly.CsvImportData.data)||[]); })()`);
-        resultRows=await f();
-      }catch(e){ console.error(e); alert('Error running blocks (see console).'); resultRows=(Blockly.CsvImportData&&Blockly.CsvImportData.data)||[]; }
-      if(!Array.isArray(resultRows)) resultRows=[{Value:resultRows}];
-
-      renderChart(resultRows); renderTable(resultRows);
+    // --- Data & Visualization Rendering ---
+    function renderDataPanel(data) {
+        const container = document.getElementById('data-panel-content');
+        const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
+        if (!dataToRender || dataToRender.length === 0) {
+            container.innerHTML = `<div class="text-sm text-muted text-center p-4">No data to display.</div>`;
+            return;
+        }
+        const headers = Object.keys(dataToRender[0]);
+        let tableHtml = `<table class="min-w-full text-sm"><thead><tr>`;
+        headers.forEach(h => { tableHtml += `<th class="px-2 py-2 text-left font-medium text-muted">${h}</th>`; });
+        tableHtml += `</tr></thead><tbody class="divide-y divide-border">`;
+        dataToRender.slice(0, 100).forEach(row => {
+            tableHtml += `<tr>`;
+            headers.forEach(h => { tableHtml += `<td class="px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis">${row[h] || ''}</td>`; });
+            tableHtml += `</tr>`;
+        });
+        tableHtml += `</tbody></table>`;
+        container.innerHTML = tableHtml;
     }
-    document.getElementById('btnPlay').addEventListener('click', runBlocks);
 
-    document.getElementById('btnShowCode').addEventListener('click', ()=>{
-      const w=document.getElementById('codeWrap'); const open=w.style.display!=='none';
-      if(open){ w.style.display='none'; return; }
-      codeArea.textContent=Blockly.JavaScript.workspaceToCode(workspace);
-      w.style.display='block';
-    });
-    document.getElementById('btnCloseCode').addEventListener('click', ()=> document.getElementById('codeWrap').style.display='none');
-    document.getElementById('vizType').addEventListener('change', ()=>{
-      const rows=(Blockly?.CsvImportData?.data)||[]; renderChart(Array.isArray(rows)?rows:[]);
-    });
+    function renderDataVisualization(data) {
+        const container = document.getElementById('react-chart-container');
+        const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
+        if (chartInstance) chartInstance.destroy();
+        if (!dataToRender || dataToRender.length === 0) {
+            container.innerHTML = 'Run blocks with data to generate a visualization.';
+            return;
+        }
+        container.innerHTML = '<canvas id="chart-canvas"></canvas>';
+        const ctx = document.getElementById('chart-canvas').getContext('2d');
+        const chartType = document.getElementById('chart-type-select').value;
+        const { labels, datasets } = prepareChartData(dataToRender);
+        chartInstance = new Chart(ctx, {
+            type: chartType,
+            data: { labels, datasets },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+    }
 
-    /* Keep Blockly sized */
-    window.addEventListener('resize', ()=> Blockly.svgResize(workspace));
+    function prepareChartData(data) {
+        if (!data || data.length === 0) return { labels: [], datasets: [] };
+        const headers = Object.keys(data[0]);
+        let labelColumn = headers.find(h => isNaN(parseFloat(data[0][h]))) || headers[0];
+        let dataColumns = headers.filter(h => h !== labelColumn && !isNaN(parseFloat(data[0][h])));
+        if(dataColumns.length === 0 && headers.length > 1) dataColumns.push(headers[1]);
+
+        const labels = data.map(row => row[labelColumn]);
+        const datasets = dataColumns.map((col, index) => {
+             const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
+            return {
+                label: col,
+                data: data.map(row => parseFloat(row[col])),
+                backgroundColor: colors[index % colors.length] + '80',
+                borderColor: colors[index % colors.length],
+                borderWidth: 1
+            }
+        });
+        return { labels, datasets };
+    }
+    
+    // --- Panel Resizing Logic ---
+    let blocksPanelWidth = 320;
+    let dataPanelWidth = 360;
+
+    function initializeResizing() {
+        const resizerLeft = document.getElementById('resizer-left');
+        const resizerRight = document.getElementById('resizer-right');
+
+        function makeResizable(resizer) {
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                let isDragging = true;
+                resizer.classList.add('is-dragging');
+                document.body.style.cursor = 'col-resize';
+                
+                const onMouseMove = (moveEvent) => {
+                    if (!isDragging) return;
+                    
+                    const rect = mainGrid.getBoundingClientRect();
+                    const isDataPanelClosed = mainGrid.classList.contains('data-closed');
+
+                    if (resizer === resizerLeft) {
+                        blocksPanelWidth = Math.max(250, moveEvent.clientX - rect.left);
+                    } else if (!isDataPanelClosed) {
+                        dataPanelWidth = Math.max(250, rect.right - moveEvent.clientX);
+                    }
+                    
+                    const currentDataWidth = isDataPanelClosed ? 0 : dataPanelWidth;
+                    mainGrid.style.gridTemplateColumns = `${blocksPanelWidth}px 8px 1fr 8px ${currentDataWidth}px`;
+                    
+                    window.dispatchEvent(new Event('resize'));
+                };
+
+                const onMouseUp = () => {
+                    isDragging = false;
+                    resizer.classList.remove('is-dragging');
+                    document.body.style.cursor = '';
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
+        makeResizable(resizerLeft);
+        makeResizable(resizerRight);
+    }
+
+    // --- App Initialization ---
+    function initializeApp() {
+        const chartTypes = ['bar', 'line', 'pie', 'doughnut', 'radar', 'polarArea'];
+        document.getElementById('chart-type-select').innerHTML = chartTypes.map(t => `<option value="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('');
+
+        window.addEventListener('csvDataChanged', (e) => {
+            document.getElementById('csv-filename').textContent = e.detail.filename || 'No file loaded';
+            renderDataPanel();
+            if (window.BlocklyAutofill) window.BlocklyAutofill.updateAllBlocksWithAutofill();
+        });
+
+        workspace.addChangeListener((event) => {
+          // Fix for toolbox not closing
+          if (event.type === Blockly.Events.BLOCK_DRAG && !event.isStart || event.type === Blockly.Events.SELECTED) {
+             if (workspace.getToolbox() && workspace.getToolbox().getFlyout()) {
+               workspace.getToolbox().getFlyout().hide();
+             }
+          }
+        });
+
+        window.addEventListener('resize', () => {
+          if(workspace) Blockly.svgResize(workspace);
+          if(chartInstance) chartInstance.resize();
+          updateToggleButtonPosition();
+        });
+
+        initializeResizing();
+        updateToggleButtonPosition();
+    }
+    
+    document.addEventListener('DOMContentLoaded', initializeApp);
   </script>
 </body>
 </html>
+
+
+

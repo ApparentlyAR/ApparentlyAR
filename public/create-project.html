@@ -16,18 +16,7 @@
 </head>
 
 <body class="text-gray-800">
-    <!-- Header imported from header.html -->
     <div id="header-container"></div>
-    <script>
-        fetch('header.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('header-container').innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error loading header:', error);
-            });
-    </script>
 
     <main class="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
         <div class="flex flex-row items-center p-4">
@@ -85,6 +74,40 @@
         </form>
 
         <script>
+            // --- Universal Dropdown Logic ---
+            function closeAllDropdowns() {
+                document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
+            }
+            function toggleUserMenu(event) {
+                event.stopPropagation();
+                const menu = document.getElementById('user-menu');
+                const isHidden = menu.classList.contains('hidden');
+                closeAllDropdowns();
+                if (isHidden) menu.classList.remove('hidden');
+            }
+            function logout(event) {
+                event.preventDefault();
+                console.log("User logged out.");
+                window.location.href = '/';
+            }
+            window.addEventListener('click', function (event) {
+                if (!event.target.closest('.dropdown-toggle')) {
+                    closeAllDropdowns();
+                }
+            });
+
+            // --- Page Setup Logic ---
+            document.addEventListener('DOMContentLoaded', () => {
+                // First, load the header
+                fetch('header.html')
+                    .then(response => response.text())
+                    .then(data => {
+                        document.getElementById('header-container').innerHTML = data;
+                        // Once header is loaded, run the main page logic
+                        initializeApp();
+                    });
+            });
+            
             // Handle file input changes to display the selected file name
             const fileInput = document.getElementById('file-upload');
             const fileNameDisplay = document.getElementById('file-name');
