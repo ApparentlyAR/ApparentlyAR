@@ -1,1681 +1,392 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <link rel="icon" type="image/jpeg" href="./LogoAR.svg">
-  <meta charset="UTF-8">
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-  <title>ApparentlyAR</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
-    rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            bg: "#0f1320",
-            panel: "#171c2b",
-            panel2: "#1e2436",
-            text: "#e7ebff",
-            muted: "#a9b4d0",
-            accent: "#6ea8fe",
-            accent2: "#7ee6c8",
-            warn: "#ffce73",
-            error: "#ff8a8a",
-            ok: "#8ff0a4",
-            chip: "#2a3350",
-            border: "#2b3350",
-          },
-          boxShadow: {
-            inset: "inset 0 2px 0 #0a0d18",
-          },
-        },
-      },
-    };
-  </script>
-  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-  <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
-  <script>
-    // Ensure Blockly.JavaScript is available before loading custom blocks
-    console.log('Blockly.JavaScript available:', !!window.Blockly.JavaScript);
-    console.log('Available JavaScript generators before CSV import:', Object.keys(window.Blockly.JavaScript || {}));
-  </script>
-  <script src="../src/react/api.js"></script>
-  <script src="../src/blocks/csv_import.js"></script>
-  <script src="../src/blocks/to_json.js"></script>
-  <script src="../src/blocks/data_ops.js"></script>
-  <script>
-    // Check if CSV import & data-op generators were registered
-    console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
-    console.log('filter_data generator registered after loading:', !!(window.Blockly.JavaScript && window.Blockly.JavaScript['filter_data']));
-    console.log('AppApi available:', !!window.AppApi);
-    console.log('AppApi.processData available:', !!window.AppApi?.processData);
-
-    // Show all available generators that might be block-related
-    const allKeys = Object.keys(window.Blockly.JavaScript || {});
-    const blockKeys = allKeys.filter(key => !key.startsWith('ORDER_') && !key.startsWith('STATEMENT_') && !key.startsWith('FUNCTION_') && !key.startsWith('INFINITE_') && !key.startsWith('INDENT') && !key.startsWith('COMMENT_') && !key.startsWith('RESERVED_') && key.length > 2);
-    console.log('Block-related generators:', blockKeys);
-
-    // Test the generators directly
-    setTimeout(() => {
-      if (window.Blockly.JavaScript['csv_import']) {
-        try {
-          console.log('Testing CSV generator directly...');
-          const result = window.Blockly.JavaScript['csv_import']();
-          console.log('Direct CSV generator test result:', result);
-        } catch (e) {
-          console.error('Direct CSV generator test failed:', e);
-        }
-      }
-    }, 200);
-  </script>
+  <meta charset="UTF-8" />
+  <title>ApparentlyAR • Simulation (Light)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    /* Grid template areas utility */
-    [data-areas="desktop"] {
-      grid-template-areas:
-        "topbar topbar topbar"
-        "blocks stage data"
-        "guide guide guide";
+    :root{
+      --bg:#f6f8fb; --panel:#fff; --ink:#1f2a37; --muted:#5a6b7b; --line:#e6e9ef;
+      --accent:#2f7dd6; --success:#12a150; --radius:14px;
+      --shadow:0 2px 10px rgba(20,33,61,.06), 0 1px 3px rgba(20,33,61,.05);
+      --tab:#eef5ff;
     }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
 
-    @media (max-width: 980px) {
-      [data-areas="desktop"] {
-        grid-template-areas:
-          "topbar"
-          "stage"
-          "blocks"
-          "data"
-          "guide";
-        grid-template-columns: 1fr !important;
-        grid-template-rows: 56px 1fr auto auto 140px !important;
-        height: auto !important;
-        min-height: 100vh;
-      }
-    }
+    /* Top toolbar only (no site header) */
+    .toolbar{background:var(--panel);box-shadow:var(--shadow);position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line)}
+    .toolbar-inner{max-width:1400px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center}
+    .breadcrumb{display:flex;gap:8px;align-items:center;color:var(--muted);flex:1;font-size:14px}
+    .breadcrumb a{color:var(--muted);text-decoration:none}
+    .breadcrumb .chev{opacity:.5}
+    .btn{border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:12px;font-weight:600;cursor:pointer}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn.success{background:var(--success);border-color:var(--success);color:#fff}
 
-    .camera-checker {
-      background-image: linear-gradient(45deg, #1b2441 25%, transparent 25%),
-        linear-gradient(-45deg, #1b2441 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #1b2441 75%),
-        linear-gradient(-45deg, transparent 75%, #1b2441 75%);
-      background-size: 24px 24px;
-      background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+    /* Main 3-column layout with two splitters */
+    .wrap{max-width:1400px;margin:16px auto 24px;padding:0 8px}
+    .grid{
+      display:grid;
+      grid-template-columns:minmax(360px, 1fr) 10px minmax(460px, 1.3fr) 10px minmax(340px, 0.9fr);
+      gap:0 0;
+      height:calc(100vh - 160px);
     }
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;min-width:240px}
 
-    /* Chart.js mobile responsiveness */
-    .chart-container {
-      position: relative;
-      width: 100%;
-    }
+    /* Splitters */
+    .splitter{cursor:col-resize;display:flex;align-items:center;justify-content:center}
+    .splitbar{width:2px;height:70%;background:var(--line);border-radius:2px;position:relative}
+    .splitbar:after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:6px;height:56px;border-radius:6px;background:var(--line)}
 
-    @media (max-width: 640px) {
-      .chart-container {
-        height: 300px !important;
-      }
+    /* LEFT: Blockly */
+    #blocklyCard{display:flex;flex-direction:column;min-height:380px}
+    #blocklySearch{border:none;border-bottom:1px solid var(--line);padding:12px 14px;font-size:14px;outline:none}
+    #blocklyArea{flex:1;min-height:0}
+    #blocklyDiv{height:100%;width:100%}
 
-      .chart-container canvas {
-        max-width: 100% !important;
-        height: auto !important;
-      }
-    }
+    /* MIDDLE: Viz */
+    #vizCard{display:grid;grid-template-rows:auto 1fr;min-width:380px}
+    .vizTop{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:10px 14px;background:linear-gradient(#fff,#fcfdff)}
+    .vizTop .type{display:flex;align-items:center;gap:8px}
+    .vizType{appearance:none;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;min-width:140px}
+    .fileLabel{font-size:14px;color:var(--muted)}
+    #vizCanvasWrap{padding:12px 14px}
+    #vizCanvas{width:100%;height:100%}
 
-    /* Resize handles */
-    .resize-handle {
-      position: relative;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
+    /* RIGHT: Data (collapsible + resizable when open) */
+    #dataShell{position:relative}
+    #dataCard{display:grid;grid-template-rows:auto 1fr;height:100%}
+    .dataHead{border-bottom:1px solid var(--line);padding:10px 14px;background:linear-gradient(#fff,#fcfdff);font-weight:600}
+    .dataBody{overflow:auto}
+    table{border-collapse:collapse;width:100%}
+    th,td{border-bottom:1px solid var(--line);padding:8px 10px;font-size:13px;text-align:left;white-space:nowrap}
+    thead th{position:sticky;top:0;background:#fff}
+    .dataToggle{
+      position:absolute;left:-14px;top:50%;transform:translateY(-50%);
+      width:28px;height:48px;border-radius:10px 0 0 10px;background:var(--tab);border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);z-index:2
     }
+    .dataToggle span{font-size:18px;color:var(--accent)}
+    .collapsed #dataCard{display:none}
+    .collapsed{border:1px dashed var(--line)}
+    .collapsed .dataToggle{left:-14px}
 
-    .resize-handle-vertical {
-      width: 8px;
-      height: 100%;
-      cursor: col-resize;
-      background: transparent;
-      border-left: 1px solid transparent;
-      transition: all 0.2s ease;
-    }
+    /* Code viewer */
+    #codeWrap{max-width:1400px;margin:12px auto 28px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);display:none;overflow:hidden}
+    #codeHead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+    #codeArea{padding:12px 14px;max-height:340px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:#fbfcff}
 
-    .resize-handle-vertical:hover {
-      background: rgba(110, 168, 254, 0.1);
-      border-left: 1px solid #6ea8fe;
-    }
-
-    .resize-handle-vertical:active,
-    .resize-handle-vertical.dragging {
-      background: rgba(110, 168, 254, 0.2);
-      border-left: 2px solid #6ea8fe;
-      cursor: col-resize;
-    }
-
-    /* Visual indicator dots */
-    .resize-handle-vertical::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 2px;
-      height: 20px;
-      background: #a9b4d0;
-      border-radius: 1px;
-      opacity: 0.3;
-      transition: opacity 0.2s ease;
-    }
-
-    .resize-handle-vertical:hover::before,
-    .resize-handle-vertical.dragging::before {
-      opacity: 0.8;
-      background: #6ea8fe;
-    }
-
-    /* Hide resize handles on mobile */
-    @media (max-width: 980px) {
-      .resize-handle {
-        display: none;
-      }
-    }
-    
-    /* Fix for Blockly flyout scroll issues */
-    .blocklyFlyout {
-      overflow: hidden !important;
-    }
-    
-    .blocklyFlyoutScrollbar {
-      display: none !important;
-    }
-    
-    /* Ensure proper sizing for Blockly workspace */
-    .blocklySvg {
-      display: block;
-    }
-    
-    /* Fix for scrollbars appearing when not needed */
-    .blocklyToolboxDiv::-webkit-scrollbar {
-      display: none;
-    }
-    
-    .blocklyToolboxDiv {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-    
-    /* Header styles to override dark theme */
-    header {
-      background-color: #ffffff !important;
-      border-bottom: 1px solid #e5e7eb !important;
-    }
-    
-    header h1 {
-      color: #1f2937 !important;
-    }
-    
-    header .dropdown-toggle {
-      color: #6b7280 !important;
-    }
-    
-    header .dropdown-toggle:hover {
-      color: #374151 !important;
-    }
-    
-    #user-menu {
-      background-color: #ffffff !important;
-      border: 1px solid #e5e7eb !important;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-    }
-    
-    #user-menu a {
-      color: #374151 !important;
-    }
-    
-    #user-menu a:hover {
-      background-color: #f9fafb !important;
+    @media (max-width:1200px){
+      .grid{grid-template-columns:minmax(300px, 1fr) 10px minmax(440px, 1.1fr) 10px minmax(300px, 0.9fr)}
     }
   </style>
+
+  <!-- Blockly + CSV + Chart -->
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Your blocks (unchanged; only theme colours adjusted) -->
+  <script src="../src/blocks/csv_import.js"></script>
+  <script src="../src/blocks/data_ops.js"></script>
+  <script src="../src/blocks/statistics.js"></script>
+  <script src="../src/blocks/to_json.js"></script>
 </head>
-
-<body class="m-0 text-text bg-[radial-gradient(1200px_700px_at_70%_-10%,#1b2240,#0a0d18)] min-h-screen">
-  <div id="main-grid" class="grid h-screen overflow-hidden" style="
-      grid-template-rows: 56px 1fr 120px;
-      grid-template-columns: 320px 1fr 360px;
-    " data-areas="desktop">
-    <!-- Resize Handle between blocks and stage -->
-    <div id="resize-handle-1" class="resize-handle resize-handle-vertical"
-      style="grid-row: 2; grid-column: 2; margin-left: -4px; z-index: 10;"></div>
-
-    <!-- Resize Handle between stage and data -->
-    <div id="resize-handle-2" class="resize-handle resize-handle-vertical"
-      style="grid-row: 2; grid-column: 3; margin-left: -4px; z-index: 10;"></div>
-    <!-- Topbar -->
-    <header style="grid-area: topbar"
-      class="bg-white shadow-sm">
-      <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-          <div class="flex items-center gap-4">
-            <!-- Breadcrumb Menu -->
-            <nav class="flex items-center space-x-2 text-sm">
-              <a href="teacher-dashboard.html" class="text-gray-500 hover:text-gray-700">My Projects</a>
-              <span class="text-gray-400">></span>
-              <span class="text-gray-900 font-medium">[Project Name]</span>
-              <span class="text-gray-400">></span>
-              <span class="text-blue-600 font-medium">Simulation</span>
-            </nav>
-          </div>
-          
-          <div class="flex items-center gap-3">
-            <!-- Control Buttons -->
-            <button id="show-code-btn" onclick="showBlocklyCode()" 
-              class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 hover:bg-panel2 transition-colors">
-              Show Code
-            </button>
-            <button id="run-blockly-btn" onclick="executeBlocklyCode()" 
-              class="rounded-lg border border-[#2a4bff] bg-gradient-to-b from-[#2a4bff] to-[#2140d9] text-white text-sm px-3 py-1.5 flex items-center gap-2">
-              <div id="run-spinner" class="hidden animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-              <span id="run-text">Run Blockly</span>
-            </button>
-            <button id="enter-ar-btn" onclick="window.location.href='ar-demo.html'"
-              class="rounded-lg border border-[#2a4bff] bg-gradient-to-b from-[#2a4bff] to-[#2140d9] text-white text-sm px-3 py-1.5">
-              Enter AR
-            </button>
-            
-            <!-- User Menu -->
-            <div class="relative">
-              <button onclick="toggleUserMenu(event)" type="button" class="dropdown-toggle p-1 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              </button>
-              
-              <div id="user-menu" class="project-dropdown hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20">
-                <a href="#" onclick="logout(event)" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Blocks Panel -->
-    <aside style="grid-area: blocks" class="grid grid-rows-[auto,1fr] bg-panel border-r border-border overflow-hidden">
-      <div class="p-2 border-b border-border">
-        <input class="w-full px-3 py-2 rounded-lg border border-border bg-[#0e1220] text-sm text-text placeholder-muted"
-          placeholder="Search blocks..." />
-      </div>
-
-      <!-- Blockly Workspace -->
-      <div id="blocklyDiv" class="w-full h-full min-h-[500px] overflow-hidden bg-[#0f1324]"></div>
-
-      <!-- Hidden Blockly Toolbox -->
-      <xml id="toolbox" style="display: none">
-        <category name="Logic" colour="210">
-          <block type="controls_if"></block>
-          <block type="logic_compare"></block>
-          <block type="logic_operation"></block>
-          <block type="logic_negate"></block>
-          <block type="logic_boolean"></block>
-        </category>
-        <category name="Loops" colour="120">
-          <block type="controls_repeat_ext"></block>
-          <block type="controls_whileUntil"></block>
-        </category>
-        <category name="Math" colour="230">
-          <block type="math_number"></block>
-          <block type="math_arithmetic"></block>
-          <block type="math_single"></block>
-          <block type="math_round"></block>
-          <block type="math_on_list"></block>
-        </category>
-        <category name="Text" colour="160">
-          <block type="text"></block>
-          <block type="text_print"></block>
-        </category>
-        <category name="Lists" colour="260">
-          <block type="lists_create_with"></block>
-          <block type="lists_getIndex"></block>
-          <block type="lists_setIndex"></block>
-          <block type="lists_length"></block>
-        </category>
-        <category name="Variables" colour="330" custom="VARIABLE"></category>
-        <category name="Functions" colour="290" custom="PROCEDURE"></category>
-        <category name="Data" colour="20">
-          <block type="csv_import"></block>
-          <block type="to_json">
-            <value name="VALUE">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="filter_data">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="sort_data">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="select_columns">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="group_by">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="calculate_column">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-          <block type="drop_empty">
-            <value name="DATA">
-              <block type="csv_import"></block>
-            </value>
-          </block>
-        </category>
-      </xml>
-    </aside>
-
-    <!-- Stage / Visualization Area -->
-    <section style="grid-area: stage"
-      class="relative grid grid-rows-[44px,1fr] bg-gradient-to-b from-[#0f1324] to-[#0b0f1c]">
-      <div class="flex items-center gap-2 p-2 border-b border-border bg-[#13182a]">
-
-        <div id="react-controls-container" class="flex items-center gap-2"></div>
-
-      </div>
-
-      <!-- Visualization Container -->
-      <div class="relative m-3 rounded-2xl border border-border overflow-hidden" style="
-          background: conic-gradient(
-            from 0deg at 50% 50%,
-            #11182c,
-            #121a31,
-            #10172b,
-            #11182c
-          );
-        ">
-        <!-- React Chart Component Mount Point -->
-        <div id="react-chart-container" class="w-full h-full min-h-[400px] grid place-items-center text-muted">
-          <div class="text-sm text-muted">
-            Visualization will appear here when blocks are executed
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- Data Panel -->
-    <aside style="grid-area: data" class="grid grid-rows-[44px,1fr] bg-panel border-l border-border">
-      <div class="flex items-center gap-2 p-2 border-b border-border bg-[#151a2c]">
-        <strong>Data Panel</strong>
-      </div>
-
-      <div id="data-panel-content" class="overflow-auto">
-        <div class="text-sm text-muted text-center py-8">
-          Data will appear here when imported via blocks
-        </div>
-      </div>
-    </aside>
-
-    <!-- Guide / Console -->
-    <footer style="grid-area: guide" class="flex items-center gap-3 px-3 py-2 bg-[#111524] border-t border-border">
-
-      <!-- React Output Display Mount Point -->
-      <div id="output-root" class="flex-1"></div>
-
-      <div class="ml-auto flex items-center gap-2">
-        <!-- React Status Indicator Mount Point -->
-        <div id="status-root"></div>
-
-      </div>
-    </footer>
+<body>
+  <!-- Toolbar (no site header) -->
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <nav class="breadcrumb">
+        <a href="view-project.html">My Projects</a><span class="chev">›</span>
+        <a href="#">[Project Name]</a><span class="chev">›</span>
+        <strong>Simulation</strong>
+      </nav>
+      <button id="btnShowCode" class="btn">Show code</button>
+      <button id="btnPlay" class="btn primary">▶︎ Play</button>
+      <a class="btn success" href="ar-demo.html">Enter AR</a>
+    </div>
   </div>
 
-  <script>
-    // Enhanced workspace configuration with dark theme
-    window.workspace = Blockly.inject('blocklyDiv', {
-      toolbox: document.getElementById('toolbox'),
-      grid: {
-        spacing: 20,
-        length: 3,
-        colour: '#2b3350',
-        snap: true
-      },
-      zoom: {
-        controls: true,
-        wheel: true,
-        startScale: 0.8,
-        maxScale: 2,
-        minScale: 0.3,
-        scaleSpeed: 1.2
-      },
-      move: {
-        scrollbars: true,
-        drag: true,
-        wheel: true
-      },
-      trashcan: true,
-      theme: {
-        base: Blockly.Themes.Dark,
-        componentStyles: {
-          workspaceBackgroundColour: '#0f1324',
-          toolboxBackgroundColour: '#171c2b',
-          toolboxForegroundColour: '#e7ebff',
-          flyoutBackgroundColour: '#171c2b',
-          flyoutForegroundColour: '#e7ebff',
-          flyoutOpacity: 0.8,
-          scrollbarColour: '#2b3350',
-          insertionMarkerColour: '#6ea8fe',
-          insertionMarkerOpacity: 0.3
-        }
-      },
-      renderer: 'zelos'  // Use the zelos renderer for better appearance
-    });
+  <div class="wrap">
+    <div id="grid" class="grid">
+      <!-- LEFT: Blockly -->
+      <section id="blocklyCard" class="card">
+        <input id="blocklySearch" type="search" placeholder="Search blocks…" />
+        <div id="blocklyArea"><div id="blocklyDiv"></div></div>
+      </section>
 
-    // Add a slight delay to ensure proper initialization
-    setTimeout(() => {
-      if (workspace) {
-        workspace.scrollbar.setVisible(true);
-      }
-    }, 300);
+      <!-- Splitter 1 (between Blockly and Viz) -->
+      <div id="split1" class="splitter"><div class="splitbar"></div></div>
 
-    // Mobile device detection
-    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      <!-- MIDDLE: Visualisation -->
+      <section id="vizCard" class="card">
+        <div class="vizTop">
+          <div class="type">
+            <label for="vizType" style="font-weight:600">Type</label>
+            <select id="vizType" class="vizType">
+              <option value="bar">Bar Chart</option>
+              <option value="line" selected>Line Chart</option>
+              <option value="scatter">Scatter</option>
+            </select>
+          </div>
+          <div class="fileLabel" id="fileLabel">No file chosen</div>
+        </div>
+        <div id="vizCanvasWrap"><canvas id="vizCanvas"></canvas></div>
+      </section>
 
-    // Enhanced responsive workspace resizing function
-    function resizeWorkspace() {
-      if (workspace && document.getElementById('blocklyDiv')) {
-        try {
-          const blocklyDiv = document.getElementById('blocklyDiv');
-          const mainGrid = document.getElementById('main-grid');
-          
-          // Force the blocklyDiv to take full height of its container
-          if (blocklyDiv) {
-            blocklyDiv.style.height = '100%';
-            blocklyDiv.style.width = '100%';
-          }
-          
-          Blockly.svgResize(workspace);
+      <!-- Splitter 2 (between Viz and Data) -->
+      <div id="split2" class="splitter"><div class="splitbar"></div></div>
 
-          // Mobile-specific adjustments
-          if (isMobile || window.innerWidth <= 768) {
-            // Adjust workspace scale for mobile
-            const scale = Math.max(0.6, Math.min(0.8, window.innerWidth / 1000));
-            if (workspace.scale !== scale) {
-              workspace.setScale(scale);
-            }
-          }
-        } catch (error) {
-          console.warn('Resize error:', error);
-        }
-      }
-    }
+      <!-- RIGHT: Data Panel -->
+      <aside id="dataShell" class="card">
+        <div class="dataToggle" id="dataToggle" title="Collapse / expand"><span>‹</span></div>
+        <section id="dataCard">
+          <div class="dataHead">Data Panel</div>
+          <div class="dataBody">
+            <table id="dataTable"><thead></thead><tbody></tbody></table>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
 
-    // Debounced resize function for better performance
-    let resizeTimeout;
-    function debouncedResize() {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(resizeWorkspace, 150);
-    }
+  <!-- Code viewer -->
+  <section id="codeWrap" aria-hidden="true">
+    <div id="codeHead">
+      <strong>Generated JavaScript</strong>
+      <button id="btnCloseCode" class="btn">Close</button>
+    </div>
+    <pre id="codeArea"></pre>
+  </section>
 
-    // Add multiple resize event listeners
-    window.addEventListener('resize', debouncedResize);
-    window.addEventListener('orientationchange', () => {
-      setTimeout(resizeWorkspace, 300); // Delay for orientation change
-    });
-
-    // Enhanced mobile touch handling
-    if (isTouch) {
-      document.addEventListener('touchstart', function () { }, { passive: true });
-    }
-
-    // Initial resize with mobile detection
-    // Use a longer timeout to ensure DOM is fully loaded
-    setTimeout(() => {
-      resizeWorkspace();
-      
-      // Additional resize after a bit more time to ensure proper rendering
-      setTimeout(resizeWorkspace, 500);
-
-      // Additional mobile initialization
-      if (isMobile) {
-        console.log('Mobile device detected, applying optimizations');
-        const blocklyDiv = document.getElementById('blocklyDiv');
-        if (blocklyDiv) {
-          blocklyDiv.style.touchAction = 'pan-x pan-y';
-        }
-      }
-    }, 200);
-
-    // Cleanup function for proper workspace disposal
-    let workspaceDisposed = false;
-    function cleanupWorkspace() {
-      if (workspace && !workspaceDisposed) {
-        try {
-          workspaceDisposed = true;
-          workspace.dispose();
-        } catch (error) {
-          console.warn('Workspace disposal warning:', error);
-        }
-      }
-    }
-
-    // Add cleanup on page unload
-    window.addEventListener('beforeunload', cleanupWorkspace);
-    window.addEventListener('pagehide', cleanupWorkspace);
-
-    // Panel Resizing Functionality
-    let isResizing = false;
-    let currentHandle = null;
-    let startX = 0;
-    let startBlocksWidth = 320;
-    let startDataWidth = 360;
-    let minBlocksWidth = 250;
-    let maxBlocksWidth = 600;
-    let minDataWidth = 300;
-    let maxDataWidth = 600;
-
-    function initializeResizing() {
-      const mainGrid = document.getElementById('main-grid');
-      const handle1 = document.getElementById('resize-handle-1');
-      const handle2 = document.getElementById('resize-handle-2');
-
-      if (!handle1 || !handle2 || !mainGrid) return;
-
-      // Load saved sizes from localStorage
-      const savedBlocksWidth = localStorage.getItem('panelBlocksWidth');
-      const savedDataWidth = localStorage.getItem('panelDataWidth');
-
-      if (savedBlocksWidth) {
-        startBlocksWidth = parseInt(savedBlocksWidth);
-      }
-      if (savedDataWidth) {
-        startDataWidth = parseInt(savedDataWidth);
-      }
-
-      // Apply saved sizes
-      mainGrid.style.gridTemplateColumns = `${startBlocksWidth}px 1fr ${startDataWidth}px`;
-
-      // Handle 1 - between blocks and stage
-      handle1.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        currentHandle = 1;
-        startX = e.clientX;
-        handle1.classList.add('dragging');
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        e.preventDefault();
-      });
-
-      // Handle 2 - between stage and data
-      handle2.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        currentHandle = 2;
-        startX = e.clientX;
-        handle2.classList.add('dragging');
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        e.preventDefault();
-      });
-
-      // Mouse move handler
-      document.addEventListener('mousemove', (e) => {
-        if (!isResizing) return;
-
-        const deltaX = e.clientX - startX;
-        let newBlocksWidth = startBlocksWidth;
-        let newDataWidth = startDataWidth;
-
-        if (currentHandle === 1) {
-          // Resizing blocks panel
-          newBlocksWidth = Math.max(minBlocksWidth, Math.min(maxBlocksWidth, startBlocksWidth + deltaX));
-        } else if (currentHandle === 2) {
-          // Resizing data panel
-          newDataWidth = Math.max(minDataWidth, Math.min(maxDataWidth, startDataWidth - deltaX));
-        }
-
-        mainGrid.style.gridTemplateColumns = `${newBlocksWidth}px 1fr ${newDataWidth}px`;
-
-        // Update Blockly workspace
-        if (workspace && currentHandle === 1) {
-          requestAnimationFrame(() => {
-            try {
-              Blockly.svgResize(workspace);
-            } catch (error) {
-              console.warn('Blockly resize error:', error);
-            }
-          });
-        }
-      });
-
-      // Mouse up handler
-      document.addEventListener('mouseup', () => {
-        if (isResizing) {
-          isResizing = false;
-
-          // Clean up visual states
-          handle1.classList.remove('dragging');
-          handle2.classList.remove('dragging');
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-
-          // Parse current widths and save to localStorage
-          const currentStyle = mainGrid.style.gridTemplateColumns;
-          const widthMatch = currentStyle.match(/(\d+)px 1fr (\d+)px/);
-
-          if (widthMatch) {
-            const blocksWidth = parseInt(widthMatch[1]);
-            const dataWidth = parseInt(widthMatch[2]);
-
-            localStorage.setItem('panelBlocksWidth', blocksWidth);
-            localStorage.setItem('panelDataWidth', dataWidth);
-
-            startBlocksWidth = blocksWidth;
-            startDataWidth = dataWidth;
-          }
-
-          currentHandle = null;
-
-          // Final Blockly resize
-          if (workspace) {
-            setTimeout(() => {
-              try {
-                Blockly.svgResize(workspace);
-              } catch (error) {
-                console.warn('Blockly final resize error:', error);
-              }
-            }, 100);
-          }
-        }
-      });
-
-      // Prevent text selection during drag
-      document.addEventListener('selectstart', (e) => {
-        if (isResizing) {
-          e.preventDefault();
-        }
-      });
-    }
-
-    // Initialize resizing after workspace is ready
-    setTimeout(() => {
-      initializeResizing();
-    }, 200);
-
-    // Bridge functions for React components to call vanilla JS Blockly functions
-    async function waitForGenerators(requiredKeys, timeoutMs = 3000) {
-      const start = Date.now();
-      return new Promise((resolve, reject) => {
-        (function poll() {
-          const js = window.Blockly && window.Blockly.JavaScript;
-          const ready = !!js && requiredKeys.every(k => !!js[k]);
-          if (ready) return resolve(true);
-          if (Date.now() - start > timeoutMs) return reject(new Error('Generators not ready'));
-          setTimeout(poll, 50);
-        })();
-      });
-    }
-
-    window.executeBlocklyCode = async function () {
-      if (!workspace) return;
-
-      // Update React state - executing
-      if (window.reactSetExecuting) window.reactSetExecuting(true);
-      if (window.reactSetOutput) window.reactSetOutput('');
-
-      console.log('Run button clicked via React');
-
-      try {
-        // Ensure our custom generators are registered before codegen
-        await waitForGenerators(['csv_import','filter_data','sort_data','select_columns','group_by','calculate_column','drop_empty']).catch(() => {});
-        console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
-        console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
-        console.log('filter_data generator available:', !!Blockly.JavaScript['filter_data']);
-        console.log('Calling workspaceToCode...');
-
-        const code = Blockly.JavaScript.workspaceToCode(workspace);
-        console.log('Generated code:', code);
-
-        if (!code.trim()) {
-          if (window.reactSetOutput) window.reactSetOutput('No code generated - make sure you have blocks in the workspace');
-          if (window.reactSetError) window.reactSetError(false);
-          if (window.reactSetExecuting) window.reactSetExecuting(false);
-          return;
-        }
-
-        // Evaluate possibly-async code and await if Promise-like
-        // eslint-disable-next-line no-eval
-        let result = eval(code);
-        if (result && typeof result.then === 'function') {
-          result = await result;
-        }
-        console.log('Execution result:', result);
-
-        if (window.reactSetOutput) window.reactSetOutput(result !== undefined ? String(JSON.stringify(result, null, 2)) : 'Code executed successfully');
-        if (window.reactSetError) window.reactSetError(false);
-
-        // Dispatch event for automatic visualization of CSV data
-        window.dispatchEvent(new CustomEvent('blocklyExecuted'));
-        
-        // Also update the data panel with the current CSV data
-        if (window.renderDataPanel) {
-          window.renderDataPanel();
-        }
-
-        // Generate chart based on the current chart type and CSV data
-        if (window.Blockly?.CsvImportData?.data && window.chartState) {
-          await window.handleGenerateChartFromBlockly();
-        }
-      } catch (e) {
-        console.error('Error details:', e);
-        if (window.reactSetOutput) window.reactSetOutput(`Error: ${e.message}`);
-        if (window.reactSetError) window.reactSetError(true);
-      }
-
-      // Update React state - finished executing
-      if (window.reactSetExecuting) window.reactSetExecuting(false);
-    };
-
-    window.showBlocklyCode = function () {
-      if (!window.workspace) return;
-
-      console.log('Show code button clicked via React');
-      console.log('Workspace blocks:', window.workspace.getAllBlocks().map(b => b.type));
-      console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
-
-      const code = Blockly.JavaScript.workspaceToCode(window.workspace);
-      console.log('Generated Blockly JavaScript code:', code);
-
-      if (window.reactSetOutput) window.reactSetOutput(code || 'No code generated');
-      if (window.reactSetError) window.reactSetError(false);
-    };
-
-    // --- Universal Dropdown Logic ---
-    function closeAllDropdowns() {
-      document.querySelectorAll('.project-dropdown').forEach(menu => menu.classList.add('hidden'));
-    }
-    function toggleUserMenu(event) {
-      event.stopPropagation();
-      const menu = document.getElementById('user-menu');
-      const isHidden = menu.classList.contains('hidden');
-      closeAllDropdowns();
-      if (isHidden) menu.classList.remove('hidden');
-    }
-    function logout(event) {
-      event.preventDefault();
-      console.log("User logged out.");
-      window.location.href = '/';
-    }
-    window.addEventListener('click', function (event) {
-      if (!event.target.closest('.dropdown-toggle')) {
-        closeAllDropdowns();
-      }
-    });
-
-    // Initialize the header after the page has loaded
-    document.addEventListener('DOMContentLoaded', () => {
-      // Header is now integrated directly in the HTML, no need to fetch
-    });
-  </script>
+  <xml id="toolbox" style="display: none">
+    <category name="Logic" colour="210">
+      <block type="controls_if"></block>
+      <block type="logic_compare"></block>
+      <block type="logic_operation"></block>
+      <block type="logic_negate"></block>
+      <block type="logic_boolean"></block>
+    </category>
+    <category name="Loops" colour="120">
+      <block type="controls_repeat_ext"></block>
+      <block type="controls_whileUntil"></block>
+    </category>
+    <category name="Math" colour="230">
+      <block type="math_number"></block>
+      <block type="math_arithmetic"></block>
+      <block type="math_single"></block>
+      <block type="math_round"></block>
+      <block type="math_on_list"></block>
+    </category>
+    <category name="Text" colour="160">
+      <block type="text"></block>
+      <block type="text_print"></block>
+    </category>
+    <category name="Lists" colour="260">
+      <block type="lists_create_with"></block>
+      <block type="lists_getIndex"></block>
+      <block type="lists_setIndex"></block>
+      <block type="lists_length"></block>
+    </category>
+    <category name="Variables" colour="330" custom="VARIABLE"></category>
+    <category name="Functions" colour="290" custom="PROCEDURE"></category>
+    <category name="Data" colour="20">
+      <block type="csv_import"></block>
+      <block type="to_json">
+        <value name="VALUE">
+          <block type="csv_import"></block>
+        </value>
+      </block>
+      <block type="filter_data">
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
+      </block>
+      <block type="sort_data">
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
+      </block>
+      <block type="select_columns">
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
+      </block>
+      <block type="group_by">
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
+      </block>
+      <block type="calculate_column">
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
+      </block>
+      <block type="drop_empty">
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
+      </block>
+    </category>
+  </xml>
 
   <script>
-    // Global variables for component state - simplified following React pattern
-    window.chartState = {
-      chartType: 'bar',
-      dataType: 'block', // Changed to block by default since we're focusing on CSV
-      loading: false
-    };
+    /* LIGHT THEME (only colours) */
+    const LIGHT_THEME = Blockly.Theme.defineTheme('apparentlyLight', {
+      base: Blockly.Themes.Classic,
+      componentStyles:{
+        toolboxForegroundColour:'#354355', toolboxBackgroundColour:'#eef3fa',
+        flyoutBackgroundColour:'#fff', flyoutForegroundColour:'#4c5d70', flyoutOpacity:1,
+        insertionMarkerOpacity:.3, scrollbarColour:'#cdd6e1'
+      },
+      categoryStyles:{
+        logic_category:{colour:'#6aa84f'}, loops_category:{colour:'#3d85c6'}, math_category:{colour:'#674ea7'},
+        text_category:{colour:'#a64d79'}, lists_category:{colour:'#bf9000'}, variables_category:{colour:'#2d8cf0'},
+        functions_category:{colour:'#0b7a75'}, data_category:{colour:'#ff8a3d'}, misc_category:{colour:'#708090'}
+      },
+      blockStyles:{
+        logic_blocks:{colourPrimary:'#6aa84f'}, loop_blocks:{colourPrimary:'#3d85c6'},
+        math_blocks:{colourPrimary:'#674ea7'}, text_blocks:{colourPrimary:'#a64d79'},
+        list_blocks:{colourPrimary:'#bf9000'}, variable_blocks:{colourPrimary:'#2d8cf0'},
+        procedure_blocks:{colourPrimary:'#0b7a75'}
+      }
+    });
 
-    let outputState = {
-      output: '',
-      isError: false
-    };
+    /* Inject Blockly */
+    const workspace = Blockly.inject('blocklyDiv', {
+      theme: LIGHT_THEME,
+      grid:{spacing:20,length:3,colour:'#e9eef5',snap:true},
+      zoom:{controls:true,wheel:true,startScale:0.95,maxScale:2,minScale:0.5,pinch:true},
+      move:{wheel:true,drag:true,scrollbars:true},
+      renderer:'zelos',
+      toolbox: document.getElementById('toolbox').childNodes.length ? document.getElementById('toolbox') : undefined
+    });
 
-    let statusState = {
-      isExecuting: false,
-      hasOutput: false,
-      hasError: false
-    };
+    document.getElementById('blocklySearch').addEventListener('input', e=>{
+      const q=e.target.value.trim().toLowerCase(); const tb=workspace.getToolbox(); if(!tb) return;
+      if(!q){ tb.clearSearch?.(); return; } tb.search?.(q);
+    });
 
-    window.visualizationState = {
-      chartData: null,
-      loading: false,
-      error: null,
-      chartInstance: null
-    };
+    /* Persist workspace */
+    const STORAGE_KEY='apparently.blockly.workspace';
+    try{
+      const saved=localStorage.getItem(STORAGE_KEY);
+      if(saved) Blockly.serialization.workspaces.load(JSON.parse(saved), workspace);
+      workspace.addChangeListener(()=> localStorage.setItem(STORAGE_KEY, JSON.stringify(Blockly.serialization.workspaces.save(workspace))));
+    }catch{}
 
-    // Chart types following the same pattern as React
-    const chartTypes = [
-      { value: 'bar', label: 'Bar Chart' },
-      { value: 'line', label: 'Line Chart' },
-      { value: 'pie', label: 'Pie Chart' },
-      { value: 'scatter', label: 'Scatter Plot' },
-      { value: 'doughnut', label: 'Doughnut Chart' },
-      { value: 'area', label: 'Area Chart' },
-      { value: 'histogram', label: 'Histogram' },
-      { value: 'boxplot', label: 'Box Plot' },
-      { value: 'heatmap', label: 'Heatmap' },
-      { value: 'radar', label: 'Radar Chart' }
-    ];
-
-    // Utility function to get CSV columns
-    function getCSVColumns() {
-      const rows = window.Blockly?.CsvImportData?.data || [];
-      const cols = rows[0] ? Object.keys(rows[0]) : [];
-      return cols;
+    /* Two splitters for resizing */
+    function setupSplitter(splitId, leftIndex, rightIndex, minLeft, minRight){
+      const grid=document.getElementById('grid'); const split=document.getElementById(splitId);
+      let drag=false,startX=0,colsStart=[];
+      split.addEventListener('mousedown', e=>{
+        drag=true; startX=e.clientX;
+        colsStart=getComputedStyle(grid).gridTemplateColumns.split(' ').map(v=>v.endsWith('px')?parseFloat(v):v);
+        document.body.style.cursor='col-resize'; e.preventDefault();
+      });
+      window.addEventListener('mousemove', e=>{
+        if(!drag) return;
+        const dx=e.clientX-startX;
+        const L=Math.max(minLeft, parseFloat(colsStart[leftIndex]) + dx);
+        const R=Math.max(minRight, parseFloat(colsStart[rightIndex]) - dx);
+        const cols=[...colsStart];
+        cols[leftIndex]=`${L}px`; cols[rightIndex]=`${R}px`;
+        grid.style.gridTemplateColumns=cols.join(' ');
+        Blockly.svgResize(workspace);
+      });
+      window.addEventListener('mouseup', ()=>{ if(!drag) return; drag=false; document.body.style.cursor=''; Blockly.svgResize(workspace); });
     }
+    // grid columns: [0]=left, [2]=middle, [4]=right
+    setupSplitter('split1', 0, 2, 320, 420);
+    setupSplitter('split2', 2, 4, 420, 320);
 
-    // Simplified chart controls - just chart type selector (no generate button, chart generated on Run Blockly)
-    function renderChartControls() {
-      const container = document.getElementById('react-controls-container');
-      if (!container) return;
+    /* Collapsible data panel */
+    (function(){
+      const shell=document.getElementById('dataShell'); const tab=document.getElementById('dataToggle');
+      let open=true; const setIcon=()=> tab.firstElementChild.textContent=open?'‹':'›';
+      tab.addEventListener('click', ()=>{
+        open=!open; shell.classList.toggle('collapsed', !open);
+        // when collapsed, also widen the middle column a bit
+        const grid=document.getElementById('grid');
+        const cols=getComputedStyle(grid).gridTemplateColumns.split(' ');
+        if(!open){ cols[4]='320px'; } // keep a reasonable right min (hidden)
+        grid.style.gridTemplateColumns=cols.join(' ');
+        setIcon(); Blockly.svgResize(workspace);
+      });
+      setIcon();
+    })();
 
-      // Check if we have CSV data
-      const hasCSVData = !!window.Blockly?.CsvImportData?.data;
-      
-      let html = '';
-      
-      // Show simple message if CSV data is available
-      if (hasCSVData) {
-        const csvData = window.Blockly.CsvImportData.data;
-        html += `
-          <div class="flex items-center gap-2">
-            <span class="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs">
-              CSV Data Loaded
-            </span>
-            <span class="text-xs text-muted">${csvData.length} rows, ${getCSVColumns().length} columns</span>
-          </div>
-        `;
-      }
-      
-      // Chart type selector
-      html += `
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs">Type</span>
-          <select id="chart-type-select" class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 disabled:opacity-50">
-            ${chartTypes.map(type => `<option value="${type.value}" ${window.chartState.chartType === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}
-          </select>
-        </div>
-      `;
-
-      // Note: Generate button is removed - chart will be generated when "Run Blockly" is clicked
-
-      container.innerHTML = html;
-
-      // Attach event listeners (only for chart type select, not the generate button)
-      attachChartControlEvents();
-    }
-
-    function attachChartControlEvents() {
-      // Chart type select
-      const chartTypeSelect = document.getElementById('chart-type-select');
-      if (chartTypeSelect) {
-        chartTypeSelect.addEventListener('change', (e) => {
-          window.chartState.chartType = e.target.value;
-        });
-      }
-
-      // Removed generate chart button - chart will be generated when "Run Blockly" is clicked
-    }
-
-    async function handleGenerateChart() {
-      window.chartState.loading = true;
-      renderChartControls();
-
-      try {
-        // Use CSV data from Blockly
-        const csvData = window.Blockly?.CsvImportData?.data || null;
-        if (!csvData) {
-          throw new Error('No CSV data available. Please import a CSV file using the CSV import block.');
-        }
-
-        // Default options from CSV columns - automatically detect appropriate columns based on data types
-        const columns = Object.keys(csvData[0] || {});
-        
-        // Identify appropriate X and Y columns based on data types and chart type
-        let xColumn = columns[0] || 'x'; // Default to first column
-        let yColumn = columns[1] || 'y'; // Default to second column
-        
-        // For different chart types, we may want different column detection logic
-        if (columns.length >= 2) {
-          // Try to find categorical (string) and numeric columns
-          const categoricalColumns = columns.filter(col => {
-            // Check first few rows to be more accurate
-            for (let i = 0; i < Math.min(5, csvData.length); i++) {
-              const value = csvData[i][col];
-              if (value !== undefined && value !== null) {
-                if (typeof value === 'string' && isNaN(parseFloat(value))) {
-                  return true;
-                }
-              }
-            }
-            return false;
-          });
-          
-          const numericColumns = columns.filter(col => {
-            // Check first few rows to be more accurate
-            for (let i = 0; i < Math.min(5, csvData.length); i++) {
-              const value = csvData[i][col];
-              if (value !== undefined && value !== null) {
-                const numValue = parseFloat(value);
-                if (!isNaN(numValue) && isFinite(numValue)) {
-                  return true;
-                }
-              }
-            }
-            return false;
-          });
-          
-          // For pie/doughnut charts, we want a category for labels and numeric values
-          if (['pie', 'doughnut'].includes(window.chartState.chartType)) {
-            if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-              xColumn = categoricalColumns[0]; // Use for labels
-              yColumn = numericColumns[0];     // Use for values
-            } else if (numericColumns.length >= 2) {
-              // For pie charts, sometimes first numeric is labels, second is values (or vice versa)
-              xColumn = numericColumns[0];
-              yColumn = numericColumns[1] || numericColumns[0];
-            }
-          } else {
-            // For other chart types, try to find categorical for X and numeric for Y
-            if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-              xColumn = categoricalColumns[0];
-              yColumn = numericColumns[0];
-            } else if (numericColumns.length >= 2) {
-              // If all columns are numeric, use first two
-              xColumn = numericColumns[0];
-              yColumn = numericColumns[1];
-            } else {
-              // Fallback to first two columns
-              xColumn = columns[0];
-              yColumn = columns[1];
-            }
-          }
-        }
-        
-        const options = {
-          xColumn: xColumn,
-          yColumn: yColumn,
-          title: 'CSV Data Visualization'
-        };
-
-        // Generate chart
-        const chartResponse = await fetch('/api/generate-chart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: csvData,
-            chartType: window.chartState.chartType,
-            options: options
-          })
-        });
-
-        const chartResult = await chartResponse.json();
-
-        // Update visualization
-        window.visualizationState.chartData = chartResult;
-        renderDataVisualization();
-        
-        // Dispatch custom event for other components to listen
-        window.dispatchEvent(new CustomEvent('chartGenerated', {
-          detail: chartResult
-        }));
-
-      } catch (error) {
-        console.error('Chart generation failed:', error);
-        alert('Failed to generate chart: ' + error.message);
-      } finally {
-        window.chartState.loading = false;
-        renderChartControls();
-      }
-    }
-
-    // Global function to handle chart generation from Blockly execution
-    window.handleGenerateChartFromBlockly = async function() {
-      try {
-        // Use CSV data from Blockly
-        const csvData = window.Blockly?.CsvImportData?.data || null;
-        if (!csvData) {
-          // No CSV data to visualize
-          return;
-        }
-
-        // Get current chart type from the global chart state
-        const chartType = window.chartState ? window.chartState.chartType : 'bar';
-        
-        // Default options from CSV columns - automatically detect appropriate columns based on data types
-        const columns = Object.keys(csvData[0] || {});
-        
-        // Identify appropriate X and Y columns based on data types and current chart type
-        let xColumn = columns[0] || 'x'; // Default to first column
-        let yColumn = columns[1] || 'y'; // Default to second column
-        
-        // For different chart types, we may want different column detection logic
-        if (columns.length >= 2) {
-          // Try to find categorical (string) and numeric columns
-          const categoricalColumns = columns.filter(col => {
-            // Check first few rows to be more accurate
-            for (let i = 0; i < Math.min(5, csvData.length); i++) {
-              const value = csvData[i][col];
-              if (value !== undefined && value !== null) {
-                if (typeof value === 'string' && isNaN(parseFloat(value))) {
-                  return true;
-                }
-              }
-            }
-            return false;
-          });
-          
-          const numericColumns = columns.filter(col => {
-            // Check first few rows to be more accurate
-            for (let i = 0; i < Math.min(5, csvData.length); i++) {
-              const value = csvData[i][col];
-              if (value !== undefined && value !== null) {
-                const numValue = parseFloat(value);
-                if (!isNaN(numValue) && isFinite(numValue)) {
-                  return true;
-                }
-              }
-            }
-            return false;
-          });
-          
-          // For pie/doughnut charts, we want a category for labels and numeric values
-          if (['pie', 'doughnut'].includes(chartType)) {
-            if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-              xColumn = categoricalColumns[0]; // Use for labels
-              yColumn = numericColumns[0];     // Use for values
-            } else if (numericColumns.length >= 2) {
-              // For pie charts, sometimes first numeric is labels, second is values (or vice versa)
-              xColumn = numericColumns[0];
-              yColumn = numericColumns[1] || numericColumns[0];
-            }
-          } else {
-            // For other chart types, try to find categorical for X and numeric for Y
-            if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-              xColumn = categoricalColumns[0];
-              yColumn = numericColumns[0];
-            } else if (numericColumns.length >= 2) {
-              // If all columns are numeric, use first two
-              xColumn = numericColumns[0];
-              yColumn = numericColumns[1];
-            } else {
-              // Fallback to first two columns
-              xColumn = columns[0];
-              yColumn = columns[1];
-            }
-          }
-        }
-        
-        const options = {
-          xColumn: xColumn,
-          yColumn: yColumn,
-          title: 'CSV Data Visualization'
-        };
-
-        // Generate chart
-        const chartResponse = await fetch('/api/generate-chart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: csvData,
-            chartType: chartType,
-            options: options
-          })
-        });
-
-        const chartResult = await chartResponse.json();
-
-        // Update visualization
-        window.visualizationState.chartData = chartResult;
-        window.renderDataVisualization();
-        
-        // Dispatch custom event for other components to listen
-        window.dispatchEvent(new CustomEvent('chartGenerated', {
-          detail: chartResult
-        }));
-
-      } catch (error) {
-        console.error('Chart generation from Blockly execution failed:', error);
-      }
-    };
-
-    // Output display - simplified following React pattern
-    function renderOutputDisplay() {
-      const container = document.getElementById('output-root');
-      if (!container) return;
-
-      if (!outputState.output) {
-        container.innerHTML = '';
-        return;
-      }
-
-      container.innerHTML = `
-        <div class="flex-1 mx-2">
-          <pre class="${outputState.isError
-            ? 'bg-[#2b1f1f] text-error border-[#4a2e2e]'
-            : 'bg-chip text-text border-border'
-          } p-2 rounded-lg font-mono text-xs border max-h-16 overflow-auto">${outputState.output}</pre>
-        </div>
-      `;
-    }
-
-    // Status indicator - following React pattern exactly
-    function renderStatusIndicator() {
-      const container = document.getElementById('status-root');
-      if (!container) return;
-
-      if (!statusState.isExecuting && !statusState.hasOutput) {
-        container.innerHTML = '';
-        return;
-      }
-
-      let html = '';
-      if (statusState.isExecuting) {
-        html = `
-          <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs">
-            <div class="animate-spin h-3 w-3 border border-muted border-t-transparent rounded-full"></div>
-            Executing...
-          </span>
-        `;
-      } else if (statusState.hasOutput && !statusState.isExecuting) {
-        html = `
-          <span class="${statusState.hasError
-            ? 'bg-[#2b1f1f] text-error border-[#4a2e2e]'
-            : 'bg-[#1a2b24] text-ok border-[#2e5a49]'
-          } inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs">
-            ${statusState.hasError ? 'Error' : 'Ready'}
-          </span>
-        `;
-      }
-
-      container.innerHTML = html;
-    }
-
-    // Data visualization panel - following React pattern exactly
-    function renderDataVisualization() {
-      const container = document.getElementById('react-chart-container');
-      if (!container) return;
-
-      if (window.visualizationState.error) {
-        container.innerHTML = `
-          <div class="absolute top-4 left-4 right-4 bg-[#2b1f1f] border border-[#4a2e2e] text-error px-3 py-2 rounded text-sm z-10">
-            <strong>Error:</strong> ${window.visualizationState.error}
-          </div>
-        `;
-        return;
-      }
-
-      if (window.visualizationState.loading) {
-        container.innerHTML = `
-          <div class="absolute inset-0 bg-[#0f1324] bg-opacity-50 flex items-center justify-center z-10">
-            <div class="bg-panel border border-border rounded-lg p-4 flex items-center gap-3">
-              <div class="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full"></div>
-              <span class="text-text">Generating chart...</span>
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      if (!window.visualizationState.chartData) {
-        container.innerHTML = `
-          <div class="absolute inset-0 flex items-center justify-center">
-            <div class="text-center">
-              <div class="text-sm text-muted mb-2">
-                Visualization will appear here when blocks are executed
-              </div>
-              <button id="load-sample-btn" class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 hover:bg-panel2 transition-colors">
-                Load Sample Chart
-              </button>
-            </div>
-          </div>
-        `;
-        
-        // Attach event listener to load sample button
-        const loadSampleBtn = document.getElementById('load-sample-btn');
-        if (loadSampleBtn) {
-          loadSampleBtn.addEventListener('click', loadSampleData);
-        }
-        return;
-      }
-
-      // Render the chart
-      container.innerHTML = '<canvas id="chart-canvas" class="w-full h-full"></canvas>';
-      
-      // Render the chart using Chart.js
-      setTimeout(() => {
-        const canvas = document.getElementById('chart-canvas');
-        if (canvas && window.Chart) {
-          // Destroy existing chart instance
-          if (window.visualizationState.chartInstance) {
-            window.visualizationState.chartInstance.destroy();
-          }
-
-          const ctx = canvas.getContext('2d');
-          
-          // Convert backend chart config to Chart.js format
-          const chartConfig = convertToChartJsConfig(window.visualizationState.chartData);
-          
-          window.visualizationState.chartInstance = new Chart(ctx, chartConfig);
-        }
-      }, 0);
-    }
-
-    function convertToChartJsConfig(backendResult) {
-      if (!backendResult.config) return null;
-      
-      // The backend config should already be in Chart.js format
-      // but we can add dark theme styling
-      return {
-        type: backendResult.chartType,
-        data: backendResult.config.data,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: {
-                color: '#e7ebff'
-              }
-            }
-          },
-          scales: {
-            x: {
-              ticks: {
-                color: '#a9b4d0'
-              },
-              grid: {
-                color: '#2b3350'
-              }
-            },
-            y: {
-              ticks: {
-                color: '#a9b4d0'
-              },
-              grid: {
-                color: '#2b3350'
-              }
-            }
-          },
-          ...backendResult.config.options
-        }
-      };
-    }
-
-    async function loadSampleData() {
-      try {
-        const response = await fetch('/api/test-data/students');
-        const result = await response.json();
-        
-        if (result.success) {
-          // Default options from sample data columns - automatically detect appropriate columns based on data types
-          const columns = Object.keys(result.data[0] || {});
-          
-          // Identify appropriate X and Y columns based on data types and current chart type
-          let xColumn = columns[0] || 'x'; // Default to first column
-          let yColumn = columns[1] || 'y'; // Default to second column
-          
-          // For different chart types, we may want different column detection logic
-          if (columns.length >= 2) {
-            // Try to find categorical (string) and numeric columns
-            const categoricalColumns = columns.filter(col => {
-              // Check first few rows to be more accurate
-              for (let i = 0; i < Math.min(5, result.data.length); i++) {
-                const value = result.data[i][col];
-                if (value !== undefined && value !== null) {
-                  if (typeof value === 'string' && isNaN(parseFloat(value))) {
-                    return true;
-                  }
-                }
-              }
-              return false;
-            });
-            
-            const numericColumns = columns.filter(col => {
-              // Check first few rows to be more accurate
-              for (let i = 0; i < Math.min(5, result.data.length); i++) {
-                const value = result.data[i][col];
-                if (value !== undefined && value !== null) {
-                  const numValue = parseFloat(value);
-                  if (!isNaN(numValue) && isFinite(numValue)) {
-                    return true;
-                  }
-                }
-              }
-              return false;
-            });
-            
-            // For pie/doughnut charts, we want a category for labels and numeric values
-            if (['pie', 'doughnut'].includes(chartState.chartType)) {
-              if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-                xColumn = categoricalColumns[0]; // Use for labels
-                yColumn = numericColumns[0];     // Use for values
-              } else if (numericColumns.length >= 2) {
-                // For pie charts, sometimes first numeric is labels, second is values (or vice versa)
-                xColumn = numericColumns[0];
-                yColumn = numericColumns[1] || numericColumns[0];
-              }
-            } else {
-              // For other chart types, try to find categorical for X and numeric for Y
-              if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-                xColumn = categoricalColumns[0];
-                yColumn = numericColumns[0];
-              } else if (numericColumns.length >= 2) {
-                // If all columns are numeric, use first two
-                xColumn = numericColumns[0];
-                yColumn = numericColumns[1];
-              } else {
-                // Fallback to first two columns
-                xColumn = columns[0];
-                yColumn = columns[1];
-              }
-            }
-          }
-          
-          // Generate a chart with sample data using detected columns
-          await generateChart(result.data, chartState.chartType, {
-            xColumn: xColumn,
-            yColumn: yColumn,
-            title: 'Sample Data Visualization'
-          });
-        }
-      } catch (err) {
-        visualizationState.error = 'Failed to load sample data';
-        renderDataVisualization();
-      }
-    }
-
-    async function generateChart(data, chartType, options) {
-      visualizationState.loading = true;
-      visualizationState.error = null;
-      renderDataVisualization();
-      
-      try {
-        const response = await fetch('/api/generate-chart', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ data, chartType, options }),
-        });
-        
-        if (!response.ok) throw new Error('Failed to generate chart');
-        
-        const result = await response.json();
-        visualizationState.chartData = result;
-        renderDataVisualization();
-      } catch (err) {
-        visualizationState.error = err.message;
-        renderDataVisualization();
-      } finally {
-        visualizationState.loading = false;
-        renderDataVisualization();
-      }
-    }
-
-    // API functions
-    async function processData(data, operations) {
-      const response = await fetch('/api/process-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    /* Chart.js rendering */
+    let chart; const ctx=document.getElementById('vizCanvas').getContext('2d');
+    function renderChart(rows){
+      const type=document.getElementById('vizType').value || 'line';
+      if(chart){ chart.destroy(); chart=null; }
+      const cols = rows?.length ? Object.keys(rows[0]) : [];
+      const numeric = cols.filter(c => rows.some(r => !isNaN(parseFloat(r[c]))));
+      const xKey = cols[0] || 'Row'; const yKey=numeric[0] || null;
+      const labels = rows.map((r,i)=> r[xKey] ?? i+1);
+      const data = yKey ? rows.map(r=>parseFloat(r[yKey])) : [];
+      chart = new Chart(ctx,{
+        type:(type==='scatter'?'scatter':type),
+        data:{
+          labels:(type==='scatter'?undefined:labels),
+          datasets:[{
+            label:yKey||'Value',
+            data:(type==='scatter')
+              ? rows.map((r,i)=>({x:i+1,y:yKey?parseFloat(r[yKey]):1}))
+              : (data.length?data:rows.map(()=>1)),
+            tension:.25, pointRadius:3
+          }]
         },
-        body: JSON.stringify({ data, operations }),
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}
       });
-      return await response.json();
     }
 
-    // Initialize all components
-    function initializeComponents() {
-      renderChartControls();
-      renderOutputDisplay();
-      renderStatusIndicator();
-      renderDataVisualization();
-      // Wait a bit to ensure Blockly is fully loaded before rendering the data panel
-      setTimeout(() => {
-        renderDataPanel();
-      }, 100);
+    /* Data table */
+    function renderTable(rows){
+      const th=document.querySelector('#dataTable thead'); const tb=document.querySelector('#dataTable tbody');
+      th.innerHTML=tb.innerHTML=''; if(!rows?.length) return;
+      const cols=Object.keys(rows[0]); th.innerHTML='<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+      const MAX=500; const frag=document.createDocumentFragment();
+      rows.slice(0,MAX).forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=cols.map(c=>`<td>${r[c]??''}</td>`).join(''); frag.appendChild(tr); });
+      tb.appendChild(frag);
     }
 
-    // Function to render CSV data in the data panel
-    function renderDataPanel() {
-      const container = document.getElementById('data-panel-content');
-      if (!container) return;
+    /* Play */
+    const codeArea=document.getElementById('codeArea');
+    async function runBlocks(){
+      const code=Blockly.JavaScript.workspaceToCode(workspace);
+      codeArea.textContent=code;
+      const fname=(Blockly.CsvImportData&&Blockly.CsvImportData.filename)||'No file chosen';
+      document.getElementById('fileLabel').textContent=fname;
 
-      const csvData = window.Blockly?.CsvImportData?.data;
-      if (!csvData || csvData.length === 0) {
-        container.innerHTML = `
-          <div class="text-sm text-muted text-center py-8 h-full flex items-center justify-center">
-            Data will appear here when imported via blocks
-          </div>
-        `;
-        return;
-      }
+      let resultRows=null;
+      try{
+        const f=new Function(`return (async()=>{ ${code}; return (typeof result!=='undefined'?result:(window.Blockly && Blockly.CsvImportData && Blockly.CsvImportData.data)||[]); })()`);
+        resultRows=await f();
+      }catch(e){ console.error(e); alert('Error running blocks (see console).'); resultRows=(Blockly.CsvImportData&&Blockly.CsvImportData.data)||[]; }
+      if(!Array.isArray(resultRows)) resultRows=[{Value:resultRows}];
 
-      try {
-        // Create a table to display the CSV data
-        const headers = Object.keys(csvData[0] || {});
-        let html = '<div class="overflow-auto h-full">';
-
-        // Limit the number of rows displayed in the table to prevent performance issues
-        const maxDisplayRows = 50;
-        const displayData = csvData.slice(0, maxDisplayRows);
-        const isTruncated = csvData.length > maxDisplayRows;
-
-        // Create table header
-        html += '<table class="min-w-full divide-y divide-border text-xs">';
-        html += '<thead class="bg-panel2">';
-        html += '<tr>';
-        headers.forEach(header => {
-          html += `<th class="px-2 py-1 text-left font-medium text-muted uppercase tracking-wider border-r border-border last:border-r-0">${header}</th>`;
-        });
-        html += '</tr>';
-        html += '</thead>';
-
-        // Create table body
-        html += '<tbody class="divide-y divide-border">';
-        displayData.forEach((row, index) => {
-          html += '<tr class="hover:bg-panel2">';
-          headers.forEach(header => {
-            const cellValue = row[header] !== undefined ? row[header] : '';
-            html += `<td class="px-2 py-1 text-text border-r border-border last:border-r-0 max-w-xs truncate" title="${escapeHtml(cellValue)}">${escapeHtml(cellValue)}</td>`;
-          });
-          html += '</tr>';
-        });
-        html += '</tbody>';
-
-        html += '</table>';
-
-        if (isTruncated) {
-          html += `<div class="text-xs text-muted mt-2 p-2">Showing ${maxDisplayRows} of ${csvData.length} rows</div>`;
-        }
-
-        html += '</div>';
-
-        container.innerHTML = html;
-
-      } catch (error) {
-        console.error('Error rendering data panel:', error);
-        container.innerHTML = `
-          <div class="text-sm text-error text-center py-8 h-full flex items-center justify-center">
-            Error displaying data: ${error.message}
-          </div>
-        `;
-      }
+      renderChart(resultRows); renderTable(resultRows);
     }
+    document.getElementById('btnPlay').addEventListener('click', runBlocks);
 
-    // Helper function to escape HTML to prevent XSS
-    function escapeHtml(unsafe) {
-      if (unsafe === null || unsafe === undefined) return '';
-      return String(unsafe)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    // Expose functions to global scope for React bridge
-    window.reactSetOutput = function(output) {
-      outputState.output = output;
-      outputState.isError = false;
-      statusState.hasOutput = !!output;
-      renderOutputDisplay();
-      renderStatusIndicator();
-    };
-
-    window.reactSetError = function(isError) {
-      outputState.isError = isError;
-      statusState.hasError = isError;
-      renderOutputDisplay();
-      renderStatusIndicator();
-    };
-
-    window.reactSetExecuting = function(isExecuting) {
-      statusState.isExecuting = isExecuting;
-      renderStatusIndicator();
-    };
-
-    window.reactGetState = function() {
-      return {
-        output: outputState.output,
-        isExecuting: statusState.isExecuting,
-        isError: outputState.isError
-      };
-    };
-
-    // Event listeners
-    document.addEventListener('DOMContentLoaded', function() {
-      initializeComponents();
+    document.getElementById('btnShowCode').addEventListener('click', ()=>{
+      const w=document.getElementById('codeWrap'); const open=w.style.display!=='none';
+      if(open){ w.style.display='none'; return; }
+      codeArea.textContent=Blockly.JavaScript.workspaceToCode(workspace);
+      w.style.display='block';
+    });
+    document.getElementById('btnCloseCode').addEventListener('click', ()=> document.getElementById('codeWrap').style.display='none');
+    document.getElementById('vizType').addEventListener('change', ()=>{
+      const rows=(Blockly?.CsvImportData?.data)||[]; renderChart(Array.isArray(rows)?rows:[]);
     });
 
-    // Listen for chart generation events
-    window.addEventListener('chartGenerated', function(event) {
-      const chartResult = event.detail;
-      visualizationState.chartData = chartResult;
-      renderDataVisualization();
-    });
-
-    // Listen for Blockly execution to automatically visualize CSV data
-    window.addEventListener('blocklyExecuted', async function() {
-      // Check if we have CSV data from Blockly and process it via backend
-      const csvData = window.Blockly?.CsvImportData?.data;
-      if (csvData && csvData.length > 0) {
-        try {
-          window.visualizationState.loading = true;
-          window.visualizationState.error = null;
-          renderDataVisualization();
-
-          // For now, send with an empty operations array (no-op pipeline)
-          const processed = await processData(csvData, []);
-          const processedData = processed && processed.data ? processed.data : csvData;
-
-          // Use the chart state's current chart type
-          const currentChartType = window.chartState ? window.chartState.chartType : 'bar';
-          
-          // Default options from CSV columns - automatically detect appropriate columns based on data types
-          const columns = Object.keys(processedData[0] || {});
-          
-          // Identify appropriate X and Y columns based on data types and current chart type
-          let xColumn = columns[0] || 'x'; // Default to first column
-          let yColumn = columns[1] || 'y'; // Default to second column
-          
-          // For different chart types, we may want different column detection logic
-          if (columns.length >= 2) {
-            // Try to find categorical (string) and numeric columns
-            const categoricalColumns = columns.filter(col => {
-              // Check first few rows to be more accurate
-              for (let i = 0; i < Math.min(5, processedData.length); i++) {
-                const value = processedData[i][col];
-                if (value !== undefined && value !== null) {
-                  if (typeof value === 'string' && isNaN(parseFloat(value))) {
-                    return true;
-                  }
-                }
-              }
-              return false;
-            });
-            
-            const numericColumns = columns.filter(col => {
-              // Check first few rows to be more accurate
-              for (let i = 0; i < Math.min(5, processedData.length); i++) {
-                const value = processedData[i][col];
-                if (value !== undefined && value !== null) {
-                  const numValue = parseFloat(value);
-                  if (!isNaN(numValue) && isFinite(numValue)) {
-                    return true;
-                  }
-                }
-              }
-              return false;
-            });
-            
-            // For pie/doughnut charts, we want a category for labels and numeric values
-            if (['pie', 'doughnut'].includes(currentChartType)) {
-              if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-                xColumn = categoricalColumns[0]; // Use for labels
-                yColumn = numericColumns[0];     // Use for values
-              } else if (numericColumns.length >= 2) {
-                // For pie charts, sometimes first numeric is labels, second is values (or vice versa)
-                xColumn = numericColumns[0];
-                yColumn = numericColumns[1] || numericColumns[0];
-              }
-            } else {
-              // For other chart types, try to find categorical for X and numeric for Y
-              if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-                xColumn = categoricalColumns[0];
-                yColumn = numericColumns[0];
-              } else if (numericColumns.length >= 2) {
-                // If all columns are numeric, use first two
-                xColumn = numericColumns[0];
-                yColumn = numericColumns[1];
-              } else {
-                // Fallback to first two columns
-                xColumn = columns[0];
-                yColumn = columns[1];
-              }
-            }
-          }
-          
-          const options = {
-            xColumn: xColumn,
-            yColumn: yColumn,
-            title: 'CSV Data Visualization'
-          };
-
-          // Generate chart using current chart type from state
-          await generateChart(processedData, currentChartType, options);
-        } catch (e) {
-          window.visualizationState.error = e.message || 'Failed to process data';
-          renderDataVisualization();
-        } finally {
-          window.visualizationState.loading = false;
-          renderDataVisualization();
-        }
-      }
-    });
-
-    // Update chart controls and data panel when CSV data changes
-    window.addEventListener('csvDataChanged', function() {
-      renderChartControls();
-      renderDataPanel();
-    });
-
-    // Also update the data panel when Blockly execution completes
-    window.addEventListener('blocklyExecuted', function() {
-      renderDataPanel();
-    });
+    /* Keep Blockly sized */
+    window.addEventListener('resize', ()=> Blockly.svgResize(workspace));
   </script>
 </body>
-
 </html>

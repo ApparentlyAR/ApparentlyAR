@@ -2,172 +2,174 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="./LogoAR.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0" />
-  <title>ApparentlyAR • Simulation</title>
-
-  <!-- Fonts & Tailwind (light) -->
+  <title>ApparentlyAR • Simulation (Light)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Plus Jakarta Sans','ui-sans-serif','system-ui'] },
-          colors: {
-            page:'#f7fafc', surface:'#ffffff', surface2:'#f3f4f6', line:'#e5e7eb',
-            ink:'#111827', mute:'#6b7280', brand:'#2563eb', brandDark:'#1e40af', chip:'#eef2ff'
-          },
-          boxShadow: { soft:'0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08)' }
-        }
-      }
-    };
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <!-- Blockly + deps -->
+  <!-- Base CSS reset + light theme -->
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --panel:#ffffff;
+      --ink:#1f2a37;
+      --muted:#5a6b7b;
+      --line:#e6e9ef;
+      --accent:#2f7dd6;
+      --accent-2:#5fb3ff;
+      --success:#12a150;
+      --warning:#f0ad00;
+      --radius:14px;
+      --shadow:0 2px 10px rgba(20,33,61,.06), 0 1px 3px rgba(20,33,61,.05);
+      --tab:#eef5ff;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    }
+
+    /* Toolbar row under header */
+    .toolbar-inner{
+      max-width:1400px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;
+    }
+    .breadcrumb{display:flex;gap:8px;align-items:center;color:var(--muted);flex:1 1 auto;font-size:14px}
+    .breadcrumb a{color:var(--muted);text-decoration:none}
+    .breadcrumb .chev{opacity:.5}
+    .btn{
+      border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:12px;font-weight:600;cursor:pointer;
+      transition:transform .05s ease, box-shadow .15s ease;
+    }
+    .btn:hover{box-shadow:var(--shadow)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn.play{display:inline-flex;align-items:center;gap:8px}
+    .btn.ghost{background:transparent}
+    .btn.success{background:var(--success);border-color:var(--success);color:#fff}
+
+    /* Layout: resizable left + center, collapsible right */
+    .app{
+      max-width:1400px;margin:16px auto 28px;display:grid;grid-template-columns: minmax(280px, 1fr) 10px minmax(420px,1.4fr) minmax(320px, 0.9fr);
+      gap:0 0;height:calc(100vh - 160px);
+    }
+    .panel{
+      background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+      overflow:hidden;position:relative;
+    }
+
+    /* Blockly panel */
+    #blocklyPanel{display:flex;flex-direction:column;}
+    #blocklySearch{border:none;border-bottom:1px solid var(--line);padding:12px 14px;font-size:14px;outline:none}
+    #blocklyArea{flex:1 1 auto;min-height:0}
+
+    /* Vertical splitter between left and center */
+    .splitter{
+      cursor:col-resize;display:flex;align-items:center;justify-content:center;
+    }
+    .splitbar{
+      width:2px;height:70%;background:var(--line);border-radius:2px;position:relative;
+    }
+    .splitbar:after{
+      content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      width:6px;height:56px;border-radius:6px;background:var(--line);
+    }
+
+    /* Visualisation panel */
+    #vizPanel{display:grid;grid-template-rows:auto 1fr;min-width:300px}
+    .vizTop{
+      display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:10px 14px;background:linear-gradient(#fff, #fcfdff);
+    }
+    .vizTop .type{display:flex;align-items:center;gap:8px}
+    select.vizType{
+      appearance:none;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;min-width:140px
+    }
+    .fileLabel{font-size:14px;color:var(--muted)}
+    #vizCanvasWrap{padding:12px 14px}
+    #vizCanvas{width:100%;height:100%}
+
+    /* Data Panel (collapsible) */
+    #dataShell{position:relative}
+    #dataPanel{height:100%;display:grid;grid-template-rows:auto 1fr}
+    .dataHead{border-bottom:1px solid var(--line);padding:10px 14px;background:linear-gradient(#fff,#fcfdff);font-weight:600}
+    .dataBody{overflow:auto}
+    table{border-collapse:collapse;width:100%}
+    th,td{border-bottom:1px solid var(--line);padding:8px 10px;font-size:13px;text-align:left;white-space:nowrap}
+    thead th{position:sticky;top:0;background:#fff}
+    /* Toggle tab – always visible on the left middle */
+    .dataToggle{
+      position:absolute;left:-14px;top:50%;transform:translateY(-50%);
+      width:28px;height:48px;border-radius:10px 0 0 10px;background:var(--tab);border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)
+    }
+    .dataToggle span{font-size:18px;color:var(--accent)}
+    .collapsed #dataPanel{display:none}
+    .collapsed{border:1px dashed var(--line)}
+    .collapsed .dataToggle{left:-14px}
+
+    /* Bottom code viewer */
+    #codeWrap{
+      max-width:1400px;margin:12px auto 28px;background:var(--panel);border:1px solid var(--line);
+      border-radius:var(--radius);box-shadow:var(--shadow);display:none;overflow:hidden
+    }
+    #codeHead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+    #codeArea{padding:12px 14px;max-height:340px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:#fbfcff}
+
+    /* Utility */
+    .hidden{display:none}
+  </style>
+
+  <!-- Blockly + dependencies -->
   <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-  <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 
-  <!-- Your blocks (registers generators) -->
-  <script src="../src/react/api.js"></script>
-  <script src="../src/blocks/csv_import.js"></script>
-  <script src="../src/blocks/to_json.js"></script>
+  <!-- Chart.js for visualisation -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Your blocks (unchanged; we only style the theme) -->
+  <script src="../src/blocks/csv_import.js"></script><!-- CSV upload & stores rows/filename on Blockly.CsvImportData --> 
   <script src="../src/blocks/data_ops.js"></script>
   <script src="../src/blocks/statistics.js"></script>
-
-  <style>
-    html, body { height:100%; }
-    body { background:#f7fafc; color:#111827; }
-
-    /* Layout with variables so we can resize/toggle elegantly */
-    :root {
-      --left-col: 340px;   /* initial width of Blockly */
-      --gutter-w: 8px;     /* draggable gutter width */
-      --data-col: 380px;   /* initial width of Data panel */
-      --tab-w:   28px;     /* persistent tab width (when collapsed) */
-      --min-left: 260px;
-      --max-left: 60vw;
-    }
-
-    #main-grid {
-      display:grid;
-      height:100vh;
-      grid-template-rows: 64px 1fr 140px;
-      grid-template-columns: var(--left-col) var(--gutter-w) 1fr var(--data-col);
-      grid-template-areas:
-        "topbar topbar topbar topbar"
-        "blocks gutterL stage  data"
-        "console console console console";
-      overflow:hidden;
-    }
-
-    /* When data panel collapsed, keep a narrow column for the tab */
-    body.data-collapsed #main-grid {
-      grid-template-columns: var(--left-col) var(--gutter-w) 1fr var(--tab-w);
-    }
-    body.data-collapsed #data-panel .content { display:none; }
-
-    @media (max-width: 980px) {
-      #main-grid {
-        grid-template-rows: 64px auto auto auto 140px;
-        grid-template-columns: 1fr;
-        grid-template-areas:
-          "topbar"
-          "stage"
-          "blocks"
-          "data"
-          "console";
-        height:auto; min-height:100vh;
-      }
-      #gutter-left { display:none; }
-    }
-
-    .blocklySvg { display:block; }
-    .blocklyToolboxDiv::-webkit-scrollbar { display:none; }
-    .blocklyToolboxDiv { -ms-overflow-style:none; scrollbar-width:none; }
-
-    .toolbar-btn { display:inline-flex; align-items:center; gap:.5rem; border-radius:.5rem; border:1px solid #e5e7eb; background:#fff; padding:.5rem .75rem; font-size:.875rem; box-shadow:0 1px 2px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.08); }
-    .toolbar-btn:hover{ background:#f3f4f6; }
-    .toolbar-btn--primary{ border-color:transparent; background:#2563eb; color:#fff; }
-    .toolbar-btn--primary:hover{ background:#1e40af; }
-
-    /* Draggable gutter (blocks <-> stage) */
-    #gutter-left {
-      grid-area: gutterL;
-      cursor: col-resize;
-      position: relative;
-      background: transparent;
-    }
-    #gutter-left::before {
-      content:''; position:absolute; top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      width:2px; height:18px; background:#c7cdd8; border-radius:1px; opacity:.6;
-    }
-
-    /* Data panel tab sits on the left edge, vertically centered */
-    #data-collapse-tab {
-      position:absolute;
-      top:50%; left:0;
-      transform: translateX(-100%) translateY(-50%);
-      width: var(--tab-w); height: 44px;
-      display:flex; align-items:center; justify-content:center;
-      background:#ffffff; border:1px solid #e5e7eb; border-right:none;
-      border-radius: 10px 0 0 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
-      cursor: pointer;
-    }
-    #data-collapse-tab svg { width:18px; height:18px; stroke:#6b7280; }
-  </style>
+  <script src="../src/blocks/to_json.js"></script>
 </head>
+<body>
+  <!-- We load your existing header.html and then render the light toolbar under it -->
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <nav class="breadcrumb">
+        <a href="view-project.html">My Projects</a>
+        <span class="chev">›</span>
+        <a href="#">[Project Name]</a>
+        <span class="chev">›</span>
+        <strong>Simulation</strong>
+      </nav>
+      <button id="btnShowCode" class="btn">Show code</button>
+      <button id="btnPlay" class="btn primary play" title="Run blocks">
+        ▶︎ <span>Play</span>
+      </button>
+      <a id="btnEnterAR" class="btn success" href="ar-demo.html">Enter AR</a>
+    </div>
+  </div>
 
-<body class="m-0 font-sans">
-  <!-- Header imported from header.html -->
-    <div id="header-container"></div>
-    <script>
-        fetch('header.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('header-container').innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error loading header:', error);
-            });
-    </script>
-  <div id="main-grid">
-
-    <!-- SUB-HEADER -->
-    <header style="grid-area: topbar" class="bg-surface border-b border-line">
-      <div class="h-16 max-w-screen-2xl mx-auto px-4 flex items-center justify-between">
-        <nav class="text-sm text-mute flex items-center gap-2">
-          <a href="teacher-dashboard.html" class="hover:text-ink">My Projects</a>
-          <span class="text-gray-300">›</span>
-          <span class="text-ink font-medium">[Project Name]</span>
-          <span class="text-gray-300">›</span>
-          <span class="text-brand font-semibold">Simulation</span>
-        </nav>
-        <div class="flex items-center gap-2">
-          <button id="btn-run" class="toolbar-btn toolbar-btn--primary bg-green-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            Play
-          </button>
-          <button id="btn-show-code" class="toolbar-btn green bg-yellow-400">Show code</button>
-          <button class="toolbar-btn bg-red-400 outline-red-500" onclick="location.href='ar-demo.html'">Enter AR</button>
-        </div>
+  <main class="app" id="layout">
+    <!-- LEFT: Blockly -->
+    <section id="blocklyPanel" class="panel">
+      <input id="blocklySearch" type="search" placeholder="Search blocks…" />
+      <div id="blocklyArea">
+        <div id="blocklyDiv" style="height:100%;width:100%"></div>
       </div>
-    </header>
+    </section>
 
-    <!-- LEFT: BLOCKLY -->
-    <aside style="grid-area: blocks" class="grid grid-rows-[auto,1fr] bg-surface border-r border-line">
-      <div class="p-2 border-b border-line">
-        <input class="w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-sm" placeholder="Search blocks…" />
+    <!-- Blocks Panel -->
+    <section id="blocklyPanel" class="panel">
+        <input id="blocklySearch" type="search" placeholder="Search blocks…" />
+      <div id="blocklyArea">
+        <!-- Blockly Workspace -->
+        <div id="blocklyDiv" style="height:100%;width:100%"></div>
       </div>
-      <div id="blocklyDiv" class="w-full h-full min-h-[480px]"></div>
 
-      <!-- TOOLBOX (UNCHANGED) -->
+      <!-- Hidden Blockly Toolbox -->
       <xml id="toolbox" style="display: none">
         <category name="Logic" colour="210">
           <block type="controls_if"></block>
@@ -202,254 +204,337 @@
         <category name="Data" colour="20">
           <block type="csv_import"></block>
           <block type="to_json">
-            <value name="VALUE"><block type="csv_import"></block></value>
+            <value name="VALUE">
+              <block type="csv_import"></block>
+            </value>
           </block>
-          <block type="filter_data"><value name="DATA"><block type="csv_import"></block></value></block>
-          <block type="sort_data"><value name="DATA"><block type="csv_import"></block></value></block>
-          <block type="group_by"><value name="DATA"><block type="csv_import"></block></value></block>
-          <block type="calculate_column"><value name="DATA"><block type="csv_import"></block></value></block>
-          <block type="drop_empty"><value name="DATA"><block type="csv_import"></block></value></block>
+          <block type="filter_data">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="sort_data">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="select_columns">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="group_by">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_column">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="drop_empty">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
         </category>
       </xml>
-    </aside>
+    </section>
 
-    <!-- RESIZE GUTTER (blocks <-> stage) -->
-    <div id="gutter-left" title="Drag to resize"></div>
+    <!-- SPLITTER -->
+    <div id="splitter" class="splitter"><div class="splitbar"></div></div>
 
-    <!-- MIDDLE: VISUALISATION -->
-    <section style="grid-area: stage" class="grid grid-rows-[48px,1fr] bg-surface">
-      <div class="flex items-center justify-between gap-3 px-3 border-b border-line bg-surface2">
-        <div id="react-controls-container" class="flex items-center gap-3"></div>
-        <div id="file-pill" class="text-xs text-mute"></div>
-      </div>
-      <div class="relative m-3 rounded-xl border border-line bg-white overflow-hidden">
-        <div id="react-chart-container" class="w-full h-full min-h-[420px] grid place-items-center text-mute">
-          <div class="text-sm">Run your blocks to see the visualisation here</div>
+    <!-- CENTER: Visualisation -->
+    <section id="vizPanel" class="panel">
+      <div class="vizTop">
+        <div class="type">
+          <label for="vizType" style="font-weight:600">Type</label>
+          <select id="vizType" class="vizType">
+            <option value="bar">Bar Chart</option>
+            <option value="line" selected>Line Chart</option>
+            <option value="scatter">Scatter</option>
+          </select>
         </div>
+        <div class="fileLabel" id="fileLabel">No file chosen</div>
+      </div>
+      <div id="vizCanvasWrap">
+        <canvas id="vizCanvas"></canvas>
       </div>
     </section>
 
-    <!-- RIGHT: DATA PANEL -->
-    <aside id="data-panel" style="grid-area: data" class="grid grid-rows-[48px,1fr] bg-surface border-l border-line relative">
-      <div class="flex items-center justify-between px-3 border-b border-line bg-surface2 content">
-        <strong class="text-sm">Data Panel</strong>
-        <!-- HEADER CHEVRON -->
-        <button id="data-toggle-header" class="p-1 rounded-md hover:bg-surface">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" fill="none">
-            <path id="chev-header" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-          </svg>
-        </button>
+    <!-- RIGHT: Data -->
+    <aside id="dataShell" class="panel">
+      <div class="dataToggle" id="dataToggle" title="Collapse / expand data panel">
+        <span>›</span>
       </div>
-      <div id="data-panel-content" class="overflow-auto content">
-        <div class="text-sm text-mute text-center py-8">Import a CSV with the block to see rows here</div>
-      </div>
-
-      <!-- PERSISTENT MID-EDGE TAB -->
-      <button id="data-collapse-tab" aria-label="Toggle data panel" title="Toggle data panel">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path id="chev-tab" d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>
-      </button>
-    </aside>
-
-    <!-- BOTTOM: CONSOLE / STATUS -->
-    <footer style="grid-area: console" class="flex items-center gap-3 px-3 py-2 bg-surface border-t border-line">
-      <div id="output-root" class="flex-1"></div>
-      <div id="status-root"></div>
-    </footer>
-  </div>
-
-  <!-- ==== PAGE SCRIPTS ==== -->
-  <script>
-    /* === Blockly (LIGHT) === */
-    window.workspace = Blockly.inject('blocklyDiv', {
-      toolbox: document.getElementById('toolbox'),
-      grid: { spacing: 20, length: 3, colour: '#e5e7eb', snap: true },
-      zoom: { controls:true, wheel:true, startScale:0.95, maxScale:2, minScale:0.5, scaleSpeed:1.2 },
-      move: { scrollbars:true, drag:true, wheel:true },
-      trashcan: true,
-      theme: {
-        base: Blockly.Themes.Classic,
-        componentStyles: {
-          workspaceBackgroundColour:'#ffffff',
-          toolboxBackgroundColour:'#ffffff',
-          toolboxForegroundColour:'#111827',
-          flyoutBackgroundColour:'#ffffff',
-          flyoutForegroundColour:'#111827',
-          scrollbarColour:'#d1d5db'
-        }
-      },
-      renderer: 'zelos'
-    });
-
-    function resizeWorkspace() {
-      const div = document.getElementById('blocklyDiv');
-      div.style.height = '100%'; div.style.width = '100%';
-      Blockly.svgResize(workspace);
-    }
-    window.addEventListener('resize', () => setTimeout(resizeWorkspace, 80));
-    setTimeout(resizeWorkspace, 120);
-
-    /* === Resizable left<->middle via gutter === */
-    (function() {
-      const grid = document.getElementById('main-grid');
-      const gutter = document.getElementById('gutter-left');
-      let dragging = false;
-      const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
-
-      gutter.addEventListener('pointerdown', (e) => {
-        dragging = true;
-        gutter.setPointerCapture(e.pointerId);
-        document.body.style.cursor = 'col-resize';
-      });
-      window.addEventListener('pointermove', (e) => {
-        if (!dragging) return;
-        const rect = grid.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const min = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--min-left')) || 260;
-        const left = clamp(x, min, rect.width * 0.6);
-        document.documentElement.style.setProperty('--left-col', left + 'px');
-        resizeWorkspace();
-      });
-      window.addEventListener('pointerup', (e) => {
-        if (!dragging) return;
-        dragging = false;
-        gutter.releasePointerCapture?.(e.pointerId);
-        document.body.style.cursor = '';
-        resizeWorkspace();
-      });
-    })();
-
-    /* === Data Panel collapse with header button + persistent tab === */
-    (function(){
-      const body = document.body;
-      const tab = document.getElementById('data-collapse-tab');
-      const headerBtn = document.getElementById('data-toggle-header');
-      const chevTab = document.getElementById('chev-tab');
-      const chevHeader = document.getElementById('chev-header');
-      let collapsed = false;
-
-      function setChevron() {
-        const openPath = 'M9 5l7 7-7 7';     // points right (collapse)
-        const closedPath = 'M15 19l-7-7 7-7';// points left (expand)
-        const d = collapsed ? closedPath : openPath;
-        chevTab.setAttribute('d', d);
-        chevHeader.setAttribute('d', d);
-      }
-      function toggle() {
-        collapsed = !collapsed;
-        body.classList.toggle('data-collapsed', collapsed);
-        setChevron();
-        setTimeout(resizeWorkspace, 50);
-      }
-
-      tab.addEventListener('click', toggle);
-      headerBtn.addEventListener('click', toggle);
-      setChevron(); // init
-    })();
-
-    /* === CSV filename chip + Data table render === */
-    window.addEventListener('csvDataChanged', () => {
-      const pill = document.getElementById('file-pill');
-      const name = (window.Blockly?.CsvImportData?.filename) || '';
-      pill.innerHTML = name
-        ? `<span class="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-full bg-chip text-ink border border-line">📄 ${name}</span>`
-        : '';
-      if (window.renderDataPanel) window.renderDataPanel();
-      if (window.renderChartControls) window.renderChartControls();
-    });
-
-    window.renderDataPanel = function () {
-      const root = document.getElementById('data-panel-content');
-      const data = window.Blockly?.CsvImportData?.data;
-      if (!root) return;
-      if (!data || !data.length) {
-        root.innerHTML = `<div class="text-sm text-mute text-center py-8">No data loaded</div>`;
-        return;
-      }
-      const cols = Object.keys(data[0] || {});
-      const header = cols.map(c => `<th class="px-3 py-2 text-left text-xs font-medium text-mute bg-surface2 border-b border-line">${c}</th>`).join('');
-      const rows = data.slice(0, 200).map(r =>
-        `<tr class="odd:bg-white even:bg-surface2">
-           ${cols.map(c => `<td class="px-3 py-2 text-sm border-b border-line">${(r[c] ?? '')}</td>`).join('')}
-         </tr>`).join('');
-      root.innerHTML = `
-        <div class="overflow-auto">
-          <table class="min-w-full border-collapse">
-            <thead><tr>${header}</tr></thead>
-            <tbody>${rows}</tbody>
+      <div id="dataPanel">
+        <div class="dataHead">Data Panel</div>
+        <div class="dataBody">
+          <table id="dataTable">
+            <thead></thead>
+            <tbody></tbody>
           </table>
-          <div class="px-3 py-2 text-xs text-mute border-t border-line">
-            Showing ${Math.min(200, data.length)} of ${data.length} rows
-          </div>
-        </div>`;
-    };
+        </div>
+      </div>
+    </aside>
+  </main>
 
-    /* ---- Bind buttons explicitly to avoid wrong handler wiring ---- */
-    function safeBind(id, fn) {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('click', fn);
-    }
-    safeBind('btn-show-code', () => showBlocklyCode());
-    safeBind('btn-run', () => executeBlocklyCode());
+  <!-- Bottom code viewer -->
+  <section id="codeWrap" aria-hidden="true">
+    <div id="codeHead">
+      <strong>Generated JavaScript</strong>
+      <button id="btnCloseCode" class="btn ghost">Close</button>
+    </div>
+    <pre id="codeArea"></pre>
+  </section>
 
-    /* ---- Run / Show code ---- */
-    async function waitForGenerators(names=[], timeout=1500){
-      const t0 = performance.now();
-      while (performance.now() - t0 < timeout) {
-        const ok = names.every(n => !!Blockly.JavaScript[n]);
-        if (ok) return true;
-        await new Promise(r => setTimeout(r, 40));
-      }
-      return false;
-    }
+  <!-- Optional existing toolbox: keep your own XML here; we won’t change content -->
+  <!-- If you already inject via components.js, this can stay empty. -->
+  <xml id="toolbox" style="display:none"></xml>
 
-    window.executeBlocklyCode = async function () {
-      if (!window.workspace) return;
-      if (window.reactSetExecuting) window.reactSetExecuting(true);
-      if (window.reactSetOutput) window.reactSetOutput('');
-
+  <script>
+    // Load header.html into <header>
+    (async () => {
       try {
-        await waitForGenerators(['csv_import','filter_data','sort_data','group_by','calculate_column','drop_empty']).catch(()=>{});
-        const code = Blockly.JavaScript.workspaceToCode(window.workspace);
-        if (!code.trim()) {
-          // If no blocks are present but CSV data exists, try to generate a default chart
-          if (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.data) {
-            // Generate a simple default chart from the CSV data
-            const csvData = window.Blockly.CsvImportData.data;
-            const chartType = window.chartState.chartType || 'bar';
-            await window.AppApi.generateChart(csvData, chartType, { title: 'Visualization of CSV Data' });
-          } else {
-            if (window.reactSetOutput) window.reactSetOutput('No blocks to execute – add some blocks or load a CSV file.');
-            if (window.reactSetError) window.reactSetError(false);
-          }
-          return;
-        }
-        const fn = new Function('AppApi','Papa','Chart','window', code);
-        await fn(window.AppApi, window.Papa, window.Chart, window); // <-- RUNS THE GENERATED CODE
-        if (window.renderDataVisualization) window.renderDataVisualization();
-        if (window.renderDataPanel) window.renderDataPanel();
-        if (window.reactSetError) window.reactSetError(false);
-      } catch (e) {
-        console.error(e);
-        if (window.reactSetOutput) window.reactSetOutput(`Error: ${e.message}`);
-        if (window.reactSetError) window.reactSetError(true);
-        if (window.visualizationState) { window.visualizationState.error = e.message; }
-        if (window.renderDataVisualization) window.renderDataVisualization();
-      } finally {
-        if (window.reactSetExecuting) window.reactSetExecuting(false);
+        const r = await fetch('header.html'); if(!r.ok) throw 0;
+        document.getElementById('hdr').innerHTML = await r.text();
+      } catch {}
+    })();
+
+    // -------- Blockly LIGHT THEME (only colours changed) ----------
+    const LIGHT_THEME = Blockly.Theme.defineTheme('apparentlyLight', {
+      'base': Blockly.Themes.Classic,
+      'componentStyles': {
+        toolboxForegroundColour: '#354355',
+        toolboxBackgroundColour: '#eef3fa',
+        flyoutBackgroundColour: '#ffffff',
+        flyoutForegroundColour: '#4c5d70',
+        flyoutOpacity: 1,
+        insertionMarkerOpacity: 0.3,
+        scrollbarColour: '#cdd6e1'
+      },
+      'categoryStyles': {               // we leave categories as-is; only provide gentle hues
+        logic_category:    { colour: '#6aa84f' },
+        loops_category:    { colour: '#3d85c6' },
+        math_category:     { colour: '#674ea7' },
+        text_category:     { colour: '#a64d79' },
+        lists_category:    { colour: '#bf9000' },
+        variables_category:{ colour: '#2d8cf0' },
+        functions_category:{ colour: '#0b7a75' },
+        data_category:     { colour: '#ff8a3d' },
+        misc_category:     { colour: '#708090' }
+      },
+      'blockStyles': {
+        logic_blocks:  { colourPrimary: '#6aa84f' },
+        loop_blocks:   { colourPrimary: '#3d85c6' },
+        math_blocks:   { colourPrimary: '#674ea7' },
+        text_blocks:   { colourPrimary: '#a64d79' },
+        list_blocks:   { colourPrimary: '#bf9000' },
+        variable_blocks:{ colourPrimary: '#2d8cf0' },
+        procedure_blocks:{ colourPrimary: '#0b7a75' },
+        // data / stats / ops blocks provided by your files keep their original block colours
       }
-    };
+    });
 
-    window.showBlocklyCode = function () {
-      if (!window.workspace) return;
-      const code = Blockly.JavaScript.workspaceToCode(window.workspace);
-      if (window.reactSetOutput) window.reactSetOutput(code || '// No code generated');
-      if (window.reactSetError) window.reactSetError(false);
-    };
+    // -------- Inject Blockly ----------
+    const toolbox = document.getElementById('toolbox'); // use your existing toolbox if present
+    const workspace = Blockly.inject('blocklyDiv', {
+      theme: LIGHT_THEME,
+      grid: { spacing: 20, length: 3, colour: '#e9eef5', snap: true },
+      zoom: { controls: true, wheel: true, startScale: 0.95, maxScale: 2.0, minScale: 0.5, pinch: true },
+      move: { wheel: true, drag: true, scrollbars: true },
+      renderer: 'zelos',
+      toolbox: toolbox && toolbox.childNodes.length ? toolbox : undefined
+    });
+
+    // Search filter for flyout
+    document.getElementById('blocklySearch').addEventListener('input', (e)=>{
+      const q = e.target.value.trim().toLowerCase();
+      const tb = workspace.getToolbox();
+      if(!tb) return;
+      tb.refreshSelection(); // ensures fresh state
+      if(!q){ tb.clearSearch(); return; }
+      tb.search(q);
+    });
+
+    // Preserve blocks across reloads (simple)
+    const STORAGE_KEY = 'apparently.blockly.workspace';
+    try{
+      const json = localStorage.getItem(STORAGE_KEY);
+      if(json){ Blockly.serialization.workspaces.load(JSON.parse(json), workspace); }
+      workspace.addChangeListener(()=>{
+        const data = Blockly.serialization.workspaces.save(workspace);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      });
+    }catch{}
+
+    // -------- Resizable left/center via splitter ----------
+    (function(){
+      const layout = document.getElementById('layout');
+      const splitter = document.getElementById('splitter');
+      let dragging = false, startX = 0, startCol1 = 0, startCol3 = 0;
+
+      splitter.addEventListener('mousedown', (e)=>{
+        dragging = true; startX = e.clientX;
+        const cs = getComputedStyle(layout).gridTemplateColumns.split(' ');
+        startCol1 = parseFloat(cs[0]); // px because container has fixed max-width
+        startCol3 = parseFloat(cs[2]);
+        document.body.style.cursor = 'col-resize';
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', (e)=>{
+        if(!dragging) return;
+        const dx = e.clientX - startX;
+        const col1 = Math.max(280, startCol1 + dx);
+        const col3 = Math.max(420, startCol3 - dx);
+        layout.style.gridTemplateColumns = `${col1}px 10px ${col3}px minmax(320px, 0.9fr)`;
+        Blockly.svgResize(workspace);
+      });
+      window.addEventListener('mouseup', ()=>{
+        if(!dragging) return; dragging = false; document.body.style.cursor = '';
+        Blockly.svgResize(workspace);
+      });
+    })();
+
+    // -------- Data panel toggle (tab always stays visible) ----------
+    (function(){
+      const shell = document.getElementById('dataShell');
+      const tab = document.getElementById('dataToggle');
+      let open = true;
+      const updateIcon = ()=> tab.firstElementChild.textContent = open ? '‹' : '›';
+      tab.addEventListener('click', ()=>{
+        open = !open;
+        shell.classList.toggle('collapsed', !open);
+        updateIcon();
+        Blockly.svgResize(workspace);
+      });
+      updateIcon();
+    })();
+
+    // -------- Visualisation (Chart.js) ----------
+    let chart;
+    const ctx = document.getElementById('vizCanvas').getContext('2d');
+
+    function renderChart(rows){
+      const type = document.getElementById('vizType').value || 'line';
+      if(chart){ chart.destroy(); chart = null; }
+      const columns = rows && rows.length ? Object.keys(rows[0]) : [];
+      const numeric = columns.filter(c => rows.some(r => !isNaN(parseFloat(r[c]))));
+      const xKey = columns[0] || 'Row';
+      const yKey = numeric[0] || null;
+
+      const labels = rows.map((r,i)=> r[xKey] ?? i+1);
+      const data = yKey ? rows.map(r => parseFloat(r[yKey])) : [];
+
+      chart = new Chart(ctx, {
+        type: (type==='scatter' ? 'scatter' : type),
+        data: {
+          labels: (type==='scatter' ? undefined : labels),
+          datasets: [{
+            label: yKey || 'Count',
+            data: (type==='scatter')
+              ? rows.map((r,i)=> ({x:i+1, y: yKey ? parseFloat(r[yKey]) : 1}))
+              : data.length ? data : rows.map(()=>1),
+            tension: .25,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins:{ legend:{ display:true } },
+          scales: (type==='scatter'
+            ? { x:{ title:{display:true,text:'Index'} }, y:{ title:{display:true,text:yKey||'Value'} } }
+            : {})
+        }
+      });
+    }
+
+    // -------- Data table ----------
+    function renderTable(rows){
+      const thead = document.querySelector('#dataTable thead');
+      const tbody = document.querySelector('#dataTable tbody');
+      thead.innerHTML = tbody.innerHTML = '';
+      if(!rows || !rows.length) return;
+      const cols = Object.keys(rows[0]);
+      thead.innerHTML = '<tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+      const MAX = 500; // safety for huge CSVs
+      const frag = document.createDocumentFragment();
+      rows.slice(0,MAX).forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = cols.map(c => `<td>${(r[c] ?? '')}</td>`).join('');
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+    }
+
+    // -------- Play (execute blocks) ----------
+    const codeArea = document.getElementById('codeArea');
+    async function runBlocks(){
+      // generate code from workspace
+      const code = Blockly.JavaScript.workspaceToCode(workspace);
+      codeArea.textContent = code;
+
+      // filename label (from your CSV block state)
+      const fname = (Blockly.CsvImportData && Blockly.CsvImportData.filename) ? Blockly.CsvImportData.filename : 'No file chosen';
+      document.getElementById('fileLabel').textContent = fname;
+
+      // Execute generated code safely (support async snippets created by your blocks)
+      let resultRows = null;
+      try{
+        // eslint-disable-next-line no-new-func
+        const f = new Function(`return (async()=>{ ${code}; return (typeof result!=='undefined'?result:(window.Blockly && Blockly.CsvImportData && Blockly.CsvImportData.data)||[]); })()`);
+        resultRows = await f();
+      }catch(err){
+        console.error(err);
+        alert('There was an error running your blocks. Check the console for details.');
+        resultRows = (window.Blockly && Blockly.CsvImportData && Blockly.CsvImportData.data) || [];
+      }
+
+      if(!Array.isArray(resultRows)){
+        // Some of your blocks return numbers/stats; if so, wrap as rows for charting
+        resultRows = [{ Value: resultRows }];
+      }
+
+      renderChart(resultRows);
+      renderTable(resultRows);
+    }
+
+    // Buttons
+    document.getElementById('btnPlay').addEventListener('click', runBlocks);
+    document.getElementById('btnShowCode').addEventListener('click', ()=>{
+      const wrap = document.getElementById('codeWrap');
+      const open = wrap.style.display !== 'block';
+      if(open){
+        const code = Blockly.JavaScript.workspaceToCode(workspace);
+        codeArea.textContent = code;
+      }
+      wrap.style.display = open ? 'block' : 'none';
+    });
+    document.getElementById('btnCloseCode').addEventListener('click', ()=>{
+      document.getElementById('codeWrap').style.display = 'none';
+    });
+
+    // Re-render when chart type changes
+    document.getElementById('vizType').addEventListener('change', ()=>{
+      const rows = (window.Blockly && Blockly.CsvImportData && Blockly.CsvImportData.data) || [];
+      renderChart(Array.isArray(rows) ? rows : []);
+    });
+
+    // Repaint Blockly on window resize
+    window.addEventListener('resize', ()=> Blockly.svgResize(workspace));
+
+    // Integrate with your CSV block’s autofill to refresh table upon upload
+    // (csv_import.js already sets Blockly.CsvImportData.*)
+    window.addEventListener('message', (e)=>{
+      if(e.data === 'csv-updated'){ // optional hook if you emit a message elsewhere
+        const rows = (Blockly.CsvImportData && Blockly.CsvImportData.data) || [];
+        document.getElementById('fileLabel').textContent = Blockly.CsvImportData.filename || 'No file chosen';
+        renderTable(rows);
+        renderChart(rows);
+      }
+    });
   </script>
-
-  <!-- Visual components (light mode) -->
-  <script src="./components.js"></script>
 </body>
 </html>
