@@ -827,8 +827,855 @@
     });
   </script>
 
-  <!-- Include component scripts -->
-  <script src="components.js"></script>
+  <script>
+    // Global variables for component state - simplified following React pattern
+    window.chartState = {
+      chartType: 'bar',
+      dataType: 'block', // Changed to block by default since we're focusing on CSV
+      loading: false
+    };
+
+    let outputState = {
+      output: '',
+      isError: false
+    };
+
+    let statusState = {
+      isExecuting: false,
+      hasOutput: false,
+      hasError: false
+    };
+
+    window.visualizationState = {
+      chartData: null,
+      loading: false,
+      error: null,
+      chartInstance: null
+    };
+
+    // Chart types following the same pattern as React
+    const chartTypes = [
+      { value: 'bar', label: 'Bar Chart' },
+      { value: 'line', label: 'Line Chart' },
+      { value: 'pie', label: 'Pie Chart' },
+      { value: 'scatter', label: 'Scatter Plot' },
+      { value: 'doughnut', label: 'Doughnut Chart' },
+      { value: 'area', label: 'Area Chart' },
+      { value: 'histogram', label: 'Histogram' },
+      { value: 'boxplot', label: 'Box Plot' },
+      { value: 'heatmap', label: 'Heatmap' },
+      { value: 'radar', label: 'Radar Chart' }
+    ];
+
+    // Utility function to get CSV columns
+    function getCSVColumns() {
+      const rows = window.Blockly?.CsvImportData?.data || [];
+      const cols = rows[0] ? Object.keys(rows[0]) : [];
+      return cols;
+    }
+
+    // Simplified chart controls - just chart type selector (no generate button, chart generated on Run Blockly)
+    function renderChartControls() {
+      const container = document.getElementById('react-controls-container');
+      if (!container) return;
+
+      // Check if we have CSV data
+      const hasCSVData = !!window.Blockly?.CsvImportData?.data;
+      
+      let html = '';
+      
+      // Show simple message if CSV data is available
+      if (hasCSVData) {
+        const csvData = window.Blockly.CsvImportData.data;
+        html += `
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs">
+              CSV Data Loaded
+            </span>
+            <span class="text-xs text-muted">${csvData.length} rows, ${getCSVColumns().length} columns</span>
+          </div>
+        `;
+      }
+      
+      // Chart type selector
+      html += `
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs">Type</span>
+          <select id="chart-type-select" class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 disabled:opacity-50">
+            ${chartTypes.map(type => `<option value="${type.value}" ${window.chartState.chartType === type.value ? 'selected' : ''}>${type.label}</option>`).join('')}
+          </select>
+        </div>
+      `;
+
+      // Note: Generate button is removed - chart will be generated when "Run Blockly" is clicked
+
+      container.innerHTML = html;
+
+      // Attach event listeners (only for chart type select, not the generate button)
+      attachChartControlEvents();
+    }
+
+    function attachChartControlEvents() {
+      // Chart type select
+      const chartTypeSelect = document.getElementById('chart-type-select');
+      if (chartTypeSelect) {
+        chartTypeSelect.addEventListener('change', (e) => {
+          window.chartState.chartType = e.target.value;
+        });
+      }
+
+      // Removed generate chart button - chart will be generated when "Run Blockly" is clicked
+    }
+
+    async function handleGenerateChart() {
+      window.chartState.loading = true;
+      renderChartControls();
+
+      try {
+        // Use CSV data from Blockly
+        const csvData = window.Blockly?.CsvImportData?.data || null;
+        if (!csvData) {
+          throw new Error('No CSV data available. Please import a CSV file using the CSV import block.');
+        }
+
+        // Default options from CSV columns - automatically detect appropriate columns based on data types
+        const columns = Object.keys(csvData[0] || {});
+        
+        // Identify appropriate X and Y columns based on data types and chart type
+        let xColumn = columns[0] || 'x'; // Default to first column
+        let yColumn = columns[1] || 'y'; // Default to second column
+        
+        // For different chart types, we may want different column detection logic
+        if (columns.length >= 2) {
+          // Try to find categorical (string) and numeric columns
+          const categoricalColumns = columns.filter(col => {
+            // Check first few rows to be more accurate
+            for (let i = 0; i < Math.min(5, csvData.length); i++) {
+              const value = csvData[i][col];
+              if (value !== undefined && value !== null) {
+                if (typeof value === 'string' && isNaN(parseFloat(value))) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          });
+          
+          const numericColumns = columns.filter(col => {
+            // Check first few rows to be more accurate
+            for (let i = 0; i < Math.min(5, csvData.length); i++) {
+              const value = csvData[i][col];
+              if (value !== undefined && value !== null) {
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue) && isFinite(numValue)) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          });
+          
+          // For pie/doughnut charts, we want a category for labels and numeric values
+          if (['pie', 'doughnut'].includes(window.chartState.chartType)) {
+            if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+              xColumn = categoricalColumns[0]; // Use for labels
+              yColumn = numericColumns[0];     // Use for values
+            } else if (numericColumns.length >= 2) {
+              // For pie charts, sometimes first numeric is labels, second is values (or vice versa)
+              xColumn = numericColumns[0];
+              yColumn = numericColumns[1] || numericColumns[0];
+            }
+          } else {
+            // For other chart types, try to find categorical for X and numeric for Y
+            if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+              xColumn = categoricalColumns[0];
+              yColumn = numericColumns[0];
+            } else if (numericColumns.length >= 2) {
+              // If all columns are numeric, use first two
+              xColumn = numericColumns[0];
+              yColumn = numericColumns[1];
+            } else {
+              // Fallback to first two columns
+              xColumn = columns[0];
+              yColumn = columns[1];
+            }
+          }
+        }
+        
+        const options = {
+          xColumn: xColumn,
+          yColumn: yColumn,
+          title: 'CSV Data Visualization'
+        };
+
+        // Generate chart
+        const chartResponse = await fetch('/api/generate-chart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: csvData,
+            chartType: window.chartState.chartType,
+            options: options
+          })
+        });
+
+        const chartResult = await chartResponse.json();
+
+        // Update visualization
+        window.visualizationState.chartData = chartResult;
+        renderDataVisualization();
+        
+        // Dispatch custom event for other components to listen
+        window.dispatchEvent(new CustomEvent('chartGenerated', {
+          detail: chartResult
+        }));
+
+      } catch (error) {
+        console.error('Chart generation failed:', error);
+        alert('Failed to generate chart: ' + error.message);
+      } finally {
+        window.chartState.loading = false;
+        renderChartControls();
+      }
+    }
+
+    // Global function to handle chart generation from Blockly execution
+    window.handleGenerateChartFromBlockly = async function() {
+      try {
+        // Use CSV data from Blockly
+        const csvData = window.Blockly?.CsvImportData?.data || null;
+        if (!csvData) {
+          // No CSV data to visualize
+          return;
+        }
+
+        // Get current chart type from the global chart state
+        const chartType = window.chartState ? window.chartState.chartType : 'bar';
+        
+        // Default options from CSV columns - automatically detect appropriate columns based on data types
+        const columns = Object.keys(csvData[0] || {});
+        
+        // Identify appropriate X and Y columns based on data types and current chart type
+        let xColumn = columns[0] || 'x'; // Default to first column
+        let yColumn = columns[1] || 'y'; // Default to second column
+        
+        // For different chart types, we may want different column detection logic
+        if (columns.length >= 2) {
+          // Try to find categorical (string) and numeric columns
+          const categoricalColumns = columns.filter(col => {
+            // Check first few rows to be more accurate
+            for (let i = 0; i < Math.min(5, csvData.length); i++) {
+              const value = csvData[i][col];
+              if (value !== undefined && value !== null) {
+                if (typeof value === 'string' && isNaN(parseFloat(value))) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          });
+          
+          const numericColumns = columns.filter(col => {
+            // Check first few rows to be more accurate
+            for (let i = 0; i < Math.min(5, csvData.length); i++) {
+              const value = csvData[i][col];
+              if (value !== undefined && value !== null) {
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue) && isFinite(numValue)) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          });
+          
+          // For pie/doughnut charts, we want a category for labels and numeric values
+          if (['pie', 'doughnut'].includes(chartType)) {
+            if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+              xColumn = categoricalColumns[0]; // Use for labels
+              yColumn = numericColumns[0];     // Use for values
+            } else if (numericColumns.length >= 2) {
+              // For pie charts, sometimes first numeric is labels, second is values (or vice versa)
+              xColumn = numericColumns[0];
+              yColumn = numericColumns[1] || numericColumns[0];
+            }
+          } else {
+            // For other chart types, try to find categorical for X and numeric for Y
+            if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+              xColumn = categoricalColumns[0];
+              yColumn = numericColumns[0];
+            } else if (numericColumns.length >= 2) {
+              // If all columns are numeric, use first two
+              xColumn = numericColumns[0];
+              yColumn = numericColumns[1];
+            } else {
+              // Fallback to first two columns
+              xColumn = columns[0];
+              yColumn = columns[1];
+            }
+          }
+        }
+        
+        const options = {
+          xColumn: xColumn,
+          yColumn: yColumn,
+          title: 'CSV Data Visualization'
+        };
+
+        // Generate chart
+        const chartResponse = await fetch('/api/generate-chart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: csvData,
+            chartType: chartType,
+            options: options
+          })
+        });
+
+        const chartResult = await chartResponse.json();
+
+        // Update visualization
+        window.visualizationState.chartData = chartResult;
+        window.renderDataVisualization();
+        
+        // Dispatch custom event for other components to listen
+        window.dispatchEvent(new CustomEvent('chartGenerated', {
+          detail: chartResult
+        }));
+
+      } catch (error) {
+        console.error('Chart generation from Blockly execution failed:', error);
+      }
+    };
+
+    // Output display - simplified following React pattern
+    function renderOutputDisplay() {
+      const container = document.getElementById('output-root');
+      if (!container) return;
+
+      if (!outputState.output) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="flex-1 mx-2">
+          <pre class="${outputState.isError
+            ? 'bg-[#2b1f1f] text-error border-[#4a2e2e]'
+            : 'bg-chip text-text border-border'
+          } p-2 rounded-lg font-mono text-xs border max-h-16 overflow-auto">${outputState.output}</pre>
+        </div>
+      `;
+    }
+
+    // Status indicator - following React pattern exactly
+    function renderStatusIndicator() {
+      const container = document.getElementById('status-root');
+      if (!container) return;
+
+      if (!statusState.isExecuting && !statusState.hasOutput) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      if (statusState.isExecuting) {
+        html = `
+          <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs">
+            <div class="animate-spin h-3 w-3 border border-muted border-t-transparent rounded-full"></div>
+            Executing...
+          </span>
+        `;
+      } else if (statusState.hasOutput && !statusState.isExecuting) {
+        html = `
+          <span class="${statusState.hasError
+            ? 'bg-[#2b1f1f] text-error border-[#4a2e2e]'
+            : 'bg-[#1a2b24] text-ok border-[#2e5a49]'
+          } inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs">
+            ${statusState.hasError ? 'Error' : 'Ready'}
+          </span>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    // Data visualization panel - following React pattern exactly
+    function renderDataVisualization() {
+      const container = document.getElementById('react-chart-container');
+      if (!container) return;
+
+      if (window.visualizationState.error) {
+        container.innerHTML = `
+          <div class="absolute top-4 left-4 right-4 bg-[#2b1f1f] border border-[#4a2e2e] text-error px-3 py-2 rounded text-sm z-10">
+            <strong>Error:</strong> ${window.visualizationState.error}
+          </div>
+        `;
+        return;
+      }
+
+      if (window.visualizationState.loading) {
+        container.innerHTML = `
+          <div class="absolute inset-0 bg-[#0f1324] bg-opacity-50 flex items-center justify-center z-10">
+            <div class="bg-panel border border-border rounded-lg p-4 flex items-center gap-3">
+              <div class="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full"></div>
+              <span class="text-text">Generating chart...</span>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (!window.visualizationState.chartData) {
+        container.innerHTML = `
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="text-center">
+              <div class="text-sm text-muted mb-2">
+                Visualization will appear here when blocks are executed
+              </div>
+              <button id="load-sample-btn" class="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 hover:bg-panel2 transition-colors">
+                Load Sample Chart
+              </button>
+            </div>
+          </div>
+        `;
+        
+        // Attach event listener to load sample button
+        const loadSampleBtn = document.getElementById('load-sample-btn');
+        if (loadSampleBtn) {
+          loadSampleBtn.addEventListener('click', loadSampleData);
+        }
+        return;
+      }
+
+      // Render the chart
+      container.innerHTML = '<canvas id="chart-canvas" class="w-full h-full"></canvas>';
+      
+      // Render the chart using Chart.js
+      setTimeout(() => {
+        const canvas = document.getElementById('chart-canvas');
+        if (canvas && window.Chart) {
+          // Destroy existing chart instance
+          if (window.visualizationState.chartInstance) {
+            window.visualizationState.chartInstance.destroy();
+          }
+
+          const ctx = canvas.getContext('2d');
+          
+          // Convert backend chart config to Chart.js format
+          const chartConfig = convertToChartJsConfig(window.visualizationState.chartData);
+          
+          window.visualizationState.chartInstance = new Chart(ctx, chartConfig);
+        }
+      }, 0);
+    }
+
+    function convertToChartJsConfig(backendResult) {
+      if (!backendResult.config) return null;
+      
+      // The backend config should already be in Chart.js format
+      // but we can add dark theme styling
+      return {
+        type: backendResult.chartType,
+        data: backendResult.config.data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#e7ebff'
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#a9b4d0'
+              },
+              grid: {
+                color: '#2b3350'
+              }
+            },
+            y: {
+              ticks: {
+                color: '#a9b4d0'
+              },
+              grid: {
+                color: '#2b3350'
+              }
+            }
+          },
+          ...backendResult.config.options
+        }
+      };
+    }
+
+    async function loadSampleData() {
+      try {
+        const response = await fetch('/api/test-data/students');
+        const result = await response.json();
+        
+        if (result.success) {
+          // Default options from sample data columns - automatically detect appropriate columns based on data types
+          const columns = Object.keys(result.data[0] || {});
+          
+          // Identify appropriate X and Y columns based on data types and current chart type
+          let xColumn = columns[0] || 'x'; // Default to first column
+          let yColumn = columns[1] || 'y'; // Default to second column
+          
+          // For different chart types, we may want different column detection logic
+          if (columns.length >= 2) {
+            // Try to find categorical (string) and numeric columns
+            const categoricalColumns = columns.filter(col => {
+              // Check first few rows to be more accurate
+              for (let i = 0; i < Math.min(5, result.data.length); i++) {
+                const value = result.data[i][col];
+                if (value !== undefined && value !== null) {
+                  if (typeof value === 'string' && isNaN(parseFloat(value))) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            });
+            
+            const numericColumns = columns.filter(col => {
+              // Check first few rows to be more accurate
+              for (let i = 0; i < Math.min(5, result.data.length); i++) {
+                const value = result.data[i][col];
+                if (value !== undefined && value !== null) {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && isFinite(numValue)) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            });
+            
+            // For pie/doughnut charts, we want a category for labels and numeric values
+            if (['pie', 'doughnut'].includes(chartState.chartType)) {
+              if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+                xColumn = categoricalColumns[0]; // Use for labels
+                yColumn = numericColumns[0];     // Use for values
+              } else if (numericColumns.length >= 2) {
+                // For pie charts, sometimes first numeric is labels, second is values (or vice versa)
+                xColumn = numericColumns[0];
+                yColumn = numericColumns[1] || numericColumns[0];
+              }
+            } else {
+              // For other chart types, try to find categorical for X and numeric for Y
+              if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+                xColumn = categoricalColumns[0];
+                yColumn = numericColumns[0];
+              } else if (numericColumns.length >= 2) {
+                // If all columns are numeric, use first two
+                xColumn = numericColumns[0];
+                yColumn = numericColumns[1];
+              } else {
+                // Fallback to first two columns
+                xColumn = columns[0];
+                yColumn = columns[1];
+              }
+            }
+          }
+          
+          // Generate a chart with sample data using detected columns
+          await generateChart(result.data, chartState.chartType, {
+            xColumn: xColumn,
+            yColumn: yColumn,
+            title: 'Sample Data Visualization'
+          });
+        }
+      } catch (err) {
+        visualizationState.error = 'Failed to load sample data';
+        renderDataVisualization();
+      }
+    }
+
+    async function generateChart(data, chartType, options) {
+      visualizationState.loading = true;
+      visualizationState.error = null;
+      renderDataVisualization();
+      
+      try {
+        const response = await fetch('/api/generate-chart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data, chartType, options }),
+        });
+        
+        if (!response.ok) throw new Error('Failed to generate chart');
+        
+        const result = await response.json();
+        visualizationState.chartData = result;
+        renderDataVisualization();
+      } catch (err) {
+        visualizationState.error = err.message;
+        renderDataVisualization();
+      } finally {
+        visualizationState.loading = false;
+        renderDataVisualization();
+      }
+    }
+
+    // API functions
+    async function processData(data, operations) {
+      const response = await fetch('/api/process-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data, operations }),
+      });
+      return await response.json();
+    }
+
+    // Initialize all components
+    function initializeComponents() {
+      renderChartControls();
+      renderOutputDisplay();
+      renderStatusIndicator();
+      renderDataVisualization();
+      // Wait a bit to ensure Blockly is fully loaded before rendering the data panel
+      setTimeout(() => {
+        renderDataPanel();
+      }, 100);
+    }
+
+    // Function to render CSV data in the data panel
+    function renderDataPanel() {
+      const container = document.getElementById('data-panel-content');
+      if (!container) return;
+
+      const csvData = window.Blockly?.CsvImportData?.data;
+      if (!csvData || csvData.length === 0) {
+        container.innerHTML = `
+          <div class="text-sm text-muted text-center py-8 h-full flex items-center justify-center">
+            Data will appear here when imported via blocks
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        // Create a table to display the CSV data
+        const headers = Object.keys(csvData[0] || {});
+        let html = '<div class="overflow-auto h-full">';
+
+        // Limit the number of rows displayed in the table to prevent performance issues
+        const maxDisplayRows = 50;
+        const displayData = csvData.slice(0, maxDisplayRows);
+        const isTruncated = csvData.length > maxDisplayRows;
+
+        // Create table header
+        html += '<table class="min-w-full divide-y divide-border text-xs">';
+        html += '<thead class="bg-panel2">';
+        html += '<tr>';
+        headers.forEach(header => {
+          html += `<th class="px-2 py-1 text-left font-medium text-muted uppercase tracking-wider border-r border-border last:border-r-0">${header}</th>`;
+        });
+        html += '</tr>';
+        html += '</thead>';
+
+        // Create table body
+        html += '<tbody class="divide-y divide-border">';
+        displayData.forEach((row, index) => {
+          html += '<tr class="hover:bg-panel2">';
+          headers.forEach(header => {
+            const cellValue = row[header] !== undefined ? row[header] : '';
+            html += `<td class="px-2 py-1 text-text border-r border-border last:border-r-0 max-w-xs truncate" title="${escapeHtml(cellValue)}">${escapeHtml(cellValue)}</td>`;
+          });
+          html += '</tr>';
+        });
+        html += '</tbody>';
+
+        html += '</table>';
+
+        if (isTruncated) {
+          html += `<div class="text-xs text-muted mt-2 p-2">Showing ${maxDisplayRows} of ${csvData.length} rows</div>`;
+        }
+
+        html += '</div>';
+
+        container.innerHTML = html;
+
+      } catch (error) {
+        console.error('Error rendering data panel:', error);
+        container.innerHTML = `
+          <div class="text-sm text-error text-center py-8 h-full flex items-center justify-center">
+            Error displaying data: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    // Helper function to escape HTML to prevent XSS
+    function escapeHtml(unsafe) {
+      if (unsafe === null || unsafe === undefined) return '';
+      return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Expose functions to global scope for React bridge
+    window.reactSetOutput = function(output) {
+      outputState.output = output;
+      outputState.isError = false;
+      statusState.hasOutput = !!output;
+      renderOutputDisplay();
+      renderStatusIndicator();
+    };
+
+    window.reactSetError = function(isError) {
+      outputState.isError = isError;
+      statusState.hasError = isError;
+      renderOutputDisplay();
+      renderStatusIndicator();
+    };
+
+    window.reactSetExecuting = function(isExecuting) {
+      statusState.isExecuting = isExecuting;
+      renderStatusIndicator();
+    };
+
+    window.reactGetState = function() {
+      return {
+        output: outputState.output,
+        isExecuting: statusState.isExecuting,
+        isError: outputState.isError
+      };
+    };
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeComponents();
+    });
+
+    // Listen for chart generation events
+    window.addEventListener('chartGenerated', function(event) {
+      const chartResult = event.detail;
+      visualizationState.chartData = chartResult;
+      renderDataVisualization();
+    });
+
+    // Listen for Blockly execution to automatically visualize CSV data
+    window.addEventListener('blocklyExecuted', async function() {
+      // Check if we have CSV data from Blockly and process it via backend
+      const csvData = window.Blockly?.CsvImportData?.data;
+      if (csvData && csvData.length > 0) {
+        try {
+          window.visualizationState.loading = true;
+          window.visualizationState.error = null;
+          renderDataVisualization();
+
+          // For now, send with an empty operations array (no-op pipeline)
+          const processed = await processData(csvData, []);
+          const processedData = processed && processed.data ? processed.data : csvData;
+
+          // Use the chart state's current chart type
+          const currentChartType = window.chartState ? window.chartState.chartType : 'bar';
+          
+          // Default options from CSV columns - automatically detect appropriate columns based on data types
+          const columns = Object.keys(processedData[0] || {});
+          
+          // Identify appropriate X and Y columns based on data types and current chart type
+          let xColumn = columns[0] || 'x'; // Default to first column
+          let yColumn = columns[1] || 'y'; // Default to second column
+          
+          // For different chart types, we may want different column detection logic
+          if (columns.length >= 2) {
+            // Try to find categorical (string) and numeric columns
+            const categoricalColumns = columns.filter(col => {
+              // Check first few rows to be more accurate
+              for (let i = 0; i < Math.min(5, processedData.length); i++) {
+                const value = processedData[i][col];
+                if (value !== undefined && value !== null) {
+                  if (typeof value === 'string' && isNaN(parseFloat(value))) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            });
+            
+            const numericColumns = columns.filter(col => {
+              // Check first few rows to be more accurate
+              for (let i = 0; i < Math.min(5, processedData.length); i++) {
+                const value = processedData[i][col];
+                if (value !== undefined && value !== null) {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && isFinite(numValue)) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            });
+            
+            // For pie/doughnut charts, we want a category for labels and numeric values
+            if (['pie', 'doughnut'].includes(currentChartType)) {
+              if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+                xColumn = categoricalColumns[0]; // Use for labels
+                yColumn = numericColumns[0];     // Use for values
+              } else if (numericColumns.length >= 2) {
+                // For pie charts, sometimes first numeric is labels, second is values (or vice versa)
+                xColumn = numericColumns[0];
+                yColumn = numericColumns[1] || numericColumns[0];
+              }
+            } else {
+              // For other chart types, try to find categorical for X and numeric for Y
+              if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+                xColumn = categoricalColumns[0];
+                yColumn = numericColumns[0];
+              } else if (numericColumns.length >= 2) {
+                // If all columns are numeric, use first two
+                xColumn = numericColumns[0];
+                yColumn = numericColumns[1];
+              } else {
+                // Fallback to first two columns
+                xColumn = columns[0];
+                yColumn = columns[1];
+              }
+            }
+          }
+          
+          const options = {
+            xColumn: xColumn,
+            yColumn: yColumn,
+            title: 'CSV Data Visualization'
+          };
+
+          // Generate chart using current chart type from state
+          await generateChart(processedData, currentChartType, options);
+        } catch (e) {
+          window.visualizationState.error = e.message || 'Failed to process data';
+          renderDataVisualization();
+        } finally {
+          window.visualizationState.loading = false;
+          renderDataVisualization();
+        }
+      }
+    });
+
+    // Update chart controls and data panel when CSV data changes
+    window.addEventListener('csvDataChanged', function() {
+      renderChartControls();
+      renderDataPanel();
+    });
+
+    // Also update the data panel when Blockly execution completes
+    window.addEventListener('blocklyExecuted', function() {
+      renderDataPanel();
+    });
+  </script>
 </body>
 
 </html>
