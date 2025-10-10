@@ -204,11 +204,12 @@
       
       const code = `(async () => {\n` +
         `  try {\n` +
-        `    let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
+        `    // Always use original data for filtering to prevent chaining issues\n` +
+        `    let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
         `    if (!Array.isArray(__input)) {\n` +
         `      for (let __i=0; __i<60 && !Array.isArray(__input); __i++) {\n` +
         `        await new Promise(r=>setTimeout(r,50));\n` +
-        `        __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
+        `        __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
         `      }\n` +
         `    }\n` +
         `    // Skip backend call if placeholders not yet edited\n` +
@@ -218,13 +219,13 @@
         `    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
         `    const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);\n` +
         `    const __data = (__res && __res.data) ? __res.data : __input;\n` +
-        `    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
+        `    // DO NOT modify global data state - return filtered data directly\n` +
         `    return __data;\n` +
         `  } catch (error) {\n` +
         `    console.error('Filter data error:', error);\n` +
-        `    return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
+        `    return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
         `  }\n` +
-        `})()`;
+        `})()`
       
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };

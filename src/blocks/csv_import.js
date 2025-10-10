@@ -70,7 +70,9 @@ class FieldFileButton extends Blockly.Field {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
+              // Store both original and current data to prevent filter chaining issues
               Blockly.CsvImportData.data = results.data;
+              Blockly.CsvImportData.originalData = [...results.data]; // Keep original data immutable
               Blockly.CsvImportData.filename = file.name;
               this._dialogOpen = false;
               
@@ -181,6 +183,7 @@ Blockly.fieldRegistry.register('field_file_button', FieldFileButton);
 
 Blockly.CsvImportData = {
   data: null,
+  originalData: null,
   filename: null
 };
 
