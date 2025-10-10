@@ -166,9 +166,9 @@
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center gap-4">
             <nav class="hidden md:flex items-center space-x-2 text-sm">
-              <a href="#" class="text-muted hover:text-text">My Project</a>
+              <a id="breadcrumb-dashboard-link" href="#" class="text-muted hover:text-text">My Project</a>
               <span class="text-gray-300">></span>
-              <a href="#" class="text-muted hover:text-text">Visualisation 1</a>
+              <a id="breadcrumb-project-link" href="#" class="text-muted hover:text-text">Visualisation 1</a>
               <span class="text-gray-300">></span>
               <span class="text-text font-medium">Simulation</span>
             </nav>
@@ -568,6 +568,31 @@
 
     // --- App Initialization ---
     function initializeApp() {
+        // Set up breadcrumb navigation
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+        const role = urlParams.get('role');
+        
+        // Set dashboard link based on role
+        const breadcrumbDashboardLink = document.getElementById('breadcrumb-dashboard-link');
+        const breadcrumbProjectLink = document.getElementById('breadcrumb-project-link');
+        const headerLink = document.getElementById('header-dashboard-link');
+        
+        if (breadcrumbDashboardLink) {
+            const dashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
+            breadcrumbDashboardLink.href = dashboardUrl;
+        }
+        
+        if (breadcrumbProjectLink && projectId) {
+            // Navigate to the view-project page for this specific project
+            breadcrumbProjectLink.href = `view-project.html?id=${projectId}${role ? '&role=' + role : ''}`;
+        }
+        
+        if (headerLink) {
+            const headerDashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
+            headerLink.href = headerDashboardUrl;
+        }
+
         const chartTypes = ['bar', 'line', 'pie', 'doughnut', 'radar', 'polarArea'];
         document.getElementById('chart-type-select').innerHTML = chartTypes.map(t => `<option value="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('');
 
