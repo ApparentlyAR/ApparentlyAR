@@ -25,7 +25,8 @@
   if (Blockly.JavaScript) {
     const generator = function(block) {
       const value = Blockly.JavaScript.valueToCode(block, 'VALUE', Blockly.JavaScript.ORDER_NONE) || 'null';
-      const code = `JSON.stringify(${value}, null, 2)`;
+      // Wrap in async IIFE to handle potential Promises from advanced math blocks
+      const code = `(async () => { const __result = await ${value}; return JSON.stringify(__result, null, 2); })()`;
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
 
