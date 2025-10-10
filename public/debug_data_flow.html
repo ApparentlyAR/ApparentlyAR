@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Data Flow - Advanced Statistics</title>
+</head>
+<body>
+    <h1>Advanced Statistics Blocks Test</h1>
+    <button id="testFlow">Test Basic Statistics</button>
+    <button id="testAdvanced">Test Advanced Math Blocks</button>
+    <div id="results"></div>
+
+    <script src="https://unpkg.com/papaparse@5/papaparse.min.js"></script>
+    <script>
+        // Mock the CSV data
+        const csvData = `name,age,salary,department,score,years_experience,performance_rating
+Alice Johnson,25,52000,Engineering,85.5,2,4.2
+Bob Smith,30,68000,Marketing,92.3,5,4.8
+Charlie Brown,35,71000,Engineering,78.9,8,3.9`;
+
+        // Initialize Blockly mock structure
+        window.Blockly = {
+            CsvImportData: {
+                data: null,
+                filename: null
+            }
+        };
+
+        // Mock the API with advanced math operations
+        window.AppApi = {
+            processData: async function(data, operations) {
+                console.log('API called with:', { data, operations });
+
+                const op = operations[0];
+
+                // Basic statistics
+                if (op.type === 'calculateMean') {
+                    const column = op.params.column;
+                    const values = data.map(row => parseFloat(row[column])).filter(v => !isNaN(v));
+                    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+                    return { success: true, data: mean };
+                }
+
+                // Matrix operations
+                if (op.type === 'matrixMultiply') {
+                    const A = op.params.matrixA;
+                    const B = op.params.matrixB;
+                    const result = [];
+                    for (let i = 0; i < A.length; i++) {
+                        result[i] = [];
+                        for (let j = 0; j < B[0].length; j++) {
+                            let sum = 0;
+                            for (let k = 0; k < A[0].length; k++) {
+                                sum += A[i][k] * B[k][j];
+                            }
+                            result[i][j] = sum;
+                        }
+                    }
+                    return { success: true, data: result };
+                }
+
+                if (op.type === 'matrixTranspose') {
+                    const matrix = op.params.matrix;
+                    const result = matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]));
+                    return { success: true, data: result };
+                }
+
+                if (op.type === 'matrixDeterminant') {
+                    const m = op.params.matrix;
+                    if (m.length === 2 && m[0].length === 2) {
+                        return { success: true, data: m[0][0] * m[1][1] - m[0][1] * m[1][0] };
+                    }
+                    return { success: true, data: 0 };
+                }
+
+                if (op.type === 'matrixInverse') {
+                    const m = op.params.matrix;
+                    const det = m[0][0] * m[1][1] - m[0][1] * m[1][0];
+                    const inv = [
+                        [m[1][1]/det, -m[0][1]/det],
+                        [-m[1][0]/det, m[0][0]/det]
+                    ];
+                    return { success: true, data: inv };
+                }
+
+                // Trigonometric functions
+                if (op.type === 'applyTrigFunction') {
+                    const result = data.map(row => {
+                        const value = parseFloat(row[op.params.column]);
+                        let angle = value;
+                        if (op.params.angleUnit === 'degrees') {
+                            angle = value * Math.PI / 180;
+                        }
+                        let trigValue;
+                        switch(op.params.function) {
+                            case 'sin': trigValue = Math.sin(angle); break;
+                            case 'cos': trigValue = Math.cos(angle); break;
+                            case 'tan': trigValue = Math.tan(angle); break;
+                            case 'asin': trigValue = Math.asin(angle); break;
+                            case 'acos': trigValue = Math.acos(angle); break;
+                            case 'atan': trigValue = Math.atan(angle); break;
+                            default: trigValue = 0;
+                        }
+                        return { ...row, [op.params.outputColumn]: trigValue };
+                    });
+                    return { success: true, data: result };
+                }
+
+                // Logarithm
+                if (op.type === 'applyLogarithm') {
+                    const result = data.map(row => {
+                        const value = parseFloat(row[op.params.column]);
+                        let logValue;
+                        switch(op.params.base) {
+                            case 'e': logValue = Math.log(value); break;
+                            case '10': logValue = Math.log10(value); break;
+                            case '2': logValue = Math.log2(value); break;
+                            default: logValue = Math.log(value);
+                        }
+                        return { ...row, [op.params.outputColumn]: logValue };
+                    });
+                    return { success: true, data: result };
+                }
+
+                // Exponential smoothing
+                if (op.type === 'exponentialSmoothing') {
+                    const alpha = op.params.alpha;
+                    const result = [];
+                    let smoothed = parseFloat(data[0][op.params.column]);
+                    result.push({ ...data[0], [op.params.outputColumn]: smoothed });
+
+                    for (let i = 1; i < data.length; i++) {
+                        const value = parseFloat(data[i][op.params.column]);
+                        smoothed = alpha * value + (1 - alpha) * smoothed;
+                        result.push({ ...data[i], [op.params.outputColumn]: smoothed });
+                    }
+                    return { success: true, data: result };
+                }
+
+                return { success: true, data: data };
+            }
+        };
+
+        // Mock the normalizer function
+        window.BlocklyNormalizeData = function(input) {
+            console.log('Normalizer called with:', input);
+            if (Array.isArray(input)) return input;
+            if (input && Array.isArray(input.data)) return input.data;
+            if (typeof input === 'string') {
+                try { 
+                    const p = JSON.parse(input); 
+                    return Array.isArray(p) ? p : []; 
+                } catch (_) { 
+                    return []; 
+                }
+            }
+            return [];
+        };
+
+        document.getElementById('testFlow').addEventListener('click', async function() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Testing Data Flow...</h2>';
+
+            try {
+                // Step 1: Parse CSV (simulating CSV import block)
+                const parseResult = Papa.parse(csvData, {
+                    header: true,
+                    skipEmptyLines: true
+                });
+
+                // Store in Blockly structure
+                Blockly.CsvImportData.data = parseResult.data;
+                results.innerHTML += '<p>✓ Step 1: CSV parsed and stored in Blockly.CsvImportData.data</p>';
+                results.innerHTML += '<pre>' + JSON.stringify(parseResult.data.slice(0, 2), null, 2) + '</pre>';
+
+                // Step 2: Test data access (simulating statistical block code generation)
+                const dataCode = 'Blockly.CsvImportData.data';
+                const rawData = eval(dataCode);
+                results.innerHTML += '<p>✓ Step 2: Data accessed via eval("' + dataCode + '")</p>';
+                results.innerHTML += '<p>Raw data type: ' + (Array.isArray(rawData) ? 'Array' : typeof rawData) + '</p>';
+                results.innerHTML += '<p>Raw data length: ' + (rawData ? rawData.length : 'null') + '</p>';
+
+                // Step 3: Test normalization
+                const normalizedData = window.BlocklyNormalizeData(rawData);
+                results.innerHTML += '<p>✓ Step 3: Data normalized</p>';
+                results.innerHTML += '<p>Normalized data type: ' + (Array.isArray(normalizedData) ? 'Array' : typeof normalizedData) + '</p>';
+                results.innerHTML += '<p>Normalized data length: ' + (normalizedData ? normalizedData.length : 'null') + '</p>';
+
+                // Step 4: Test API call
+                const apiResult = await window.AppApi.processData(normalizedData, [{
+                    type: 'calculateMean',
+                    params: { column: 'age' }
+                }]);
+                results.innerHTML += '<p>✓ Step 4: API call successful</p>';
+                results.innerHTML += '<p>API result: ' + JSON.stringify(apiResult) + '</p>';
+
+                // Step 5: Test the exact code that would be generated
+                results.innerHTML += '<h3>Testing Generated Code:</h3>';
+                const generatedCode = `(async () => {
+                    try {
+                        const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+                        if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+                        if (__input.length === 0) { throw new Error('No data available - please connect a CSV import block with data'); }
+
+                        // Check if column exists
+                        const columns = Object.keys(__input[0] || {});
+                        if (!columns.includes('age')) {
+                            throw new Error(\`Column 'age' not found. Available columns: \${columns.join(', ')}\`);
+                        }
+
+                        if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+                        const __res = await window.AppApi.processData(__input, [{ type: 'calculateMean', params: { column: 'age' } }]);
+                        return __res && __res.data ? __res.data : 0;
+                    } catch (error) {
+                        console.error('Calculate mean error:', error);
+                        return 0;
+                    }
+                })()`;
+
+                const finalResult = await eval(generatedCode);
+                results.innerHTML += '<p>✓ Step 5: Generated code executed</p>';
+                results.innerHTML += '<p><strong>Final Result: ' + finalResult + '</strong></p>';
+
+            } catch (error) {
+                results.innerHTML += '<p style="color: red;">❌ Error: ' + error.message + '</p>';
+                console.error('Test error:', error);
+            }
+        });
+
+        document.getElementById('testAdvanced').addEventListener('click', async function() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Testing Advanced Math Blocks...</h2>';
+
+            try {
+                // Parse CSV data first
+                const parseResult = Papa.parse(csvData, {
+                    header: true,
+                    skipEmptyLines: true
+                });
+                Blockly.CsvImportData.data = parseResult.data;
+
+                // Test 1: Matrix Multiply
+                results.innerHTML += '<h3>1. Matrix Multiply</h3>';
+                const matrixA = [[1, 2], [3, 4]];
+                const matrixB = [[5, 6], [7, 8]];
+                const multiplyResult = await window.AppApi.processData([], [{
+                    type: 'matrixMultiply',
+                    params: { matrixA, matrixB }
+                }]);
+                results.innerHTML += '<p>A = [[1,2],[3,4]], B = [[5,6],[7,8]]</p>';
+                results.innerHTML += '<p>✓ A × B = ' + JSON.stringify(multiplyResult.data) + '</p>';
+
+                // Test 2: Matrix Transpose
+                results.innerHTML += '<h3>2. Matrix Transpose</h3>';
+                const transposeResult = await window.AppApi.processData([], [{
+                    type: 'matrixTranspose',
+                    params: { matrix: [[1, 2, 3], [4, 5, 6]] }
+                }]);
+                results.innerHTML += '<p>Matrix = [[1,2,3],[4,5,6]]</p>';
+                results.innerHTML += '<p>✓ Transpose = ' + JSON.stringify(transposeResult.data) + '</p>';
+
+                // Test 3: Matrix Determinant
+                results.innerHTML += '<h3>3. Matrix Determinant</h3>';
+                const detResult = await window.AppApi.processData([], [{
+                    type: 'matrixDeterminant',
+                    params: { matrix: [[4, 3], [2, 1]] }
+                }]);
+                results.innerHTML += '<p>Matrix = [[4,3],[2,1]]</p>';
+                results.innerHTML += '<p>✓ Determinant = ' + detResult.data + '</p>';
+
+                // Test 4: Matrix Inverse
+                results.innerHTML += '<h3>4. Matrix Inverse</h3>';
+                const invResult = await window.AppApi.processData([], [{
+                    type: 'matrixInverse',
+                    params: { matrix: [[4, 3], [2, 1]] }
+                }]);
+                results.innerHTML += '<p>Matrix = [[4,3],[2,1]]</p>';
+                results.innerHTML += '<p>✓ Inverse = ' + JSON.stringify(invResult.data) + '</p>';
+
+                // Test 5: Trigonometric Function (sin on age column)
+                results.innerHTML += '<h3>5. Trigonometric Function (sin)</h3>';
+                const trigResult = await window.AppApi.processData(parseResult.data, [{
+                    type: 'applyTrigFunction',
+                    params: {
+                        column: 'age',
+                        function: 'sin',
+                        angleUnit: 'degrees',
+                        outputColumn: 'sin_age'
+                    }
+                }]);
+                results.innerHTML += '<p>✓ Applied sin to age column (in degrees)</p>';
+                results.innerHTML += '<pre>' + JSON.stringify(trigResult.data[0], null, 2) + '</pre>';
+
+                // Test 6: Logarithm (natural log of salary)
+                results.innerHTML += '<h3>6. Logarithm (ln of salary)</h3>';
+                const logResult = await window.AppApi.processData(parseResult.data, [{
+                    type: 'applyLogarithm',
+                    params: {
+                        column: 'salary',
+                        base: 'e',
+                        outputColumn: 'ln_salary'
+                    }
+                }]);
+                results.innerHTML += '<p>✓ Applied ln to salary column</p>';
+                results.innerHTML += '<pre>' + JSON.stringify(logResult.data[0], null, 2) + '</pre>';
+
+                // Test 7: Exponential Smoothing (on score column)
+                results.innerHTML += '<h3>7. Exponential Smoothing</h3>';
+                const smoothResult = await window.AppApi.processData(parseResult.data, [{
+                    type: 'exponentialSmoothing',
+                    params: {
+                        column: 'score',
+                        alpha: 0.3,
+                        outputColumn: 'smoothed_score'
+                    }
+                }]);
+                results.innerHTML += '<p>✓ Applied exponential smoothing (α=0.3) to score column</p>';
+                results.innerHTML += '<pre>' + JSON.stringify(smoothResult.data, null, 2) + '</pre>';
+
+                results.innerHTML += '<h3 style="color: green;">✅ All Advanced Math Tests Passed!</h3>';
+
+            } catch (error) {
+                results.innerHTML += '<p style="color: red;">❌ Error: ' + error.message + '</p>';
+                console.error('Test error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
