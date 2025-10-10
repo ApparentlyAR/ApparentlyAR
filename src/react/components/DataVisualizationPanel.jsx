@@ -36,6 +36,13 @@ const DataVisualizationPanel = () => {
   const renderChart = (chartResult) => {
     if (!canvasRef.current || !window.Chart || !chartResult) return;
 
+    // DEBUG: Log what we received
+    console.log('🔍 renderChart called with:', {
+      chartType: chartResult.chartType,
+      configType: chartResult.config?.type,
+      fullResult: chartResult
+    });
+
     // Destroy existing chart instance
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy();
@@ -46,6 +53,9 @@ const DataVisualizationPanel = () => {
     // Convert backend chart config to Chart.js format
     const chartConfig = convertToChartJsConfig(chartResult);
     
+    // DEBUG: Log final chart config
+    console.log('📊 Final chart config:', chartConfig);
+    
     chartInstanceRef.current = new Chart(ctx, chartConfig);
   };
 
@@ -53,9 +63,9 @@ const DataVisualizationPanel = () => {
     if (!backendResult.config) return null;
     
     // The backend config should already be in Chart.js format
-    // but we can add dark theme styling
+    // Use the type from the backend config, not the separate chartType field
     return {
-      type: backendResult.chartType,
+      type: backendResult.config.type,
       data: backendResult.config.data,
       options: {
         responsive: true,
@@ -111,6 +121,7 @@ const DataVisualizationPanel = () => {
   // Listen for chart generation events from ChartControls
   useEffect(() => {
     const handleChartGenerated = (event) => {
+      console.log('chartGenerated event received:', event.detail);
       const chartResult = event.detail;
       setChartData(chartResult);
       renderChart(chartResult);
@@ -126,7 +137,9 @@ const DataVisualizationPanel = () => {
     };
   }, []);
 
-  // Listen for Blockly execution to automatically visualize CSV data
+  // COMMENTED OUT: Listen for Blockly execution to automatically visualize CSV data
+  // This was interfering with visualization blocks by automatically generating bar charts
+  /*
   useEffect(() => {
     const handleBlocklyExecution = async () => {
       // Check if we have CSV data from Blockly and process it via backend
@@ -165,6 +178,7 @@ const DataVisualizationPanel = () => {
       window.removeEventListener('blocklyExecuted', handleBlocklyExecution);
     };
   }, []);
+  */
 
   // Cleanup chart on unmount
   useEffect(() => {
