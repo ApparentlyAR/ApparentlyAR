@@ -413,12 +413,12 @@
     </section>
 
     <!-- Data Panel -->
-    <aside style="grid-area: data" class="grid grid-rows-[44px,auto,1fr] bg-panel border-l border-border">
+    <aside style="grid-area: data" class="grid grid-rows-[44px,1fr] bg-panel border-l border-border">
       <div class="flex items-center gap-2 p-2 border-b border-border bg-[#151a2c]">
         <strong>Data Panel</strong>
       </div>
 
-      <div class="overflow-auto p-2">
+      <div id="data-panel-content" class="overflow-auto">
         <div class="text-sm text-muted text-center py-8">
           Data will appear here when imported via blocks
         </div>
@@ -441,7 +441,7 @@
 
   <script>
     // Enhanced workspace configuration with dark theme
-    const workspace = Blockly.inject('blocklyDiv', {
+    window.workspace = Blockly.inject('blocklyDiv', {
       toolbox: document.getElementById('toolbox'),
       grid: {
         spacing: 20,
@@ -765,6 +765,16 @@
 
         // Dispatch event for automatic visualization of CSV data
         window.dispatchEvent(new CustomEvent('blocklyExecuted'));
+        
+        // Also update the data panel with the current CSV data
+        if (window.renderDataPanel) {
+          window.renderDataPanel();
+        }
+
+        // Generate chart based on the current chart type and CSV data
+        if (window.Blockly?.CsvImportData?.data && window.chartState) {
+          await window.handleGenerateChartFromBlockly();
+        }
       } catch (e) {
         console.error('Error details:', e);
         if (window.reactSetOutput) window.reactSetOutput(`Error: ${e.message}`);
@@ -776,14 +786,14 @@
     };
 
     window.showBlocklyCode = function () {
-      if (!workspace) return;
+      if (!window.workspace) return;
 
       console.log('Show code button clicked via React');
-      console.log('Workspace blocks:', workspace.getAllBlocks().map(b => b.type));
+      console.log('Workspace blocks:', window.workspace.getAllBlocks().map(b => b.type));
       console.log('CSV import generator available:', !!Blockly.JavaScript['csv_import']);
 
-      const code = Blockly.JavaScript.workspaceToCode(workspace);
-      console.log('Generated code:', code);
+      const code = Blockly.JavaScript.workspaceToCode(window.workspace);
+      console.log('Generated Blockly JavaScript code:', code);
 
       if (window.reactSetOutput) window.reactSetOutput(code || 'No code generated');
       if (window.reactSetError) window.reactSetError(false);
