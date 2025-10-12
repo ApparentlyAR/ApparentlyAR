@@ -480,13 +480,17 @@
 
       const code = `(async () => {
         try {
-          let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
-          if (!Array.isArray(__input)) {
-            for (let __i=0; __i<60 && !Array.isArray(__input); __i++) {
-              await new Promise(r=>setTimeout(r,50));
-              __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
-            }
+          // First, get the data (could be a Promise from chained blocks)
+          let __rawInput = ${dataCode};
+
+          // If it's a Promise, await it
+          if (__rawInput && typeof __rawInput.then === 'function') {
+            __rawInput = await __rawInput;
           }
+
+          // Then normalize it
+          let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawInput) : (__rawInput || []));
+
           const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}') ||
                                   (${JSON.stringify(['min'])}).includes('${min}') ||
                                   (${JSON.stringify(['max'])}).includes('${max}');
@@ -498,11 +502,11 @@
             { type: 'filter', params: { column: '${column}', operator: 'between', min: '${min}', max: '${max}' } }
           ]);
           const __data = (__res && __res.data) ? __res.data : __input;
-          if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+          // DO NOT modify global data state - return filtered data directly
           return __data;
         } catch (error) {
           console.error('Filter range error:', error);
-          return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+          return [];
         }
       })()`;
 
