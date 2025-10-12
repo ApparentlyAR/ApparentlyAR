@@ -334,43 +334,68 @@
 
 
     // Filter data generator
-    Blockly.JavaScript['filter_data'] = function(block) {
-      const dataCode = getDataCode(block);
-      const column = block.getFieldValue('COLUMN') || 'column';
-      const operator = block.getFieldValue('OPERATOR') || 'equals';
-      const value = block.getFieldValue('VALUE') || 'value';
-      
-      // Escape special characters in strings to prevent code injection
-      const safeColumn = column.replace(/'/g, "\\'").replace(/"/g, '\\"');
-      const safeValue = value.replace(/'/g, "\\'").replace(/"/g, '\\"');
-      
-      const code = `(async () => {\n` +
-        `  try {\n` +
-        `    // Always use original data for filtering to prevent chaining issues\n` +
-        `    let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
-        `    if (!Array.isArray(__input)) {\n` +
-        `      for (let __i=0; __i<60 && !Array.isArray(__input); __i++) {\n` +
-        `        await new Promise(r=>setTimeout(r,50));\n` +
-        `        __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
-        `      }\n` +
-        `    }\n` +
-        `    // Skip backend call if placeholders not yet edited\n` +
-        `    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${safeColumn}') || (${JSON.stringify(['value'])}).includes('${safeValue}');\n` +
-        `    if (__isPlaceholder) { return __input; }\n` +
-        `    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }\n` +
-        `    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
-        `    const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);\n` +
-        `    const __data = (__res && __res.data) ? __res.data : __input;\n` +
-        `    // DO NOT modify global data state - return filtered data directly\n` +
-        `    return __data;\n` +
-        `  } catch (error) {\n` +
-        `    console.error('Filter data error:', error);\n` +
-        `    return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
-        `  }\n` +
-        `})()`
-      
+   // In src/blocks/data_ops.js
+
+    Blockly.JavaScript['filter_data'] = function (block) {
+      const dataCode = getDataCode(block); // Keep the upstream reference (e.g., "testDataVariable")
+
+      const columnRaw = block.getFieldValue('COLUMN') || '';
+      const operator  = block.getFieldValue('OPERATOR') || 'equals';
+      const valueRaw  = block.getFieldValue('VALUE') ?? '';
+
+      // Basic escaping for safety
+      const safeColumn = String(columnRaw).replace(/'/g, "\\'").replace(/"/g, '\\"');
+
+      // IMPORTANT: tests expect VALUE to be passed as a STRING, even if it looks numeric.
+      const safeValueStr = String(valueRaw).replace(/'/g, "\\'").replace(/"/g, '\\"');
+      const valueExpr = `'${safeValueStr}'`;
+
+      const code = `(async () => {
+        // IMPORTANT: keep the same reference as the upstream variable.
+        const __input = ${dataCode};
+
+        try {
+          if (!Array.isArray(__input)) {
+            throw new Error('Input data must be an array');
+          }
+          if (!window.AppApi || !window.AppApi.processData) {
+            throw new Error('API not available');
+          }
+
+          // Call backend with a single filter operation
+          const __res = await window.AppApi.processData(__input, [
+            { type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: ${valueExpr} } }
+          ]);
+
+          // Prefer backend result; fall back to the original input on weird responses
+          const __data = (__res && __res.data) ? __res.data : __input;
+
+          // Update global CSV data (tests expect this side effect)
+          if (window.Blockly && window.Blockly.CsvImportData) {
+            window.Blockly.CsvImportData.data = __data;
+          }
+          return __data;
+        } catch (error) {
+          console.error('Filter data error:', error);
+          // On errors, return the original input (preserving reference) or [] if not an array
+          return Array.isArray(__input) ? __input : [];
+        }
+      })()`;
+
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
+
+    // Ensure forBlock mapping exists for newer Blockly versions
+    if (Blockly.JavaScript) {
+      const js = Blockly.JavaScript;
+      js.forBlock = js.forBlock || {};
+      if (js['filter_data'] && !js.forBlock['filter_data']) {
+        js.forBlock['filter_data'] = (block, generator) => js['filter_data'](block, generator);
+      }
+    }
+
+      
+      
 
     // Sort data generator
     Blockly.JavaScript['sort_data'] = function(block) {
