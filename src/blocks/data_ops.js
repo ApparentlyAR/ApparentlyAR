@@ -184,7 +184,7 @@
     // Convert Type
     {
       "type": "convert_type",
-      "message0": "把 %1 转成 %2",
+      "message0": "convert %1 to %2",
       "args0": [
         { "type": "field_dropdown", "name": "COLUMN", "options": [["column","column"]], "SERIALIZABLE": true },
         { "type": "field_dropdown", "name": "TO", "options": [
@@ -197,7 +197,7 @@
     // Drop column
     {
       "type": "drop_column",
-      "message0": "删除列 %1 来自 %2",
+      "message0": "drop column %1 from %2",
       "args0": [
         { "type": "field_dropdown", "name": "COLUMN", "options": [["column","column"]], "SERIALIZABLE": true },
         { "type": "input_value", "name": "DATA", "check": "Dataset" }
@@ -208,7 +208,7 @@
     // Rename column
     {
       "type": "rename_column",
-      "message0": "把列名 %1 改为 %2 于 %3",
+      "message0": "rename column %1 to %2 in %3",
       "args0": [
         { "type": "field_dropdown", "name": "FROM", "options": [["old_name","old_name"]], "SERIALIZABLE": true },
         { "type": "field_input", "name": "TO", "text": "new_name", "SERIALIZABLE": true },
@@ -220,11 +220,11 @@
     // Handle missing
     {
       "type": "handle_missing",
-      "message0": "处理 %1 中的缺失 用 %2 值 %3 于 %4",
+      "message0": "handle missing in %1 with %2 value %3 from %4",
       "args0": [
         { "type": "field_dropdown", "name": "COLUMN", "options": [["column","column"]], "SERIALIZABLE": true },
         { "type": "field_dropdown", "name": "STRATEGY", "options": [
-          ["删除行","drop"],["填 0","fill_zero"],["填空字符串","fill_empty"],["自定义值","fill_value"]
+          ["drop rows","drop"],["fill 0","fill_zero"],["fill empty string","fill_empty"],["custom value","fill_value"]
         ], "SERIALIZABLE": true },
         { "type": "field_input", "name": "VALUE", "text": "0", "SERIALIZABLE": true },
         { "type": "input_value", "name": "DATA", "check": "Dataset" }
@@ -235,7 +235,7 @@
     // Bin (numeric)
     {
       "type": "bin_column",
-      "message0": "把 %1 分箱为 %2 桶 新列名 %3 于 %4",
+      "message0": "bin %1 into %2 buckets as %3 in %4",
       "args0": [
         { "type": "field_dropdown", "name": "COLUMN", "options": [["value","value"]], "SERIALIZABLE": true },
         { "type": "field_number", "name": "BINS", "value": 10, "min": 1 },
@@ -248,7 +248,7 @@
     // Visualisation fields
     {
       "type": "viz_fields",
-      "message0": "可视化 %1 设 x %2 y %3 颜色 %4 类型 %5",
+      "message0": "visualize %1 with x %2, y %3, color %4, type %5",
       "args0": [
         { "type": "input_value", "name": "DATA", "check": "Dataset" },
         { "type": "field_dropdown", "name": "X", "options": [["x","x"]], "SERIALIZABLE": true },
@@ -260,6 +260,7 @@
       ],
       "output": "Dataset", "colour": 60
     }
+
 
   ]);
 
