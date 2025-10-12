@@ -113,6 +113,17 @@
     #blocks-panel, #data-panel {
         min-width: 0;
     }
+    
+    /* Enable horizontal scrolling for Blockly panel */
+    #blocks-panel {
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+    
+    #blocklyDiv {
+        min-width: 100%;
+        overflow-x: auto;
+    }
 
     #toggle-data-panel-btn {
         position: absolute;
@@ -231,12 +242,12 @@
     <div class="flex-1 relative overflow-hidden">
       <main id="main-content-grid" class="h-full">
         <!-- Blocks Panel -->
-        <aside id="blocks-panel" class="flex flex-col bg-panel overflow-hidden">
+        <aside id="blocks-panel" class="flex flex-col bg-panel overflow-x-auto overflow-y-hidden">
           <div class="p-2 border-b border-border">
             <input class="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-text placeholder-muted focus:outline-none focus:ring-2 focus:ring-secondary"
               placeholder="Search blocks..." />
           </div>
-          <div id="blocklyDiv" class="w-full h-full flex-1"></div>
+          <div id="blocklyDiv" class="w-full h-full flex-1 overflow-x-auto"></div>
         </aside>
   
         <!-- Left Resizer -->
@@ -507,7 +518,7 @@
       move: { scrollbars: false, drag: true, wheel: true },
       trashcan: true,
       theme: lightTheme,
-      renderer: 'zelos'
+      renderer: 'geras'
     });
     
     // --- UI Interaction Functions ---
@@ -890,6 +901,3 @@
   </script>
 </body>
 </html>
-
-
-
