@@ -339,36 +339,39 @@
       const column = block.getFieldValue('COLUMN') || 'column';
       const operator = block.getFieldValue('OPERATOR') || 'equals';
       const value = block.getFieldValue('VALUE') || 'value';
-      
+
       // Escape special characters in strings to prevent code injection
       const safeColumn = column.replace(/'/g, "\\'").replace(/"/g, '\\"');
       const safeValue = value.replace(/'/g, "\\'").replace(/"/g, '\\"');
-      
-      const code = `(async () => {\n` +
-        `  try {\n` +
-        `    // Always use original data for filtering to prevent chaining issues\n` +
-        `    let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
-        `    if (!Array.isArray(__input)) {\n` +
-        `      for (let __i=0; __i<60 && !Array.isArray(__input); __i++) {\n` +
-        `        await new Promise(r=>setTimeout(r,50));\n` +
-        `        __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
-        `      }\n` +
-        `    }\n` +
-        `    // Skip backend call if placeholders not yet edited\n` +
-        `    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${safeColumn}') || (${JSON.stringify(['value'])}).includes('${safeValue}');\n` +
-        `    if (__isPlaceholder) { return __input; }\n` +
-        `    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }\n` +
-        `    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
-        `    const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);\n` +
-        `    const __data = (__res && __res.data) ? __res.data : __input;\n` +
-        `    // DO NOT modify global data state - return filtered data directly\n` +
-        `    return __data;\n` +
-        `  } catch (error) {\n` +
-        `    console.error('Filter data error:', error);\n` +
-        `    return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) : ((window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data : null) || []));\n` +
-        `  }\n` +
-        `})()`
-      
+
+      const code = `(async () => {
+        try {
+          // First, get the data (could be a Promise from chained blocks)
+          let __rawInput = ${dataCode};
+
+          // If it's a Promise, await it
+          if (__rawInput && typeof __rawInput.then === 'function') {
+            __rawInput = await __rawInput;
+          }
+
+          // Then normalize it
+          let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawInput) : (__rawInput || []));
+
+          const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${safeColumn}') || (${JSON.stringify(['value'])}).includes('${safeValue}');
+          if (__isPlaceholder) { return __input; }
+          if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+          if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+
+          const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);
+          const __data = (__res && __res.data) ? __res.data : __input;
+          // DO NOT modify global data state - return filtered data directly
+          return __data;
+        } catch (error) {
+          console.error('Filter data error:', error);
+          return [];
+        }
+      })()`;
+
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
 
@@ -480,13 +483,17 @@
 
       const code = `(async () => {
         try {
-          let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
-          if (!Array.isArray(__input)) {
-            for (let __i=0; __i<60 && !Array.isArray(__input); __i++) {
-              await new Promise(r=>setTimeout(r,50));
-              __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
-            }
+          // First, get the data (could be a Promise from chained blocks)
+          let __rawInput = ${dataCode};
+
+          // If it's a Promise, await it
+          if (__rawInput && typeof __rawInput.then === 'function') {
+            __rawInput = await __rawInput;
           }
+
+          // Then normalize it
+          let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawInput) : (__rawInput || []));
+
           const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}') ||
                                   (${JSON.stringify(['min'])}).includes('${min}') ||
                                   (${JSON.stringify(['max'])}).includes('${max}');
@@ -498,11 +505,11 @@
             { type: 'filter', params: { column: '${column}', operator: 'between', min: '${min}', max: '${max}' } }
           ]);
           const __data = (__res && __res.data) ? __res.data : __input;
-          if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+          // DO NOT modify global data state - return filtered data directly
           return __data;
         } catch (error) {
           console.error('Filter range error:', error);
-          return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+          return [];
         }
       })()`;
 
