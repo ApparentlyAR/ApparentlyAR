@@ -82,6 +82,35 @@
       user-select: none; /* Prevent text selection during drag */
     }
 
+    /* Allow text selection in code output */
+    #output-root {
+      user-select: text;
+      cursor: text;
+    }
+
+    /* Copy button styles */
+    .copy-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #4F46E5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .copy-button:hover {
+      background: #3730A3;
+    }
+    
+    .copy-button.copied {
+      background: #10B981;
+    }
+
     #main-content-grid {
         display: grid;
         grid-template-columns: 320px 8px 1fr 8px 360px; /* Panels and resizers */
@@ -293,7 +322,12 @@
 
      <!-- Bottom Panel: Code Output -->
     <footer id="code-panel" class="bg-panel border-t border-border p-2 hidden flex-shrink-0">
-      <pre id="output-root" class="h-full w-full rounded-md p-2 text-sm font-mono overflow-auto"></pre>
+      <div class="relative h-full">
+        <button id="copy-code-btn" class="copy-button" onclick="copyGeneratedCode()" title="Copy code to clipboard">
+          Copy
+        </button>
+        <pre id="output-root" class="h-full w-full rounded-md p-2 pr-20 text-sm font-mono overflow-auto"></pre>
+      </div>
     </footer>
 
   </div>
@@ -636,6 +670,42 @@
     
     function updateCodeOutput(content) {
         document.getElementById('output-root').textContent = content || "Workspace is empty.";
+    }
+    
+    // Copy generated code to clipboard
+    function copyGeneratedCode() {
+        const codeContent = document.getElementById('output-root').textContent;
+        if (!codeContent || codeContent === "Workspace is empty.") {
+            alert('No code to copy. Generate some code first!');
+            return;
+        }
+        
+        navigator.clipboard.writeText(codeContent).then(() => {
+            const copyBtn = document.getElementById('copy-code-btn');
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            copyBtn.classList.add('copied');
+            
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+                copyBtn.classList.remove('copied');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy code:', err);
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = codeContent;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                alert('Code copied to clipboard!');
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+                alert('Unable to copy code automatically. Please select and copy manually.');
+            }
+            document.body.removeChild(textArea);
+        });
     }
     
     // Render advanced charts from backend API or visualization blocks
