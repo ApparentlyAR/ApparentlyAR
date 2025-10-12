@@ -14,7 +14,7 @@
  * @since 1.0.0
  */
 
-/**
+/** 
  * Data processing blocks and generators (frontend integration)
  *
  * - Defines individual Blockly blocks: filter_data, sort_data, select_columns,
@@ -91,10 +91,25 @@
         { "type": "field_input", "name": "VALUE", "text": "value", "SERIALIZABLE": true }
       ],
       "output": "Dataset",
-      "colour": 20,
+      "colour": 120,
       "tooltip": "Filter data based on a condition. Column dropdown will be populated with available columns.",
       "helpUrl": ""
     },
+    {
+      "type": "filter_range",
+      "message0": "filter %1 where %2 is between %3 and %4",
+      "args0": [
+        { "type": "input_value", "name": "DATA", "check": "Dataset" },
+        { "type": "field_dropdown", "name": "COLUMN", "options": [["column","column"]], "SERIALIZABLE": true },
+        { "type": "field_input", "name": "MIN", "text": "min", "SERIALIZABLE": true },
+        { "type": "field_input", "name": "MAX", "text": "max", "SERIALIZABLE": true }
+      ],
+      "output": "Dataset",
+      "colour": 120,  
+      "tooltip": "Keep rows whose column value is between MIN and MAX (inclusive).",
+      "helpUrl": ""
+    },
+
     {
       "type": "sort_data",
       "message0": "sort %1 by %2 %3",
@@ -165,7 +180,88 @@
       "colour": 20,
       "tooltip": "Remove rows with empty values. Column dropdown will be populated with available columns.",
       "helpUrl": ""
+    },
+    // Convert Type
+    {
+      "type": "convert_type",
+      "message0": "convert %1 to %2",
+      "args0": [
+        { "type": "field_dropdown", "name": "COLUMN", "options": [["column","column"]], "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "TO", "options": [
+          ["number","number"],["string","string"],["date","date"],["boolean","boolean"]
+        ], "SERIALIZABLE": true }
+      ],
+      "output": "Dataset", "colour": 20
+    },
+
+    // Drop column
+    {
+      "type": "drop_column",
+      "message0": "drop column %1 from %2",
+      "args0": [
+        { "type": "field_dropdown", "name": "COLUMN", "options": [["column","column"]], "SERIALIZABLE": true },
+        { "type": "input_value", "name": "DATA", "check": "Dataset" }
+      ],
+      "output": "Dataset", "colour": 20
+    },
+
+    // Rename column
+    {
+      "type": "rename_column",
+      "message0": "rename column %1 to %2 in %3",
+      "args0": [
+        { "type": "field_dropdown", "name": "FROM", "options": [["old_name","old_name"]], "SERIALIZABLE": true },
+        { "type": "field_input", "name": "TO", "text": "new_name", "SERIALIZABLE": true },
+        { "type": "input_value", "name": "DATA", "check": "Dataset" }
+      ],
+      "output": "Dataset", "colour": 20
+    },
+
+    // Handle missing
+    {
+      "type": "handle_missing",
+      "message0": "handle missing in %1 with %2 value %3 from %4",
+      "args0": [
+        { "type": "field_dropdown", "name": "COLUMN", "options": [["column","column"]], "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "STRATEGY", "options": [
+          ["drop rows","drop"],["fill 0","fill_zero"],["fill empty string","fill_empty"],["custom value","fill_value"]
+        ], "SERIALIZABLE": true },
+        { "type": "field_input", "name": "VALUE", "text": "0", "SERIALIZABLE": true },
+        { "type": "input_value", "name": "DATA", "check": "Dataset" }
+      ],
+      "output": "Dataset", "colour": 20
+    },
+
+    // Bin (numeric)
+    {
+      "type": "bin_column",
+      "message0": "bin %1 into %2 buckets as %3 in %4",
+      "args0": [
+        { "type": "field_dropdown", "name": "COLUMN", "options": [["value","value"]], "SERIALIZABLE": true },
+        { "type": "field_number", "name": "BINS", "value": 10, "min": 1 },
+        { "type": "field_input", "name": "OUT", "text": "value_bin" },
+        { "type": "input_value", "name": "DATA", "check": "Dataset" }
+      ],
+      "output": "Dataset", "colour": 20
+    },
+
+    // Visualisation fields
+    {
+      "type": "viz_fields",
+      "message0": "visualize %1 with x %2, y %3, color %4, type %5",
+      "args0": [
+        { "type": "input_value", "name": "DATA", "check": "Dataset" },
+        { "type": "field_dropdown", "name": "X", "options": [["x","x"]], "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "Y", "options": [["y","y"]], "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "COLOR", "options": [["category","category"]], "SERIALIZABLE": true },
+        { "type": "field_dropdown", "name": "TYPE", "options": [
+          ["bar","bar"],["line","line"],["scatter","scatter"],["histogram","hist"]
+        ], "SERIALIZABLE": true }
+      ],
+      "output": "Dataset", "colour": 60
     }
+
+
   ]);
 
   // JavaScript generators for each block
@@ -190,6 +286,52 @@
         return 'Blockly.CsvImportData.data';
       }
     }
+   (function () {
+      // Optional helpers – replace these stubs with your project's real implementations.
+      function getAvailableColumns(){ /* ... */ }
+      function updateFieldWithColumns(){ /* ... */ }
+      function getDataCode(block){ /* ... */ }
+
+      function initializeBlocks() {
+        // 1) Define all blocks (including your existing filter/sort/...).
+        Blockly.defineBlocksWithJsonArray([
+          /* ...your existing blocks... */,
+          /* Append new blocks here: convert_type / drop_column / rename_column / handle_missing / bin_column / viz_fields */
+        ]);
+
+        // 2) === Generators (place their implementations here) ===
+        Blockly.JavaScript['convert_type']  = function(block){ /* ... */ };
+        Blockly.JavaScript['drop_column']   = function(block){ /* ... */ };
+        Blockly.JavaScript['rename_column'] = function(block){ /* ... */ };
+        Blockly.JavaScript['handle_missing']= function(block){ /* ... */ };
+        Blockly.JavaScript['bin_column']    = function(block){ /* ... */ };
+        Blockly.JavaScript['viz_fields']    = function(block){ /* ... */ };
+
+        // 3) forBlock compatibility (put this at the end of initializeBlocks as well).
+        Blockly.JavaScript.forBlock = Blockly.JavaScript.forBlock || {};
+        ['convert_type','drop_column','rename_column','handle_missing','bin_column','viz_fields']
+          .forEach(t => {
+            if (!Blockly.JavaScript.forBlock[t] && Blockly.JavaScript[t]) {
+              Blockly.JavaScript.forBlock[t] = (block, g) => Blockly.JavaScript[t](block, g);
+            }
+          });
+      }
+
+      function waitForBlockly(){
+        // Wait until Blockly and its JavaScript generator are available,
+        // then register blocks and generators to avoid race conditions.
+        if (typeof Blockly !== 'undefined' && Blockly.JavaScript){
+          initializeBlocks();
+          // You can also attach your autofill hooks here if needed.
+          // attachAutofillHooks();
+        } else {
+          setTimeout(waitForBlockly, 10);
+        }
+      }
+
+      waitForBlockly();
+  })();
+
 
     // Filter data generator
     Blockly.JavaScript['filter_data'] = function(block) {
@@ -328,6 +470,45 @@
       
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
+
+    // === filter_range generator ===
+    Blockly.JavaScript['filter_range'] = function(block) {
+      const dataCode = getDataCode(block);
+      const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g,"\\'").replace(/"/g,'\\"');
+      const min = (block.getFieldValue('MIN') || 'min').replace(/'/g,"\\'").replace(/"/g,'\\"');
+      const max = (block.getFieldValue('MAX') || 'max').replace(/'/g,"\\'").replace(/"/g,'\\"');
+
+      const code = `(async () => {
+        try {
+          let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+          if (!Array.isArray(__input)) {
+            for (let __i=0; __i<60 && !Array.isArray(__input); __i++) {
+              await new Promise(r=>setTimeout(r,50));
+              __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+            }
+          }
+          const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}') ||
+                                  (${JSON.stringify(['min'])}).includes('${min}') ||
+                                  (${JSON.stringify(['max'])}).includes('${max}');
+          if (__isPlaceholder) { return __input; }
+          if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+          if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+
+          const __res = await window.AppApi.processData(__input, [
+            { type: 'filter', params: { column: '${column}', operator: 'between', min: '${min}', max: '${max}' } }
+          ]);
+          const __data = (__res && __res.data) ? __res.data : __input;
+          if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+          return __data;
+        } catch (error) {
+          console.error('Filter range error:', error);
+          return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));
+        }
+      })()`;
+
+      return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+    };
+
   }
 
   // Register forBlock mappings for newer Blockly generator API
@@ -340,6 +521,7 @@
     if (js['group_by'] && !js.forBlock['group_by']) js.forBlock['group_by'] = (block, generator) => js['group_by'](block, generator);
     if (js['calculate_column'] && !js.forBlock['calculate_column']) js.forBlock['calculate_column'] = (block, generator) => js['calculate_column'](block, generator);
     if (js['drop_empty'] && !js.forBlock['drop_empty']) js.forBlock['drop_empty'] = (block, generator) => js['drop_empty'](block, generator);
+    if (js['filter_range'] && !js.forBlock['filter_range']) {js.forBlock['filter_range'] = (block, generator) => js['filter_range'](block, generator);}
   }
   }
   
@@ -399,6 +581,9 @@
         updateFieldWithColumns(block.getField('AGG_COLUMN'));
         break;
       case 'drop_empty':
+        updateFieldWithColumns(block.getField('COLUMN'));
+        break;
+        case 'filter_range':
         updateFieldWithColumns(block.getField('COLUMN'));
         break;
     }
