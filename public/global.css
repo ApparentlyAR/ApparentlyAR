@@ -6,10 +6,32 @@ body {
 
 /* Custom scrollbar for data panel if needed, for demonstration */
 .data-panel-table-container {
-    overflow-x: auto; /* Enable horizontal scrolling if table content is wide */
+    max-height: 400px; /* Set a fixed height */
+    overflow-y: auto;  /* Enable vertical scrolling */
+    overflow-x: auto;  /* Enable horizontal scrolling if table content is wide */
     max-width: 100%;   /* Ensure it doesn't overflow parent */
+    border: 1px solid #e5e7eb; /* Add a border to define the container */
+    border-radius: 0.5rem; /* Rounded corners to match the card */
+    margin-bottom: 1rem; /* Add some space below the container */
 }
 
 .data-panel-table-container table {
     min-width: 700px;
+}
+
+/* Improve scrollbar appearance */
+.data-panel-table-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+.data-panel-table-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+.data-panel-table-container::-webkit-scrollbar-thumb {
+    background: #c5d2e0;
+    border-radius: 4px;
+}
+.data-panel-table-container::-webkit-scrollbar-thumb:hover {
+    background: #a3b3c5;
 }
