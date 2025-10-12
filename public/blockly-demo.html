@@ -568,11 +568,16 @@
             result = Blockly.CsvImportData.data;
         }
         
-        // Check if result is a chart configuration (from visualization blocks)
-        if (result && typeof result === 'object' && result.chartType) {
-          console.log('🎨 Detected chart configuration from visualization blocks:', result);
-          await handleAdvancedVisualization(result);
+        // Check if result is a chart configuration or handled by visualization blocks
+        console.log('🔍 Checking result type:', typeof result, 'has chartType:', !!(result && result.chartType), 'has handled:', !!(result && result.handled));
+        if (result && typeof result === 'object' && (result.chartType || result.handled === 'chartGenerated')) {
+          console.log('🎨 Detected chart from visualization blocks or handled by event system:', result);
+          // Chart is handled by the chartGenerated event system, don't render fallback
+          if (!result.handled) {
+            await handleAdvancedVisualization(result);
+          }
         } else {
+          console.log('📊 Taking standard data rendering path');
           // Standard data rendering for basic blocks
           renderDataPanel(result);
           renderDataVisualization(result);
@@ -644,8 +649,13 @@
         const canvas = document.getElementById('chart-canvas');
         const ctx = canvas.getContext('2d');
         
-        console.log('📊 Creating chart with config:', chartResult.config);
+        console.log('📊 Creating chart with full result:', chartResult);
+        console.log('📊 Chart config type:', chartResult.config.type);
+        console.log('📊 Chart config data:', chartResult.config.data);
+        console.log('📊 Chart config options:', chartResult.config.options);
+        
         chartInstance = new Chart(ctx, chartResult.config);
+        console.log('📊 Chart instance created, type:', chartInstance.config.type);
         
         // Update data panel with the chart data if available
         if (chartResult.data) {
@@ -680,9 +690,13 @@
     }
 
     function renderDataVisualization(data, chartConfig = null) {
+        console.log('🖼️ renderDataVisualization called with:', { data: !!data, chartConfig });
         const container = document.getElementById('react-chart-container');
         const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
-        if (chartInstance) chartInstance.destroy();
+        if (chartInstance) {
+            console.log('🖼️ Destroying existing chart instance');
+            chartInstance.destroy();
+        }
         if (!dataToRender || dataToRender.length === 0) {
             container.innerHTML = 'Run blocks with data to generate a visualization.';
             return;
