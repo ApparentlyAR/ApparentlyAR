@@ -107,6 +107,16 @@ class FieldFileButton extends Blockly.Field {
               } else {
                 console.warn('[CSV Import] BlocklyVisualizationAutofill not available');
               }
+
+              // Also trigger autofill for transformation blocks
+              if (window.BlocklyTransformAutofill && window.BlocklyTransformAutofill.updateAllTransformationBlocksWithAutofill) {
+                console.log('[CSV Import] Triggering transformation blocks autofill');
+                setTimeout(() => {
+                  window.BlocklyTransformAutofill.updateAllTransformationBlocksWithAutofill();
+                }, 220); // Ensure runs after other systems
+              } else {
+                console.warn('[CSV Import] BlocklyTransformAutofill not available');
+              }
             }
           });
         };
