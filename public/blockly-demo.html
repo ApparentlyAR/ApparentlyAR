@@ -13,19 +13,18 @@
     rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Tailwind config for the new light theme
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            background: '#F8F9FA', // Light grey background
-            panel: '#FFFFFF',      // White panels
-            border: '#E5E7EB',    // Light grey border
-            text: '#1F2937',        // Dark text
-            muted: '#6B7280',     // Grey for muted text
-            primary: '#22C55E',   // Vibrant green for play button
+            background: '#F8F9FA',
+            panel: '#FFFFFF',
+            border: '#E5E7EB',
+            text: '#1F2937',
+            muted: '#6B7280',
+            primary: '#22C55E',
             'primary-hover': '#16A34A',
-            secondary: '#4F46E5', // Accent color for Blockly
+            secondary: '#4F46E5',
           },
           fontFamily: {
             sans: ['Plus Jakarta Sans', 'sans-serif'],
@@ -111,12 +110,12 @@
       background: #10B981;
     }
 
+    /* Panels and resizers */
     #main-content-grid {
         display: grid;
-        grid-template-columns: 320px 8px 1fr 8px 360px; /* Panels and resizers */
+        grid-template-columns: 320px 8px 1fr 8px 360px; 
     }
     
-    /* This class will be toggled to provide smooth animation only when not dragging */
     .grid-transition {
         transition: grid-template-columns 0.3s ease-in-out;
     }
