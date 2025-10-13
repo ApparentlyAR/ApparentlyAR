@@ -685,7 +685,7 @@ describe('Data Transformation Blocks Integration', () => {
       
       // Code should properly escape dangerous input with backslashes
       expect(code).toContain('name\\"; malicious_code(); \\"'); // Escaped quotes
-      expect(code).not.toContain('"; malicious_code(); "')); // Raw dangerous pattern should not exist
+      expect(code).not.toContain('"; malicious_code(); "'); // Raw dangerous pattern should not exist
     });
 
     test('Should handle empty field values gracefully', () => {
