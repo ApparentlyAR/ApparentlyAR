@@ -1,7 +1,24 @@
 /**
  * Data Transformation Blocks Integration Tests
  * 
- * Tests the complete flow from Blockly transformation blocks to in-memory data operations
+ * Comprehensive test suite for the transformation blocks module, validating
+ * the complete flow from Blockly block generation to in-memory data operations.
+ * 
+ * Tests cover:
+ * - Block availability and code generation
+ * - Data transformation execution (rename, drop, fill, replace, cast, transform, split, concat, dedupe, round)
+ * - Error handling for invalid/empty/null data
+ * - Data normalization and type conversion
+ * - Autofill system integration
+ * - Blockly forBlock API compatibility
+ * - Security and input validation
+ * - Global data state management
+ * - Chained transformation operations
+ * 
+ * @module TransformationBlocksTests
+ * @author ApparentlyAR Team
+ * @version 1.0.0
+ * @since 1.0.0
  */
 
 // Mock browser environment for testing

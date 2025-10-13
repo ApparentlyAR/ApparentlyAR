@@ -1,18 +1,46 @@
 /**
  * Data Transformation Blocks for Blockly
- *
- * Pure-frontend transformation helpers that operate on the in-memory CSV rows.
- * These complement server-side operations by providing quick per-row edits
- * like renaming columns, replacing values, filling missing data, type casting,
- * and string transformations.
+ * 
+ * Provides client-side data transformation blocks for the ApparentlyAR platform.
+ * These blocks allow students in grades 8-10 to perform beginner-friendly data
+ * manipulation operations including renaming columns, dropping duplicates, 
+ * rounding numbers, splitting/concatenating columns, and more.
+ * 
+ * All transformations operate on in-memory CSV data and update the global
+ * Blockly.CsvImportData.data state. These complement server-side operations
+ * by providing quick, synchronous per-row edits.
+ * 
+ * Features:
+ * - Automatic column dropdown population (autofill)
+ * - Real-time data transformation
+ * - Chainable operations
+ * - Type-safe conversions
+ * - String manipulation utilities
+ * 
+ * @module TransformationBlocks
+ * @author ApparentlyAR Team
+ * @version 1.0.0
+ * @since 1.0.0
  */
 (function(){
+  /**
+   * Retrieves the current CSV data from global Blockly storage
+   * 
+   * @private
+   * @returns {Array<Object>} Array of CSV row objects, or empty array if no data
+   */
   function getCsvData() {
     return (window.Blockly && window.Blockly.CsvImportData && Array.isArray(window.Blockly.CsvImportData.data))
       ? window.Blockly.CsvImportData.data
       : [];
   }
 
+  /**
+   * Extracts column names from the current CSV data
+   * 
+   * @private
+   * @returns {Array<string>} Array of column names from the first data row
+   */
   function getAvailableColumns() {
     const data = getCsvData();
     if (data.length > 0 && data[0] && typeof data[0] === 'object') {
@@ -21,6 +49,12 @@
     return [];
   }
 
+  /**
+   * Updates a Blockly dropdown field with available CSV column names
+   * 
+   * @private
+   * @param {Object} field - Blockly field object with setOptions method
+   */
   function updateFieldWithColumns(field) {
     if (!field || !field.setOptions) return;
     const columns = getAvailableColumns();
@@ -29,6 +63,12 @@
     }
   }
 
+  /**
+   * Waits for Blockly to be available before initializing blocks
+   * Polls every 10ms until Blockly and Blockly.JavaScript are defined
+   * 
+   * @private
+   */
   function waitForBlockly() {
     if (typeof Blockly !== 'undefined' && Blockly.JavaScript) {
       initializeBlocks();
@@ -37,6 +77,26 @@
     }
   }
 
+  /**
+   * Initializes all transformation block definitions and JavaScript generators
+   * 
+   * Defines 10 transformation blocks:
+   * - tf_rename_column: Rename a column
+   * - tf_drop_column: Remove a column
+   * - tf_fill_missing: Fill null/undefined/empty values
+   * - tf_replace_values: Replace specific values in a column
+   * - tf_cast_type: Convert column data types (number, string, boolean, date)
+   * - tf_string_transform: Apply string operations (uppercase, lowercase, capitalize, trim)
+   * - tf_split_column: Split a column by delimiter into two columns
+   * - tf_concat_columns: Combine two columns with a separator
+   * - tf_drop_duplicates: Remove duplicate rows based on a column
+   * - tf_round_number: Round numeric values to specified decimal places
+   * 
+   * All blocks accept a dataset input and return a transformed dataset output,
+   * allowing for chainable operations.
+   * 
+   * @private
+   */
   function initializeBlocks() {
     Blockly.defineBlocksWithJsonArray([
       {
@@ -186,6 +246,13 @@
         };
       }
 
+      /**
+       * Extracts the data input code from a block or returns default CSV data reference
+       * 
+       * @private
+       * @param {Object} block - Blockly block instance
+       * @returns {string} JavaScript code string representing the data input
+       */
       function getDataCode(block) {
         try {
           const dataCode = Blockly.JavaScript.valueToCode(block, 'DATA', Blockly.JavaScript.ORDER_NONE);
@@ -195,12 +262,28 @@
         }
       }
 
+      /**
+       * Updates the global CSV data storage with transformed data
+       * 
+       * @private
+       * @param {Array<Object>} __data - Transformed dataset to store
+       */
       function assignCsvData(__data) {
         if (window.Blockly && window.Blockly.CsvImportData) {
           window.Blockly.CsvImportData.data = __data;
         }
       }
 
+      /**
+       * JavaScript generator for rename column block
+       * 
+       * Generates code that renames a column in the dataset by destructuring
+       * the old column name and creating a new property with the new name.
+       * Updates global CSV data state.
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_rename_column'] = function(block) {
         const dataCode = getDataCode(block);
         const from = (block.getFieldValue('FROM') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
@@ -224,6 +307,15 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for drop column block
+       * 
+       * Generates code that removes a column from the dataset using destructuring.
+       * Updates global CSV data state.
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_drop_column'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
@@ -244,6 +336,15 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for fill missing values block
+       * 
+       * Generates code that replaces null, undefined, or empty string values
+       * in a column with a specified fill value.
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_fill_missing'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
@@ -268,6 +369,15 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for replace values block
+       * 
+       * Generates code that replaces specific values in a column with new values.
+       * Uses string comparison to match values.
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_replace_values'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
@@ -290,6 +400,18 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for cast type block
+       * 
+       * Generates code that converts column values to a specified type:
+       * - number: Converts to finite numbers or null
+       * - boolean: Converts to true/false based on truthiness
+       * - date: Parses dates and converts to ISO strings
+       * - string: Converts to string representation
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_cast_type'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
@@ -316,6 +438,18 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for string transform block
+       * 
+       * Generates code that applies string transformations:
+       * - lower: Convert to lowercase
+       * - upper: Convert to uppercase
+       * - cap: Capitalize first letter
+       * - trim: Remove leading/trailing whitespace
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_string_transform'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
@@ -344,6 +478,15 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for split column block
+       * 
+       * Generates code that splits a column by a delimiter into two new columns.
+       * Preserves the original column and adds two new columns for the split parts.
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_split_column'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
@@ -367,6 +510,15 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for concatenate columns block
+       * 
+       * Generates code that combines two columns with a separator into a new column.
+       * Preserves the original columns.
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_concat_columns'] = function(block) {
         const dataCode = getDataCode(block);
         const c1 = (block.getFieldValue('COL1') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
@@ -390,6 +542,15 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for drop duplicates block
+       * 
+       * Generates code that removes duplicate rows based on a column value.
+       * Keeps the first occurrence and removes subsequent duplicates.
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_drop_duplicates'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
@@ -413,6 +574,15 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      /**
+       * JavaScript generator for round number block
+       * 
+       * Generates code that rounds numeric values in a column to a specified
+       * number of decimal places. Non-numeric values are preserved unchanged.
+       * 
+       * @param {Object} block - Blockly block instance
+       * @returns {Array} Tuple of [code string, order precedence]
+       */
       Blockly.JavaScript['tf_round_number'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
@@ -465,7 +635,12 @@
       }
     }
 
-    // Export an autofill helper so CSV import can trigger us on data load
+    /**
+     * Updates all transformation blocks in the workspace with current CSV column data
+     * Called after CSV import to populate dropdown fields with actual column names
+     * 
+     * @private
+     */
     function updateAllTransformationBlocksWithAutofill() {
       if (typeof Blockly === 'undefined' || !Blockly.getMainWorkspace) return;
       const ws = Blockly.getMainWorkspace();
@@ -477,6 +652,13 @@
       });
     }
 
+    /**
+     * Applies autofill to a specific transformation block based on its type
+     * Identifies the appropriate dropdown fields and populates them with CSV columns
+     * 
+     * @private
+     * @param {Object} block - Blockly block instance to apply autofill to
+     */
     function applyAutofillToTransformationBlock(block) {
       switch (block.type) {
         case 'tf_rename_column':
@@ -496,7 +678,15 @@
       }
     }
 
-    // Integrate with the existing global BlocklyAutofill system so we get called automatically
+    /**
+     * Extends the global BlocklyAutofill system to include transformation blocks
+     * 
+     * Wraps the existing applyAutofillToBlock function to also handle transformation
+     * block types. Ensures autofill works both when blocks are created and when
+     * CSV data is loaded.
+     * 
+     * @private
+     */
     function extendBlocklyAutofillSystem() {
       if (!window.BlocklyAutofill) { setTimeout(extendBlocklyAutofillSystem, 100); return; }
       if (window.BlocklyAutofill._transformationsExtended) return;
@@ -524,8 +714,27 @@
     setTimeout(extendBlocklyAutofillSystem, 1000);
     setTimeout(extendBlocklyAutofillSystem, 2000);
 
+    /**
+     * Global transformation block autofill API
+     * Exposed on window for integration with CSV import and other systems
+     * 
+     * @global
+     * @namespace BlocklyTransformAutofill
+     */
     window.BlocklyTransformAutofill = {
+      /**
+       * Applies autofill to a single transformation block
+       * @memberof BlocklyTransformAutofill
+       * @function applyAutofillToTransformationBlock
+       * @param {Object} block - Blockly block instance
+       */
       applyAutofillToTransformationBlock,
+      
+      /**
+       * Updates all transformation blocks in the workspace with column data
+       * @memberof BlocklyTransformAutofill
+       * @function updateAllTransformationBlocksWithAutofill
+       */
       updateAllTransformationBlocksWithAutofill,
     };
   }
