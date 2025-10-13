@@ -116,6 +116,61 @@
         colour: 200,
         tooltip: 'Apply common string transformations to a column',
         helpUrl: ''
+      },
+      {
+        type: 'tf_split_column',
+        message0: 'split %1 by %2 into %3 and %4 in %5',
+        args0: [
+          { type: 'field_dropdown', name: 'COLUMN', options: [['column','column']], SERIALIZABLE: true },
+          { type: 'field_input', name: 'DELIM', text: ',', SERIALIZABLE: true },
+          { type: 'field_input', name: 'OUT1', text: 'part1', SERIALIZABLE: true },
+          { type: 'field_input', name: 'OUT2', text: 'part2', SERIALIZABLE: true },
+          { type: 'input_value', name: 'DATA', check: 'Dataset' }
+        ],
+        output: 'Dataset',
+        colour: 200,
+        tooltip: 'Split a column into two new columns using a delimiter',
+        helpUrl: ''
+      },
+      {
+        type: 'tf_concat_columns',
+        message0: 'combine %1 and %2 with %3 as %4 in %5',
+        args0: [
+          { type: 'field_dropdown', name: 'COL1', options: [['column','column']], SERIALIZABLE: true },
+          { type: 'field_dropdown', name: 'COL2', options: [['column','column']], SERIALIZABLE: true },
+          { type: 'field_input', name: 'SEP', text: ' ', SERIALIZABLE: true },
+          { type: 'field_input', name: 'OUT', text: 'combined', SERIALIZABLE: true },
+          { type: 'input_value', name: 'DATA', check: 'Dataset' }
+        ],
+        output: 'Dataset',
+        colour: 200,
+        tooltip: 'Join two columns together with a separator',
+        helpUrl: ''
+      },
+      {
+        type: 'tf_drop_duplicates',
+        message0: 'drop duplicate rows by %1 in %2',
+        args0: [
+          { type: 'field_dropdown', name: 'COLUMN', options: [['column','column']], SERIALIZABLE: true },
+          { type: 'input_value', name: 'DATA', check: 'Dataset' }
+        ],
+        output: 'Dataset',
+        colour: 200,
+        tooltip: 'Keep the first row and remove later duplicates in that column',
+        helpUrl: ''
+      },
+      {
+        type: 'tf_round_number',
+        message0: 'round %1 to %2 decimals in %3',
+        args0: [
+          { type: 'field_dropdown', name: 'COLUMN', options: [['column','column']], SERIALIZABLE: true },
+          { type: 'field_number', name: 'DECIMALS', value: 0, min: 0, max: 6 },
+          { type: 'input_value', name: 'DATA', check: 'Dataset' }
+        ],
+        output: 'Dataset',
+        colour: 200,
+        tooltip: 'Round numbers to a fixed number of decimal places',
+        helpUrl: ''
       }
     ]);
 
@@ -289,10 +344,101 @@
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
+      Blockly.JavaScript['tf_split_column'] = function(block) {
+        const dataCode = getDataCode(block);
+        const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const delim = (block.getFieldValue('DELIM') || ',').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const out1 = (block.getFieldValue('OUT1') || 'part1').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const out2 = (block.getFieldValue('OUT2') || 'part2').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const code = `(async () => {\n`+
+          `  let __raw = ${dataCode};\n`+
+          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
+          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
+          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
+          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
+          `  const __data = __input.map(row => {\n`+
+          `    if (!row || typeof row!=='object') return row;\n`+
+          `    const parts = String(row['${column}'] ?? '').split('${delim}');\n`+
+          `    return { ...row, ['${out1}']: parts[0] ?? '', ['${out2}']: parts[1] ?? '' };\n`+
+          `  });\n`+
+          `  (${assignCsvData.toString()})(__data);\n`+
+          `  return __data;\n`+
+          `})()`;
+        return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+      };
+
+      Blockly.JavaScript['tf_concat_columns'] = function(block) {
+        const dataCode = getDataCode(block);
+        const c1 = (block.getFieldValue('COL1') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const c2 = (block.getFieldValue('COL2') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const sep = (block.getFieldValue('SEP') || ' ').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const out = (block.getFieldValue('OUT') || 'combined').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const code = `(async () => {\n`+
+          `  let __raw = ${dataCode};\n`+
+          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
+          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
+          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
+          `  if (${JSON.stringify(['column'])}.includes('${c1}') || ${JSON.stringify(['column'])}.includes('${c2}')) return __input;\n`+
+          `  const __data = __input.map(row => {\n`+
+          `    if (!row || typeof row!=='object') return row;\n`+
+          `    const a = row['${c1}']; const b = row['${c2}'];\n`+
+          `    return { ...row, ['${out}']: [a,b].filter(v=>v!==undefined&&v!==null).join('${sep}') };\n`+
+          `  });\n`+
+          `  (${assignCsvData.toString()})(__data);\n`+
+          `  return __data;\n`+
+          `})()`;
+        return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+      };
+
+      Blockly.JavaScript['tf_drop_duplicates'] = function(block) {
+        const dataCode = getDataCode(block);
+        const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const code = `(async () => {\n`+
+          `  let __raw = ${dataCode};\n`+
+          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
+          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
+          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
+          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
+          `  const seen = new Set();\n`+
+          `  const __data = __input.filter(row => {\n`+
+          `    const key = row && typeof row==='object' ? row['${column}'] : row;\n`+
+          `    const s = String(key);\n`+
+          `    if (seen.has(s)) return false;\n`+
+          `    seen.add(s);\n`+
+          `    return true;\n`+
+          `  });\n`+
+          `  (${assignCsvData.toString()})(__data);\n`+
+          `  return __data;\n`+
+          `})()`;
+        return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+      };
+
+      Blockly.JavaScript['tf_round_number'] = function(block) {
+        const dataCode = getDataCode(block);
+        const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
+        const decimals = Number(block.getFieldValue('DECIMALS') || 0);
+        const code = `(async () => {\n`+
+          `  let __raw = ${dataCode};\n`+
+          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
+          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
+          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
+          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
+          `  const __data = __input.map(row => {\n`+
+          `    if (!row || typeof row!=='object') return row;\n`+
+          `    const n = Number(row['${column}']);\n`+
+          `    const val = Number.isFinite(n) ? Number(n.toFixed(${decimals})) : row['${column}'];\n`+
+          `    return { ...row, ['${column}']: val };\n`+
+          `  });\n`+
+          `  (${assignCsvData.toString()})(__data);\n`+
+          `  return __data;\n`+
+          `})()`;
+        return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+      };
+
       // forBlock compatibility
       const js = Blockly.JavaScript;
       js.forBlock = js.forBlock || {};
-      ['tf_rename_column','tf_drop_column','tf_fill_missing','tf_replace_values','tf_cast_type','tf_string_transform']
+      ['tf_rename_column','tf_drop_column','tf_fill_missing','tf_replace_values','tf_cast_type','tf_string_transform','tf_split_column','tf_concat_columns','tf_drop_duplicates','tf_round_number']
         .forEach(t => { if (!js.forBlock[t] && js[t]) { js.forBlock[t] = (block,g) => js[t](block,g); } });
     }
 
@@ -302,26 +448,20 @@
       if (ws) {
         ws.addChangeListener((event) => {
           if (event.type === Blockly.Events.BLOCK_CREATE) {
-            const block = ws.getBlockById(event.blockId);
-            if (!block) return;
+            const ids = (event.ids && Array.isArray(event.ids)) ? event.ids : (event.blockId ? [event.blockId] : []);
+            if (!ids.length) return;
             setTimeout(() => {
-              switch (block.type) {
-                case 'tf_rename_column':
-                  updateFieldWithColumns(block.getField('FROM')); break;
-                case 'tf_drop_column':
-                  updateFieldWithColumns(block.getField('COLUMN')); break;
-                case 'tf_fill_missing':
-                  updateFieldWithColumns(block.getField('COLUMN')); break;
-                case 'tf_replace_values':
-                  updateFieldWithColumns(block.getField('COLUMN')); break;
-                case 'tf_cast_type':
-                  updateFieldWithColumns(block.getField('COLUMN')); break;
-                case 'tf_string_transform':
-                  updateFieldWithColumns(block.getField('COLUMN')); break;
-              }
+              ids.forEach(id => {
+                const b = ws.getBlockById(id);
+                if (b) {
+                  try { applyAutofillToTransformationBlock(b); } catch (_) {}
+                }
+              });
             }, 50);
           }
         });
+        // Fallback: after workspace ready, try a pass once to populate any pre-existing blocks
+        setTimeout(() => { try { updateAllTransformationBlocksWithAutofill(); } catch (_) {} }, 400);
       }
     }
 
@@ -333,20 +473,59 @@
       const blocks = ws.getAllBlocks();
       blocks.forEach(block => {
         if (!block || !block.type) return;
-        switch (block.type) {
-          case 'tf_rename_column':
-            updateFieldWithColumns(block.getField('FROM')); break;
-          case 'tf_drop_column':
-          case 'tf_fill_missing':
-          case 'tf_replace_values':
-          case 'tf_cast_type':
-          case 'tf_string_transform':
-            updateFieldWithColumns(block.getField('COLUMN')); break;
-        }
+        applyAutofillToTransformationBlock(block);
       });
     }
 
+    function applyAutofillToTransformationBlock(block) {
+      switch (block.type) {
+        case 'tf_rename_column':
+          updateFieldWithColumns(block.getField('FROM')); break;
+        case 'tf_drop_column':
+        case 'tf_fill_missing':
+        case 'tf_replace_values':
+        case 'tf_cast_type':
+        case 'tf_string_transform':
+        case 'tf_split_column':
+        case 'tf_drop_duplicates':
+        case 'tf_round_number':
+          updateFieldWithColumns(block.getField('COLUMN')); break;
+        case 'tf_concat_columns':
+          updateFieldWithColumns(block.getField('COL1'));
+          updateFieldWithColumns(block.getField('COL2')); break;
+      }
+    }
+
+    // Integrate with the existing global BlocklyAutofill system so we get called automatically
+    function extendBlocklyAutofillSystem() {
+      if (!window.BlocklyAutofill) { setTimeout(extendBlocklyAutofillSystem, 100); return; }
+      if (window.BlocklyAutofill._transformationsExtended) return;
+      const original = window.BlocklyAutofill.applyAutofillToBlock || function(){};
+      window.BlocklyAutofill.applyAutofillToBlock = function(block) {
+        try { original(block); } catch (_e) {}
+        if (block && block.type && (
+          block.type === 'tf_rename_column' ||
+          block.type === 'tf_drop_column' ||
+          block.type === 'tf_fill_missing' ||
+          block.type === 'tf_replace_values' ||
+          block.type === 'tf_cast_type' ||
+          block.type === 'tf_string_transform' ||
+          block.type === 'tf_split_column' ||
+          block.type === 'tf_concat_columns' ||
+          block.type === 'tf_drop_duplicates' ||
+          block.type === 'tf_round_number'
+        )) {
+          applyAutofillToTransformationBlock(block);
+        }
+      };
+      window.BlocklyAutofill._transformationsExtended = true;
+    }
+    setTimeout(extendBlocklyAutofillSystem, 300);
+    setTimeout(extendBlocklyAutofillSystem, 1000);
+    setTimeout(extendBlocklyAutofillSystem, 2000);
+
     window.BlocklyTransformAutofill = {
+      applyAutofillToTransformationBlock,
       updateAllTransformationBlocksWithAutofill,
     };
   }

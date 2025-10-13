@@ -368,6 +368,18 @@
           <block type="tf_replace_values">
             <value name="DATA"><block type="csv_import"></block></value>
           </block>
+          <block type="tf_split_column">
+            <value name="DATA"><block type="csv_import"></block></value>
+          </block>
+          <block type="tf_concat_columns">
+            <value name="DATA"><block type="csv_import"></block></value>
+          </block>
+          <block type="tf_drop_duplicates">
+            <value name="DATA"><block type="csv_import"></block></value>
+          </block>
+          <block type="tf_round_number">
+            <value name="DATA"><block type="csv_import"></block></value>
+          </block>
           <block type="tf_cast_type">
             <value name="DATA"><block type="csv_import"></block></value>
           </block>
