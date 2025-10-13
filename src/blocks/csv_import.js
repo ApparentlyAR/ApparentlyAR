@@ -77,6 +77,21 @@ class FieldFileButton extends Blockly.Field {
               this._dialogOpen = false;
               
               console.log('[CSV Import] Data loaded, triggering autofill for all systems...');
+
+              // Notify the application that CSV data has changed so UI elements can update
+              if (typeof window !== 'undefined') {
+                try {
+                  window.dispatchEvent(new CustomEvent('csvDataChanged', {
+                    detail: {
+                      filename: file.name,
+                      rows: Array.isArray(results.data) ? results.data.length : 0,
+                      columns: Array.isArray(results.data) && results.data[0] ? Object.keys(results.data[0]).length : 0
+                    }
+                  }));
+                } catch (eventError) {
+                  console.warn('[CSV Import] Failed to dispatch csvDataChanged event:', eventError);
+                }
+              }
               
               // Trigger autofill for all existing blocks when CSV data is loaded
               if (window.BlocklyAutofill && window.BlocklyAutofill.updateAllBlocksWithAutofill) {

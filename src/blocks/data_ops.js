@@ -258,40 +258,40 @@
       const safeColumn = column.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
       const code = `(async () => {
-  const __normalize = window.BlocklyNormalizeData || function(input) {
-    if (Array.isArray(input)) { return input; }
-    if (input && Array.isArray(input.data)) { return input.data; }
-    if (typeof input === 'string') {
-      try {
-        const parsed = JSON.parse(input);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (_) {
-        return [];
-      }
-    }
-    return [];
-  };
-  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
-  try {
-    let __rawData = ${dataCode};
-    if (__rawData && typeof __rawData.then === 'function') {
-      __rawData = await __rawData;
-    }
-    let __input = __normalize(__rawData);
-    if (!Array.isArray(__input)) {
-      __input = __csvFallback();
-    }
-    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
-    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
-    const __res = await window.AppApi.processData(__input, [{ type: 'sort', params: { column: '${safeColumn}', direction: '${direction}' } }]);
-    const __data = (__res && __res.data) ? __res.data : __input;
-    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
-    return __data;
-  } catch (error) {
-    console.error('Sort data error:', error);
-    return __csvFallback();
-  }
-})()`;
+        const __normalize = window.BlocklyNormalizeData || function(input) {
+          if (Array.isArray(input)) { return input; }
+          if (input && Array.isArray(input.data)) { return input.data; }
+          if (typeof input === 'string') {
+            try {
+              const parsed = JSON.parse(input);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+              return [];
+            }
+          }
+          return [];
+        };
+        const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+        try {
+          let __rawData = ${dataCode};
+          if (__rawData && typeof __rawData.then === 'function') {
+            __rawData = await __rawData;
+          }
+          let __input = __normalize(__rawData);
+          if (!Array.isArray(__input)) {
+            __input = __csvFallback();
+          }
+          if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+          if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+          const __res = await window.AppApi.processData(__input, [{ type: 'sort', params: { column: '${safeColumn}', direction: '${direction}' } }]);
+          const __data = (__res && __res.data) ? __res.data : __input;
+          if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+          return __data;
+        } catch (error) {
+          console.error('Sort data error:', error);
+          return __csvFallback();
+        }
+      })()`;
 
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
