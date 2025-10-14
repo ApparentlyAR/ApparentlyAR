@@ -5,6 +5,8 @@ const ChartControls = ({ onChartGenerate }) => {
   const [chartType, setChartType] = useState('bar');
   const [dataType, setDataType] = useState('students');
   const [loading, setLoading] = useState(false);
+  const [hoveredChart, setHoveredChart] = useState(null);
+  const [showChartDropdown, setShowChartDropdown] = useState(false);
 
   // CSV (block) dataset helpers
   const [xColumn, setXColumn] = useState('');
@@ -33,15 +35,60 @@ const ChartControls = ({ onChartGenerate }) => {
   const [calcNewColumnName, setCalcNewColumnName] = useState('newValue');
 
   const chartTypes = [
-    { value: 'bar', label: 'Bar Chart' },
-    { value: 'line', label: 'Line Chart' },
-    { value: 'pie', label: 'Pie Chart' },
-    { value: 'scatter', label: 'Scatter Plot' },
-    { value: 'doughnut', label: 'Doughnut Chart' },
-    { value: 'area', label: 'Area Chart' },
-    { value: 'histogram', label: 'Histogram' },
-    { value: 'heatmap', label: 'Heatmap' },
-    { value: 'radar', label: 'Radar Chart' }
+    {
+      value: 'bar',
+      label: 'Bar Chart',
+      description: 'Displays categorical data with rectangular bars. Best for comparing values across different categories or showing data changes over time.',
+      bestFor: 'Comparing quantities, rankings, or frequencies'
+    },
+    {
+      value: 'line',
+      label: 'Line Chart',
+      description: 'Shows trends and changes over time with connected data points. Ideal for continuous data and identifying patterns.',
+      bestFor: 'Time series data, trends, and continuous measurements'
+    },
+    {
+      value: 'pie',
+      label: 'Pie Chart',
+      description: 'Circular chart divided into slices showing proportions. Each slice represents a percentage of the whole.',
+      bestFor: 'Showing part-to-whole relationships and percentages'
+    },
+    {
+      value: 'scatter',
+      label: 'Scatter Plot',
+      description: 'Plots individual data points to show relationships between two variables. Useful for identifying correlations and outliers.',
+      bestFor: 'Correlation analysis, distribution patterns, and outlier detection'
+    },
+    {
+      value: 'doughnut',
+      label: 'Doughnut Chart',
+      description: 'Similar to pie chart but with a hollow center. Better for comparing multiple datasets or adding central information.',
+      bestFor: 'Part-to-whole relationships with additional context'
+    },
+    {
+      value: 'area',
+      label: 'Area Chart',
+      description: 'Line chart with filled area below the line. Emphasizes magnitude of change over time and cumulative totals.',
+      bestFor: 'Cumulative trends, volume over time, and stacked comparisons'
+    },
+    {
+      value: 'histogram',
+      label: 'Histogram',
+      description: 'Shows distribution of numerical data by grouping values into bins. Reveals frequency and patterns in datasets.',
+      bestFor: 'Data distribution, frequency analysis, and identifying normal distributions'
+    },
+    {
+      value: 'heatmap',
+      label: 'Heatmap',
+      description: 'Uses color intensity to represent values in a matrix. Excellent for spotting patterns in large datasets.',
+      bestFor: 'Correlation matrices, pattern detection, and multi-dimensional data'
+    },
+    {
+      value: 'radar',
+      label: 'Radar Chart',
+      description: 'Displays multivariate data on axes starting from the same point. Shows strengths and weaknesses across categories.',
+      bestFor: 'Multi-variable comparisons, performance metrics, and profile analysis'
+    }
   ];
 
   const dataTypes = [
@@ -454,23 +501,90 @@ const ChartControls = ({ onChartGenerate }) => {
         </div>
       )}
       
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 relative">
         <span
           className="inline-flex items-center px-2 py-1 rounded-full bg-chip text-muted border border-border text-xs"
           >Type</span
         >
-        <select 
-          value={chartType} 
-          onChange={(e) => setChartType(e.target.value)}
-          disabled={loading}
-          className="rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 disabled:opacity-50"
-        >
-          {chartTypes.map(type => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative flex-1">
+          {/* Custom Dropdown Button */}
+          <button
+            type="button"
+            onClick={() => setShowChartDropdown(!showChartDropdown)}
+            disabled={loading}
+            className="w-full rounded-lg border border-border bg-panel text-text text-sm px-3 py-1.5 disabled:opacity-50 flex items-center justify-between hover:bg-panel2 transition-colors"
+          >
+            <span>{chartTypes.find(t => t.value === chartType)?.label || 'Select Chart Type'}</span>
+            <span className="text-xs">▼</span>
+          </button>
+
+          {/* Custom Dropdown Menu */}
+          {showChartDropdown && (
+            <>
+              {/* Backdrop to close dropdown when clicking outside */}
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowChartDropdown(false)}
+              />
+
+              <div className="absolute left-0 top-full mt-1 z-50 w-full max-h-96 overflow-y-auto bg-panel border border-border rounded-lg shadow-lg">
+                {chartTypes.map(type => (
+                  <div
+                    key={type.value}
+                    onMouseEnter={() => setHoveredChart(type.value)}
+                    onMouseLeave={() => setHoveredChart(null)}
+                    onClick={() => {
+                      setChartType(type.value);
+                      setShowChartDropdown(false);
+                      setHoveredChart(null);
+                    }}
+                    className={`px-3 py-2 cursor-pointer transition-colors ${
+                      chartType === type.value
+                        ? 'bg-accent/20 text-accent'
+                        : 'hover:bg-panel2 text-text'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">{type.label}</span>
+                      {chartType === type.value && (
+                        <span className="text-xs">✓</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Hover Tooltip - positioned to the right */}
+          {hoveredChart && showChartDropdown && (
+            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] w-96 bg-[#1a1f35] border-2 border-accent rounded-lg shadow-2xl p-5">
+              {chartTypes.find(t => t.value === hoveredChart) && (
+                <>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h4 className="text-base font-semibold text-text">
+                      {chartTypes.find(t => t.value === hoveredChart).label}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded text-xs bg-accent/20 text-accent border border-accent/30">
+                      {hoveredChart}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted mb-4 leading-relaxed">
+                    {chartTypes.find(t => t.value === hoveredChart).description}
+                  </p>
+                  <div className="border-t border-border pt-3">
+                    <p className="text-xs text-muted mb-2">
+                      <span className="font-medium text-text">Best for:</span>
+                    </p>
+                    <p className="text-sm text-accent">
+                      {chartTypes.find(t => t.value === hoveredChart).bestFor}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       
       <button 
