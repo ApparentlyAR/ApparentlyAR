@@ -28,9 +28,47 @@
             <input type="text" placeholder="Search Project" class="block w-full bg-white border border-gray-300 rounded-md py-2 pl-10 pr-3 text-sm placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
         </div>
 
-        <h3 class="text-2xl font-semibold mb-4 text-gray-900">My Project</h3>
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-2xl font-semibold text-gray-900">My Project</h3>
+            <button id="add-project-btn" class="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Container for manually added projects -->
         <div id="projects-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        </div>
+        
+        <!-- Modal for entering project code -->
+        <div id="project-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <div class="flex justify-between items-center pb-3">
+                        <h3 class="text-lg font-medium text-gray-900">Join Project</h3>
+                        <button id="close-modal" class="text-gray-400 hover:text-gray-600">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-sm text-gray-600 mb-4">Input the code below</p>
+                        <input type="text" id="project-code-input" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter project ID">
+                        <div id="error-message" class="mt-2 text-sm text-red-600 hidden">Invalid code, try again</div>
+                        <div class="items-center space-x-2 mt-4 flex justify-end">
+                            <button id="cancel-modal-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none">
+                                Cancel
+                            </button>
+                            <button id="submit-code-btn" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none">
+                                Join
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </div>
     </main>
 
     <script>
@@ -71,60 +109,207 @@
 
         async function loadProjects() {
             const projectContainer = document.getElementById('projects-container');
-            projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">Loading projects...</p>';
-
-            try {
-                const response = await fetch('/api/projects');
-                const projects = await response.json();
-                
-                const activeProjects = projects.filter(project => project.status === 'Active');
-                projectContainer.innerHTML = ''; 
-
-                if (activeProjects.length === 0) {
-                    projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">No active projects available yet.</p>';
-                } else {
-                    const styles = [
-                        { icon: 'chart-bar', colors: { bg: 'bg-pink-100', text: 'bg-pink-500' } },
-                        { icon: 'moon', colors: { bg: 'bg-yellow-100', text: 'bg-yellow-500' } },
-                        { icon: 'table', colors: { bg: 'bg-blue-100', text: 'bg-blue-500' } },
-                    ];
-
-                    activeProjects.forEach((project, index) => {
-                        const style = styles[index % styles.length];
-                        const projectElement = document.createElement('a');
-                        
-                        projectElement.href = `view-project.html?id=${project.id}&role=student`;
-                        projectElement.className = 'block rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300';
-                        
-                        const formattedDate = new Date(project.createdAt).toLocaleDateString('en-GB', {
-                            day: 'numeric', month: 'short', year: 'numeric'
-                        });
-                        
-                        const icons = {
-                            'chart-bar': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>',
-                            'moon': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>',
-                            'table': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>',
-                        };
-
-                        projectElement.innerHTML = `
-                            <div class="${style.colors.bg} h-32 flex items-center justify-center">
-                                ${icons[style.icon] || ''}
-                            </div>
-                            <div class="p-4 ${style.colors.text} text-white">
-                                <h4 class="font-bold">${project.name}</h4>
-                                <p class="text-sm">${formattedDate}</p>
-                            </div>
-                        `;
-                        projectContainer.appendChild(projectElement);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading projects:', error);
-                projectContainer.innerHTML = '<p class="text-red-500 col-span-full">Failed to load projects.</p>';
-            }
+            projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">No projects added yet. Click the "+" button to join a project.</p>';
         }
 
-        document.addEventListener('DOMContentLoaded', loadProjects);
+        // Function to add a project by ID to the dashboard
+        async function addProjectById(projectId) {
+            try {
+                const response = await fetch(`/api/projects/${projectId}`);
+                if (!response.ok) {
+                    throw new Error('Project not found');
+                }
+                
+                const project = await response.json();
+                
+                // Check if project is active
+                if (project.status !== 'Active') {
+                    throw new Error('Project is not active');
+                }
+                
+                // Add project to the dashboard
+                addProjectToDashboard(project);
+                
+                // Store the project ID in localStorage
+                storeProjectId(projectId);
+                
+                return true;
+            } catch (error) {
+                console.error('Error adding project:', error);
+                return false;
+            }
+        }
+        
+        // Function to get stored project IDs from localStorage
+        function getStoredProjectIds() {
+            const stored = localStorage.getItem('studentProjects');
+            return stored ? JSON.parse(stored) : [];
+        }
+        
+        // Function to store project ID in localStorage
+        function storeProjectId(projectId) {
+            let projectIds = getStoredProjectIds();
+            if (!projectIds.includes(projectId)) {
+                projectIds.push(projectId);
+                localStorage.setItem('studentProjects', JSON.stringify(projectIds));
+            }
+        }
+        
+        // Function to remove project ID from localStorage
+        function removeStoredProjectId(projectId) {
+            let projectIds = getStoredProjectIds();
+            projectIds = projectIds.filter(id => id != projectId);
+            localStorage.setItem('studentProjects', JSON.stringify(projectIds));
+        }
+        
+        // Function to load stored projects
+        async function loadStoredProjects() {
+            const projectIds = getStoredProjectIds();
+            const projectContainer = document.getElementById('projects-container');
+            
+            if (projectIds.length === 0) {
+                projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">No projects added yet. Click the "+" button to join a project.</p>';
+                return;
+            }
+            
+            // Clear container and start loading projects
+            projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">Loading projects...</p>';
+            
+            let loadedProjects = [];
+            let errors = [];
+            
+            // Load each project by ID
+            for (const projectId of projectIds) {
+                try {
+                    const response = await fetch(`/api/projects/${projectId}`);
+                    if (response.ok) {
+                        const project = await response.json();
+                        // Only add project if it's still active
+                        if (project.status === 'Active') {
+                            loadedProjects.push(project);
+                        } else {
+                            // Remove from storage if project is no longer active
+                            removeStoredProjectId(projectId);
+                        }
+                    } else {
+                        // Remove from storage if project doesn't exist
+                        removeStoredProjectId(projectId);
+                        errors.push(projectId);
+                    }
+                } catch (error) {
+                    console.error(`Error loading project ${projectId}:`, error);
+                    errors.push(projectId);
+                }
+            }
+            
+            // Update the project container with loaded projects
+            projectContainer.innerHTML = '';
+            if (loadedProjects.length === 0) {
+                projectContainer.innerHTML = '<p class="text-gray-500 col-span-full">No projects added yet. Click the "+" button to join a project.</p>';
+            } else {
+                loadedProjects.forEach(project => {
+                    addProjectToDashboard(project);
+                });
+            }
+        }
+        
+        // Function to add a project element to the dashboard
+        function addProjectToDashboard(project) {
+            const projectContainer = document.getElementById('projects-container');
+            const styles = [
+                { icon: 'chart-bar', colors: { bg: 'bg-pink-100', text: 'bg-pink-500' } },
+                { icon: 'moon', colors: { bg: 'bg-yellow-100', text: 'bg-yellow-500' } },
+                { icon: 'table', colors: { bg: 'bg-blue-100', text: 'bg-blue-500' } },
+            ];
+            
+            const style = styles[projectContainer.children.length % styles.length];
+            const projectElement = document.createElement('a');
+            
+            projectElement.href = `view-project.html?id=${project.id}&role=student`;
+            projectElement.className = 'block rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300';
+            
+            const formattedDate = new Date(project.createdAt).toLocaleDateString('en-GB', {
+                day: 'numeric', month: 'short', year: 'numeric'
+            });
+            
+            const icons = {
+                'chart-bar': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>',
+                'moon': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>',
+                'table': '<svg class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>',
+            };
+
+            projectElement.innerHTML = `
+                <div class="${style.colors.bg} h-32 flex items-center justify-center">
+                    ${icons[style.icon] || ''}
+                </div>
+                <div class="p-4 ${style.colors.text} text-white">
+                    <h4 class="font-bold">${project.name}</h4>
+                    <p class="text-sm">${formattedDate}</p>
+                </div>
+            `;
+            
+            // If this is the first project, clear the "no projects" message
+            if (projectContainer.children.length === 1 && 
+                projectContainer.children[0].textContent.includes('No projects added yet')) {
+                projectContainer.innerHTML = '';
+            }
+            
+            projectContainer.appendChild(projectElement);
+        }
+
+        // Modal controls
+        document.getElementById('add-project-btn').addEventListener('click', function() {
+            document.getElementById('project-modal').classList.remove('hidden');
+            document.getElementById('project-code-input').value = '';
+            document.getElementById('error-message').classList.add('hidden');
+        });
+
+        document.getElementById('close-modal').addEventListener('click', function() {
+            document.getElementById('project-modal').classList.add('hidden');
+        });
+
+        document.getElementById('cancel-modal-btn').addEventListener('click', function() {
+            document.getElementById('project-modal').classList.add('hidden');
+        });
+
+        document.getElementById('submit-code-btn').addEventListener('click', async function() {
+            const codeInput = document.getElementById('project-code-input').value.trim();
+            const errorMessage = document.getElementById('error-message');
+            
+            if (!codeInput) {
+                errorMessage.textContent = 'Please enter a project ID';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                const success = await addProjectById(codeInput);
+                
+                if (success) {
+                    document.getElementById('project-modal').classList.add('hidden');
+                    document.getElementById('project-code-input').value = '';
+                } else {
+                    errorMessage.textContent = 'Invalid code, try again';
+                    errorMessage.classList.remove('hidden');
+                    document.getElementById('project-code-input').focus();
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Invalid code, try again';
+                errorMessage.classList.remove('hidden');
+                document.getElementById('project-code-input').focus();
+            }
+        });
+
+        // Allow pressing Enter to submit
+        document.getElementById('project-code-input').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                document.getElementById('submit-code-btn').click();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStoredProjects();
+        });
     </script>
 </body>
 </html>
