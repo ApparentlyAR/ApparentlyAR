@@ -8,8 +8,9 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+        rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="global.css">
 </head>
@@ -23,45 +24,87 @@
             <h2 class="text-2xl font-bold">Login</h2>
         </div>
 
-        <form class="space-y-6 my-4">
-            <div>
-                <div>
-                    <label for="email" class="block text-sm text-gray-700 font-bold pb-2">Email</label>
-                    <div class="mt-1">
-                        <input type="email" id="email" placeholder="Email Address" class="w-full p-2 border border-gray-300 rounded-md shadow-sm px-5 bg-gray-100 hover:bg-gray-200">
-                    </div>
-                </div>
-    
-                <div class="relative py-6">
-                    <div class="flex items-center">
-                        <label for="password" class="block text-sm text-gray-700 font-bold pb-2">Password</label>
-                    </div>
-                    <div class="mt-1">
-                        <input type="password" id="password" placeholder="Password" class="w-full p-2 border border-gray-300 rounded-md shadow-sm px-5 bg-gray-100 hover:bg-gray-200">
-                    </div>
-                    <div class="flex align-right absolute right-0">
-                        <a href="#" class="text-sm text-blue-400 hover:text-blue-500 pt-2">Forgot Password?</a>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-800 hover:bg-gray-900">
-                    Sign in
-                </button>
-            </div>
-        </form>
-
         <div>
             <p class="text-gray-700 mb-2 text-center py-4">Sign in as:</p>
             <div class="flex justify-center space-x-2">
-                <button class="shadow-sm text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-md py-2 px-4"
-                    onclick="window.location.href='/teacher-dashboard'">Teacher</button>
-                <button class="shadow-sm text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-md py-2 px-4"
-                    onclick="window.location.href='/student-dashboard'">Student</button>
+                <button
+                    id="facilitator-btn"
+                    class="shadow-sm text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-md py-2 px-4"
+                    onclick="showPasswordModal()">Facilitator</button>
+                <button
+                    class="shadow-sm text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-md py-2 px-4"
+                    onclick="window.location.href='/student-dashboard'">Guest</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Password Modal for Facilitator -->
+    <div id="password-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <h3 class="text-lg font-medium text-gray-900">Facilitator Access</h3>
+                    <button id="close-modal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm text-gray-600 mb-3">Please enter the facilitator password:</p>
+                    <input type="password" id="facilitator-password" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter password">
+                    <div id="password-error" class="mt-2 text-sm text-red-600 hidden">Incorrect password. Please try again.</div>
+                    <div class="items-center space-x-2 mt-4 flex justify-end">
+                        <button id="cancel-password" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none">
+                            Cancel
+                        </button>
+                        <button id="submit-password" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none">
+                            Submit
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <script>
+        // Password modal controls
+        function showPasswordModal() {
+            document.getElementById('password-modal').classList.remove('hidden');
+            document.getElementById('facilitator-password').value = '';
+            document.getElementById('password-error').classList.add('hidden');
+            document.getElementById('facilitator-password').focus();
+        }
+
+        document.getElementById('close-modal').addEventListener('click', function() {
+            document.getElementById('password-modal').classList.add('hidden');
+        });
+
+        document.getElementById('cancel-password').addEventListener('click', function() {
+            document.getElementById('password-modal').classList.add('hidden');
+        });
+
+        document.getElementById('submit-password').addEventListener('click', function() {
+            const password = document.getElementById('facilitator-password').value;
+            
+            if (password === 'secret') {
+                // Redirect to teacher dashboard
+                window.location.href = '/teacher-dashboard';
+            } else {
+                // Show error message
+                document.getElementById('password-error').classList.remove('hidden');
+                document.getElementById('facilitator-password').value = '';
+                document.getElementById('facilitator-password').focus();
+            }
+        });
+
+        // Allow pressing Enter to submit
+        document.getElementById('facilitator-password').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                document.getElementById('submit-password').click();
+            }
+        });
+    </script>
 </body>
+
 </html>

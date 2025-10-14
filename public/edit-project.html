@@ -117,8 +117,9 @@
                     document.getElementById('description').value = project.description;
                     
                     // Display existing file info if available
-                    if (project.csvHeaders) {
-                        fileNameDisplay.textContent = "File already uploaded";
+                    if (project.csvHeaders && project.csvData && project.csvData.length > 0) {
+                        const fileName = project.csvFilename || "CSV file loaded";
+                        fileNameDisplay.textContent = fileName;
                         fileNameDisplay.classList.add('text-green-600');
                         fileNameDisplay.classList.remove('text-gray-500');
                     }
