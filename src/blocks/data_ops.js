@@ -345,33 +345,48 @@
       const safeValue = value.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
       const code = `(async () => {
-        try {
-          // First, get the data (could be a Promise from chained blocks)
-          let __rawInput = ${dataCode};
-
-          // If it's a Promise, await it
-          if (__rawInput && typeof __rawInput.then === 'function') {
-            __rawInput = await __rawInput;
-          }
-
-          // Then normalize it
-          let __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawInput) : (__rawInput || []));
-
-          const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${safeColumn}') || (${JSON.stringify(['value'])}).includes('${safeValue}');
-          if (__isPlaceholder) { return __input; }
-          if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
-          if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
-
-          const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);
-          const __data = (__res && __res.data) ? __res.data : __input;
-          // DO NOT modify global data state - return filtered data directly
-          return __data;
-        } catch (error) {
-          console.error('Filter data error:', error);
-          return [];
-        }
-      })()`;
-
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) { return input; }
+    if (input && Array.isArray(input.data)) { return input.data; }
+    if (typeof input === 'string') {
+      try {
+        const parsed = JSON.parse(input);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? (window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data) : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) {
+      for (let __i = 0; __i < 60 && !Array.isArray(__input); __i++) {
+        await new Promise(r => setTimeout(r, 50));
+        __input = __csvFallback();
+      }
+    }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${safeColumn}') || (${JSON.stringify(['value'])}).includes('${safeValue}');
+    if (__isPlaceholder) { return __input; }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    return __data;
+  } catch (error) {
+    console.error('Filter data error:', error);
+    return __csvFallback();
+  }
+})()`;
+      
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };
 
@@ -384,20 +399,41 @@
       // Escape special characters in strings
       const safeColumn = column.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
-      const code = `(async () => {\n` +
-        `  try {\n` +
-        `    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
-        `    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }\n` +
-        `    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }\n` +
-        `    const __res = await window.AppApi.processData(__input, [{ type: 'sort', params: { column: '${safeColumn}', direction: '${direction}' } }]);\n` +
-        `    const __data = (__res && __res.data) ? __res.data : __input;\n` +
-        `    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }\n` +
-        `    return __data;\n` +
-        `  } catch (error) {\n` +
-        `    console.error('Sort data error:', error);\n` +
-        `    return (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(${dataCode}) : (${dataCode} || []));\n` +
-        `  }\n` +
-        `})()`;
+      const code = `(async () => {
+        const __normalize = window.BlocklyNormalizeData || function(input) {
+          if (Array.isArray(input)) { return input; }
+          if (input && Array.isArray(input.data)) { return input.data; }
+          if (typeof input === 'string') {
+            try {
+              const parsed = JSON.parse(input);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+              return [];
+            }
+          }
+          return [];
+        };
+        const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+        try {
+          let __rawData = ${dataCode};
+          if (__rawData && typeof __rawData.then === 'function') {
+            __rawData = await __rawData;
+          }
+          let __input = __normalize(__rawData);
+          if (!Array.isArray(__input)) {
+            __input = __csvFallback();
+          }
+          if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+          if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+          const __res = await window.AppApi.processData(__input, [{ type: 'sort', params: { column: '${safeColumn}', direction: '${direction}' } }]);
+          const __data = (__res && __res.data) ? __res.data : __input;
+          if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+          return __data;
+        } catch (error) {
+          console.error('Sort data error:', error);
+          return __csvFallback();
+        }
+      })()`;
 
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };

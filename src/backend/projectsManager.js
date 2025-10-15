@@ -87,7 +87,10 @@ function createProject(projectData) {
     id: Date.now(), // Simple ID generation
     name: projectData.name,
     description: projectData.description,
-    status: 'Active',
+    status: 'Inactive',
+    csvData: projectData.csvData || null, // Store CSV data if provided
+    csvHeaders: projectData.csvHeaders || null, // Store CSV headers if provided
+    csvFilename: projectData.csvFilename || null, // Store CSV filename if provided
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };

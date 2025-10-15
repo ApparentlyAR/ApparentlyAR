@@ -421,11 +421,15 @@
 
     if (window.reactSetOutput) window.reactSetOutput('Chart generated successfully: ' + config.chartType);
     if (window.reactSetError) window.reactSetError(false);
+    
+    // Return a value to indicate this was handled via event system
+    return { handled: 'chartGenerated', chartType: config.chartType };
 
   } catch (error) {
     console.error('[generate_visualization] Error:', error);
     if (window.reactSetOutput) window.reactSetOutput('Error: ' + error.message);
     if (window.reactSetError) window.reactSetError(true);
+    return { error: error.message };
   }
 })();
 `;
@@ -494,11 +498,15 @@
 
     if (window.reactSetOutput) window.reactSetOutput('Chart created: ${safeTitle}');
     if (window.reactSetError) window.reactSetError(false);
+    
+    // Return a value to indicate this was handled via event system
+    return { handled: 'chartGenerated', chartType: '${chartType}' };
 
   } catch (error) {
     console.error('[quick_chart] Error:', error);
     if (window.reactSetOutput) window.reactSetOutput('Error: ' + error.message);
     if (window.reactSetError) window.reactSetError(true);
+    return { error: error.message };
   }
 })();
 `;
