@@ -1,4 +1,4 @@
-# ApparentlyAR Yes
+# ApparentlyAR 
 
 A comprehensive educational data visualization platform that combines block-based programming with cutting-edge Augmented Reality technology. Designed for students in grades 8-10 to explore and visualize data through hands-on, creative learning experiences.
 
@@ -10,12 +10,16 @@ Markers can be viewed and downloaded [here](https://github.com/nicolocarpignoli/
 
 ### Core Platform
 
+- **Project Management System**: Multi-user platform with student and teacher dashboards
+- **User Authentication**: Secure login system with role-based access control
 - **Block-Based Programming**: Drag-and-drop interface using Blockly for accessible data manipulation
 - **Backend Data Processing**: Server-side data operations for improved performance on low-powered devices
 - **Advanced Data Operations**: Filter, sort, aggregate, group, and calculate with visual programming blocks
+- **Data Transformation Tools**: 10+ transformation blocks for data cleaning and preparation (NEW)
+- **Statistical Analysis**: Built-in statistical computation blocks for data exploration
 - **Chart Generation**: Create various chart types (bar, line, scatter, pie, doughnut, area, histogram, heatmap, radar)
 - **RESTful APIs**: Clean, well-documented API endpoints for data processing and visualization
-- **Frontend API Client**: Centralized API communication with comprehensive error handling
+- **CSV Import/Export**: Upload CSV files and download processed data
 
 ### Augmented Reality Experiences
 
@@ -60,23 +64,74 @@ The server will be available at `http://localhost:3000` by default. If port 3000
 
 ### Available Interfaces
 
-- **Main Application**: `http://localhost:[PORT]/` - Block-based programming interface
-- **Hand Tracking AR**: `http://localhost:[PORT]/ar-demo` - MediaPipe hand gesture controls
-- **Hybrid AR Demo**: `http://localhost:[PORT]/hybrid-ar` - Combined markers + hand tracking
+- **Login**: `http://localhost:[PORT]/login.html` - User authentication
+- **Student Dashboard**: `http://localhost:[PORT]/student-dashboard.html` - Student project management
+- **Teacher Dashboard**: `http://localhost:[PORT]/teacher-dashboard.html` - Teacher project management
+- **Create Project**: `http://localhost:[PORT]/create-project.html` - Create new projects
+- **Edit Project**: `http://localhost:[PORT]/edit-project.html` - Edit existing projects
+- **View Project**: `http://localhost:[PORT]/view-project.html` - View project details
+- **Block-Based Programming**: `http://localhost:[PORT]/blockly-demo.html` - Main block programming interface
+- **Hand Tracking AR**: `http://localhost:[PORT]/ar-demo.html` - MediaPipe hand gesture controls
+- **Hybrid AR Demo**: `http://localhost:[PORT]/hybrid-ar-demo.html` - Combined markers + hand tracking
 
 Where `[PORT]` is the port number shown in the server startup message (3000 by default, or the next available port if 3000 is in use).
 
-### Blockly Data Operations (New)
+### Blockly Block Categories
 
-- New blocks: `filter_data`, `sort_data`, `select_columns`, `group_by`, `calculate_column`, `drop_empty`.
-- CSV import uses PapaParse; parsed rows are available at `Blockly.CsvImportData.data`.
-- Generators register after Blockly is ready and support both classic and `forBlock` APIs.
-- The system accepts arrays, PapaParse results (`{ data: [...] }`), or JSON strings.
-- If a block still shows placeholders (e.g., `column`, `value`), it no-ops instead of calling the backend.
+#### Data Operations
+- `csv_import`: Import CSV files for data analysis
+- `filter_data`: Filter data based on conditions (equals, not equals, greater than, less than, contains)
+- `filter_range`: Filter data within a numeric range (between min and max)
+- `sort_data`: Sort data by column in ascending or descending order
+- `select_columns`: Select specific columns from the dataset
+- `group_by`: Group data and apply aggregations (sum, average, count, min, max)
+- `calculate_column`: Calculate new columns using mathematical expressions
+- `drop_empty`: Remove rows with empty values
+- `to_json`: Convert data to JSON format
 
-Troubleshooting:
-- If you see “generator does not know how to generate code,” hard refresh (Ctrl+F5) to reload scripts.
-- If you see “input data must be an array,” ensure the CSV finished parsing or chain from the `csv_import` block.
+#### Data Transformation Blocks (New)
+- `tf_rename_column`: Rename columns in the dataset
+- `tf_drop_column`: Remove specific columns
+- `tf_fill_missing`: Fill missing values with specified strategies
+- `tf_replace_values`: Replace specific values in columns
+- `tf_split_column`: Split column values into multiple columns
+- `tf_concat_columns`: Concatenate multiple columns
+- `tf_drop_duplicates`: Remove duplicate rows
+- `tf_round_number`: Round numeric values to specified precision
+- `tf_cast_type`: Convert column data types
+- `tf_string_transform`: Apply string transformations (uppercase, lowercase, trim)
+
+#### Statistical Analysis Blocks
+- `descriptive_stats`: Calculate descriptive statistics (mean, median, std, etc.)
+- `calculate_mean`: Calculate mean of a column
+- `calculate_median`: Calculate median of a column
+- `calculate_std`: Calculate standard deviation
+- `calculate_correlation`: Calculate correlation between columns
+- `detect_outliers`: Identify statistical outliers
+- `frequency_count`: Count frequency of values
+- `calculate_percentiles`: Calculate percentile values
+
+#### Visualization Blocks
+- `set_chart_type`: Define chart type (bar, line, scatter, pie, etc.)
+- `set_axes`: Configure X and Y axes
+- `chart_options`: Set chart display options
+- `advanced_chart_options`: Configure advanced chart features
+- `generate_visualization`: Generate complete chart from configuration
+- `quick_chart`: Quickly create basic charts
+- `histogram_config`: Create histogram visualizations
+- `heatmap_config`: Create heatmap visualizations
+
+**Technical Details:**
+- CSV import uses PapaParse; parsed rows are available at `Blockly.CsvImportData.data`
+- Generators register after Blockly is ready and support both classic and `forBlock` APIs
+- System accepts arrays, PapaParse results (`{ data: [...] }`), or JSON strings
+- Backend processing via `/api/process-data` for improved performance
+- Placeholder values (e.g., `column`, `value`) trigger no-op behavior
+
+**Troubleshooting:**
+- "Generator does not know how to generate code": Hard refresh (Ctrl+F5) to reload scripts
+- "Input data must be an array": Ensure CSV finished parsing or chain from `csv_import` block
+- Visualization not appearing: Check browser console for errors and ensure data is loaded
 
 ## Architecture Overview
 
@@ -301,9 +356,11 @@ The backend maintains **95%+ test coverage** across:
 
 Recent additions include comprehensive testing for:
 
-- **Frontend API Integration**: Tests for React components using backend APIs
+- **Frontend API Integration**: Tests for native JS implementation using backend APIs
 - **Blockly Data Processing**: Tests for visual programming blocks with backend operations
 - **CSV File Processing**: Real-world data processing with user-provided CSV files
+- **Data Transformation Blocks**: Tests for the new transformation block functionality
+- **Statistical Analysis**: Tests for statistical computation blocks
 - **End-to-End Workflows**: Complete data processing pipelines from CSV to visualization
 
 ### Test Structure
@@ -317,13 +374,15 @@ tests/
 │   ├── server.test.js           # Server integration tests
 │   └── testData.test.js         # Sample data tests
 ├── frontend/
-│   ├── chartGeneration.test.js  # Chart generation frontend tests
+│   ├── blocklyProcessing.test.js  # Blockly backend integration tests
+│   ├── chartGeneration.test.js    # Chart generation frontend tests
+│   ├── csvFileProcessing.test.js  # Real CSV file processing tests
 │   ├── dataProcessingFrontend.test.js # Frontend API integration tests
-│   ├── blocklyProcessing.test.js # Blockly backend integration tests
-│   ├── csvFileProcessing.test.js # Real CSV file processing tests
-│   ├── errorHandling.test.js    # Error handling tests
+│   ├── errorHandling.test.js      # Error handling tests
 │   ├── eventCommunication.test.js # Event system tests
-│   └── hybridAR.test.js         # Hybrid AR system tests
+│   ├── hybridAR.test.js           # Hybrid AR system tests
+│   ├── statisticalBlocks.test.js  # Statistical analysis block tests
+│   └── transformationBlocks.test.js # Data transformation block tests (NEW)
 ├── csv_demo.test.js             # CSV demo functionality tests
 ├── csv_final.test.js            # CSV final implementation tests
 ├── csv_import.test.js           # CSV import block tests
@@ -342,60 +401,71 @@ ApparentlyAR/
 ├── webpack.config.js                  # Webpack build configuration
 ├── LICENSE                            # Project license
 ├── README.md                          # Project documentation
-├── frontend-test.html                 # Frontend testing page
-├── sampleui.html                      # Sample UI demonstration
-├── public/                            # Static assets and built files
-│   ├── blockly-demo.html             # Main application HTML
-│   ├── ar-demo.html                  # Hand tracking AR interface
-│   ├── hybrid-ar-demo.html           # Hybrid AR demo interface
+├── .gitignore                         # Git ignore rules
+├── Adelaide_Crime_Breakdown_by_Year.csv # Sample crime data
+├── test_data.csv                      # Test dataset
+├── public/                            # Static assets and HTML pages
+│   ├── blockly-demo.html             # Main block programming interface (with resizable panels)
+│   ├── login.html                     # User authentication page
+│   ├── student-dashboard.html         # Student project management
+│   ├── teacher-dashboard.html         # Teacher project management
+│   ├── create-project.html            # Project creation interface
+│   ├── edit-project.html              # Project editing interface
+│   ├── view-project.html              # Project viewing interface
+│   ├── ar-demo.html                   # Hand tracking AR interface
+│   ├── hybrid-ar-demo.html            # Hybrid AR demo (markers + hand tracking)
+│   ├── header.html                    # Shared header component
+│   ├── global.css                     # Global styling
 │   ├── favicon.ico                    # Site icon
-│   ├── react-bundle.js               # Built React bundle
-│   ├── react-bundle.js.map           # Source maps
-│   └── react-bundle.js.LICENSE.txt   # Bundle licenses
+│   ├── react-bundle.js                # Built React bundle
+│   ├── react-bundle.js.map            # Source maps
+│   └── react-bundle.js.LICENSE.txt    # Bundle licenses
 ├── src/                               # Source code
 │   ├── backend/                       # Server-side modules
+│   │   ├── server.js                  # Backend server configuration
 │   │   ├── dataProcessor.js           # Data processing operations
 │   │   ├── chartGenerator.js          # Chart generation logic
-│   │   └── testData.js               # Sample datasets
+│   │   ├── csvHandler.js              # CSV file handling
+│   │   ├── projectsManager.js         # Project management logic
+│   │   └── testData.js                # Sample datasets
 │   ├── ar/                            # Augmented Reality modules
 │   │   ├── coordinate-system.js       # Screen-to-world coordinate conversion
 │   │   ├── gesture-detector.js        # MediaPipe hand gesture recognition
 │   │   ├── chart-manager.js           # Chart creation and lifecycle management
 │   │   ├── hand-tracking.js           # MediaPipe integration and processing
 │   │   └── hybrid-ar-controller.js    # Main AR controller orchestration
-│   ├── react/                         # React frontend components
-│   │   ├── index.js                  # Main React application entry
-│   │   ├── api.js                    # Frontend API client for backend communication
-│   │   └── components/               # React UI components
-│   │       ├── AppHeader.jsx          # Application header
-│   │       ├── ButtonPanel.jsx        # Control buttons
-│   │       ├── ChartControls.jsx      # Chart configuration controls with data processing
-│   │       ├── DataVisualizationPanel.jsx # Main chart display with backend integration
-│   │       ├── OutputDisplay.jsx      # Code output display
-│   │       └── StatusIndicator.jsx    # Execution status indicator
-│   ├── blocks/                        # Blockly custom blocks
-│   │   ├── csv_import.js             # CSV import block definition
-│   │   ├── data_ops.js               # Data processing block for backend operations
-│   │   └── to_json.js                # JSON conversion block
-│   └── sum.js                         # Utility function (legacy)
+│   ├── react/                         # React/Frontend modules
+│   │   └── api.js                     # Frontend API client for backend communication
+│   └── blocks/                        # Blockly custom blocks
+│       ├── csv_import.js              # CSV import block definition
+│       ├── data_ops.js                # Data processing blocks (filter, sort, group, etc.)
+│       ├── statistics.js              # Statistical analysis blocks
+│       ├── transformations.js         # Data transformation blocks (NEW)
+│       ├── visualization.js           # Chart visualization blocks
+│       └── to_json.js                 # JSON conversion block
 ├── tests/                             # Test suites
 │   ├── backend/                       # Backend tests
-│   │   ├── api.test.js               # API endpoint tests
+│   │   ├── api.test.js                # API endpoint tests
 │   │   ├── chartGenerator.test.js     # Chart generation tests
 │   │   ├── dataProcessor.test.js      # Data processing tests
-│   │   ├── server.test.js            # Server integration tests
-│   │   └── testData.test.js          # Sample data tests
+│   │   ├── server.test.js             # Server integration tests
+│   │   └── testData.test.js           # Sample data tests
 │   ├── frontend/                      # Frontend and AR tests
+│   │   ├── blocklyProcessing.test.js  # Blockly backend integration tests
 │   │   ├── chartGeneration.test.js    # Chart generation frontend tests
+│   │   ├── csvFileProcessing.test.js  # Real CSV file processing tests
+│   │   ├── dataProcessingFrontend.test.js # Frontend API integration tests
 │   │   ├── errorHandling.test.js      # Error handling tests
 │   │   ├── eventCommunication.test.js # Event system tests
-│   │   └── hybridAR.test.js          # Hybrid AR system tests
-│   ├── csv_demo.test.js              # CSV demo functionality tests
-│   ├── csv_final.test.js             # CSV final implementation tests
-│   ├── csv_import.test.js            # CSV import block tests
+│   │   ├── hybridAR.test.js           # Hybrid AR system tests
+│   │   ├── statisticalBlocks.test.js  # Statistical analysis block tests
+│   │   └── transformationBlocks.test.js # Data transformation block tests (NEW)
+│   ├── csv_demo.test.js               # CSV demo functionality tests
+│   ├── csv_final.test.js              # CSV final implementation tests
+│   ├── csv_import.test.js             # CSV import block tests
 │   ├── csv_import_integration.test.js # CSV integration tests
-│   ├── csv_import_simple.test.js     # Basic CSV import tests
-│   └── sum.test.js                   # Basic utility tests
+│   ├── csv_import_simple.test.js      # Basic CSV import tests
+│   └── sum.test.js                    # Basic utility tests
 └── node_modules/                      # Dependencies (auto-generated)
 ```
 
