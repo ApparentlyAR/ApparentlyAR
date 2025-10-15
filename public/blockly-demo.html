@@ -48,6 +48,7 @@
   <script src="../src/blocks/data_ops.js"></script>
   <script src="../src/blocks/statistics.js"></script>
   <script src="../src/blocks/visualization.js"></script>
+  <script src="../src/blocks/transformations.js"></script>
   <script>
     // Check if CSV import & data-op generators were registered
     console.log('CSV import generator registered after loading:', !!window.Blockly.JavaScript['csv_import']);
@@ -400,6 +401,43 @@
           <block type="csv_import"></block>
         </value>
       </block>
+      <block type="filter_range">
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
+      </block>
+    </category>
+    <category name="Data Transformation" colour="200">
+      <block type="tf_rename_column">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_drop_column">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_fill_missing">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_replace_values">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_split_column">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_concat_columns">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_drop_duplicates">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_round_number">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_cast_type">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
+      <block type="tf_string_transform">
+        <value name="DATA"><block type="csv_import"></block></value>
+      </block>
     </category>
     <category name="Statistical Analysis" colour="40">
       <block type="descriptive_stats">
@@ -474,11 +512,6 @@
         </value>
       </block>
       <block type="histogram_config">
-        <value name="DATA">
-          <block type="csv_import"></block>
-        </value>
-      </block>
-      <block type="boxplot_config">
         <value name="DATA">
           <block type="csv_import"></block>
         </value>

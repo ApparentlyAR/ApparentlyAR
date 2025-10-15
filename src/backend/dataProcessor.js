@@ -145,6 +145,31 @@ class DataProcessor {
           return String(cellValue).toLowerCase().startsWith(String(value).toLowerCase());
         case 'ends_with':
           return String(cellValue).toLowerCase().endsWith(String(value).toLowerCase());
+        case 'between': {
+          const { min, max } = params;
+          const minNum = Number(min);
+          const maxNum = Number(max);
+          const haveNumericBounds = Number.isFinite(minNum) && Number.isFinite(maxNum);
+          const minTime = Date.parse(min);
+          const maxTime = Date.parse(max);
+          const haveDateBounds = Number.isFinite(minTime) && Number.isFinite(maxTime);
+
+          // Check if the current row's cellValue is between min and max
+          if (cellValue === null || cellValue === undefined || cellValue === '') return false;
+
+          if (haveNumericBounds) {
+            const vNum = Number(cellValue);
+            if (Number.isFinite(vNum)) return vNum >= minNum && vNum <= maxNum;
+          }
+          if (haveDateBounds) {
+            const vTime = Date.parse(cellValue);
+            if (Number.isFinite(vTime)) return vTime >= minTime && vTime <= maxTime;
+          }
+          const vStr = String(cellValue);
+          const minStr = String(min);
+          const maxStr = String(max);
+          return vStr.localeCompare(minStr) >= 0 && vStr.localeCompare(maxStr) <= 0;
+        }
         default:
           return true;
       }

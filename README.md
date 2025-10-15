@@ -13,7 +13,7 @@ Markers can be viewed and downloaded [here](https://github.com/nicolocarpignoli/
 - **Block-Based Programming**: Drag-and-drop interface using Blockly for accessible data manipulation
 - **Backend Data Processing**: Server-side data operations for improved performance on low-powered devices
 - **Advanced Data Operations**: Filter, sort, aggregate, group, and calculate with visual programming blocks
-- **Chart Generation**: Create various chart types (bar, line, scatter, pie, doughnut, area, histogram, box plot, heatmap, radar)
+- **Chart Generation**: Create various chart types (bar, line, scatter, pie, doughnut, area, histogram, heatmap, radar)
 - **RESTful APIs**: Clean, well-documented API endpoints for data processing and visualization
 - **Frontend API Client**: Centralized API communication with comprehensive error handling
 
@@ -210,7 +210,6 @@ Generates chart configuration for various chart types.
 - `doughnut`: Doughnut charts for categorical data with center space
 - `area`: Area charts for trend visualization
 - `histogram`: Frequency distribution charts with customizable bins
-- `boxplot`: Statistical box plots for quartile analysis
 - `heatmap`: 2D data correlation visualization
 - `radar`: Multi-dimensional data comparison charts
 
@@ -225,19 +224,6 @@ _Histogram:_
     "valueColumn": "age",
     "bins": 10,
     "title": "Age Distribution"
-  }
-}
-```
-
-_Box Plot:_
-
-```json
-{
-  "chartType": "boxplot",
-  "options": {
-    "valueColumn": "score",
-    "groupColumn": "grade",
-    "title": "Score Distribution by Grade"
   }
 }
 ```

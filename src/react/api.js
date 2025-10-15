@@ -92,7 +92,7 @@ async function processData(data, operations = []) {
  * 
  * Creates chart configurations for various chart types using the backend
  * chart generation service. Supports all chart types including bar, line,
- * scatter, pie, doughnut, area, histogram, box plot, heatmap, and radar.
+ * scatter, pie, doughnut, area, histogram, heatmap, and radar.
  * 
  * @param {Array} data - Data to visualize
  * @param {string} chartType - Type of chart to generate

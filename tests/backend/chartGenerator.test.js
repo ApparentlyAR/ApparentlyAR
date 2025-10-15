@@ -307,35 +307,6 @@ describe('ChartGenerator', () => {
     });
   });
 
-  describe('generateBoxPlotChart', () => {
-    const boxPlotData = [
-      { grade: 'A', score: 95 }, { grade: 'A', score: 92 },
-      { grade: 'B', score: 85 }, { grade: 'B', score: 88 },
-      { grade: 'C', score: 75 }, { grade: 'C', score: 78 }
-    ];
-
-    test('should generate box plot with grouping', async () => {
-      const result = await chartGenerator.generateBoxPlotChart(boxPlotData, {
-        valueColumn: 'score',
-        groupColumn: 'grade'
-      });
-
-      expect(result.type).toBe('boxplot');
-      expect(result.data.labels).toEqual(['A', 'B', 'C']);
-      expect(result.data.datasets[0].data).toHaveLength(3);
-    });
-
-    test('should generate box plot without grouping', async () => {
-      const result = await chartGenerator.generateBoxPlotChart(boxPlotData, {
-        valueColumn: 'score'
-      });
-
-      expect(result.type).toBe('boxplot');
-      expect(result.data.labels).toEqual(['score']);
-      expect(result.data.datasets[0].data).toHaveLength(1);
-    });
-  });
-
   describe('generateHeatmapChart', () => {
     const heatmapData = [
       { month: 'Jan', region: 'North', sales: 100 },
@@ -387,20 +358,10 @@ describe('ChartGenerator', () => {
     });
   });
 
-  describe('percentile utility', () => {
-    test('should calculate percentiles correctly', () => {
-      const sortedData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-      
-      expect(chartGenerator.percentile(sortedData, 50)).toBe(5.5); // median
-      expect(chartGenerator.percentile(sortedData, 25)).toBe(3.25); // Q1
-      expect(chartGenerator.percentile(sortedData, 75)).toBe(7.75); // Q3
-    });
-  });
-
   describe('getSupportedChartTypes', () => {
     test('should return all supported chart types including new ones', () => {
       const types = chartGenerator.getSupportedChartTypes();
-      
+
       expect(types).toContain('bar');
       expect(types).toContain('line');
       expect(types).toContain('scatter');
@@ -408,7 +369,6 @@ describe('ChartGenerator', () => {
       expect(types).toContain('doughnut');
       expect(types).toContain('area');
       expect(types).toContain('histogram');
-      expect(types).toContain('boxplot');
       expect(types).toContain('heatmap');
       expect(types).toContain('radar');
     });
@@ -536,14 +496,6 @@ describe('ChartGenerator', () => {
       const data = [{ age: 25 }, { age: 30 }];
       const result = chartGenerator.validateChartData(data, 'histogram', {
         valueColumn: 'age'
-      });
-      expect(result).toBe(true);
-    });
-
-    it('should validate boxplot chart data', () => {
-      const data = [{ score: 85 }, { score: 90 }];
-      const result = chartGenerator.validateChartData(data, 'boxplot', {
-        valueColumn: 'score'
       });
       expect(result).toBe(true);
     });
