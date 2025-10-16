@@ -470,6 +470,136 @@
       <block type="calculate_correlation">
         <value name="DATA">
           <block type="csv_import"></block>
+          <block type="to_json">
+            <value name="VALUE">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="filter_data">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="filter_range">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="sort_data">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="select_columns">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="group_by">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_column">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="drop_empty">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+        <category name="Statistical Analysis" colour="40">
+          <block type="descriptive_stats">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_mean">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_median">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_std">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_correlation">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="detect_outliers">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="frequency_count">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+          <block type="calculate_percentiles">
+            <value name="DATA">
+              <block type="csv_import"></block>
+            </value>
+          </block>
+        </category>
+      </xml>
+    </aside>
+
+    <!-- Stage / Visualization Area -->
+    <section style="grid-area: stage"
+      class="relative grid grid-rows-[44px,1fr] bg-gradient-to-b from-[#0f1324] to-[#0b0f1c]">
+      <div class="flex items-center gap-2 p-2 border-b border-border bg-[#13182a]">
+
+        <div id="react-controls-container" class="flex items-center gap-2"></div>
+
+      </div>
+
+      <!-- Visualization Container -->
+      <div class="relative m-3 rounded-2xl border border-border overflow-hidden" style="
+          background: conic-gradient(
+            from 0deg at 50% 50%,
+            #11182c,
+            #121a31,
+            #10172b,
+            #11182c
+          );
+        ">
+        <!-- React Chart Component Mount Point -->
+        <div id="react-chart-container" class="w-full h-full min-h-[400px] grid place-items-center text-muted">
+          <div class="text-sm text-muted">
+            Visualization will appear here when blocks are executed
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Data Panel -->
+    <aside style="grid-area: data" class="grid grid-rows-[44px,auto,1fr] bg-panel border-l border-border">
+      <div class="flex items-center gap-2 p-2 border-b border-border bg-[#151a2c]">
+        <strong>Data Panel</strong>
+      </div>
+
+      <div class="overflow-auto p-2">
+        <div class="text-sm text-muted text-center py-8">
+          Data will appear here when imported via blocks
+        </div>
+      </div>
+    </aside>
+
+    <!-- Guide / Console -->
+    <footer style="grid-area: guide" class="flex items-center gap-3 px-3 py-2 bg-[#111524] border-t border-border">
         </value>
       </block>
       <block type="detect_outliers">
