@@ -449,7 +449,7 @@ class HybridARController {
       }
 
       // Build chart from the CURRENT DATA SOURCE explicitly (custom or sample)
-      const chartType = document.getElementById('chart-type').value;
+      let chartType = document.getElementById('chart-type').value;
       const dataForChart = this.chartManager.getCurrentData();
 
       // Create (or reuse) canvas

@@ -407,6 +407,10 @@
       throw new Error('Chart API not available');
     }
 
+    // Persist the exact dataset used for visualization so AR can load it
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __input; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__input); } catch (_) {} }
+
     const chartResult = await window.AppApi.generateChart(__input, config.chartType, config.options || {});
     console.log('[generate_visualization] Chart generated:', chartResult);
 
@@ -480,6 +484,10 @@
     if (!window.AppApi || !window.AppApi.generateChart) {
       throw new Error('Chart API not available');
     }
+
+    // Persist the exact dataset used for visualization so AR can load it
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __input; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__input); } catch (_) {} }
 
     const chartResult = await window.AppApi.generateChart(__input, '${chartType}', {
       xColumn: '${xColumn}',
