@@ -23,7 +23,6 @@ class ChartGenerator {
     this.generateDoughnutChart = this.generateDoughnutChart.bind(this);
     this.generateAreaChart = this.generateAreaChart.bind(this);
     this.generateHistogramChart = this.generateHistogramChart.bind(this);
-    this.generateBoxPlotChart = this.generateBoxPlotChart.bind(this);
     this.generateHeatmapChart = this.generateHeatmapChart.bind(this);
     this.generateRadarChart = this.generateRadarChart.bind(this);
 
@@ -39,7 +38,6 @@ class ChartGenerator {
       doughnut: this.generateDoughnutChart,
       area: this.generateAreaChart,
       histogram: this.generateHistogramChart,
-      boxplot: this.generateBoxPlotChart,
       heatmap: this.generateHeatmapChart,
       radar: this.generateRadarChart
     };
@@ -672,101 +670,6 @@ class ChartGenerator {
   }
 
   /**
-   * Generate box plot chart configuration
-   * 
-   * @param {Array} data - Data to visualize
-   * @param {Object} options - Chart options
-   * @param {string} options.valueColumn - Column name for values
-   * @param {string} options.groupColumn - Column name for grouping (optional)
-   * @param {string} options.title - Chart title
-   * @returns {Object} Chart.js configuration object
-   */
-  async generateBoxPlotChart(data, options = {}) {
-    const {
-      valueColumn = Object.keys(data[0])[0],
-      groupColumn = null,
-      title = 'Box Plot'
-    } = options;
-
-    const calculateBoxPlotStats = (values) => {
-      const sorted = values.sort((a, b) => a - b);
-      const q1 = this.percentile(sorted, 25);
-      const median = this.percentile(sorted, 50);
-      const q3 = this.percentile(sorted, 75);
-      const min = sorted[0];
-      const max = sorted[sorted.length - 1];
-      const iqr = q3 - q1;
-      const lowerFence = q1 - 1.5 * iqr;
-      const upperFence = q3 + 1.5 * iqr;
-      
-      return { min, q1, median, q3, max, lowerFence, upperFence };
-    };
-
-    let datasets = [];
-    let labels = [];
-
-    if (groupColumn) {
-      const groups = {};
-      data.forEach(row => {
-        const group = row[groupColumn];
-        if (!groups[group]) groups[group] = [];
-        groups[group].push(parseFloat(row[valueColumn]) || 0);
-      });
-
-      labels = Object.keys(groups);
-      const boxPlotData = labels.map(label => calculateBoxPlotStats(groups[label]));
-      
-      datasets.push({
-        label: valueColumn,
-        data: boxPlotData,
-        backgroundColor: 'rgba(45, 140, 240, 0.3)',
-        borderColor: '#2d8cf0',
-        borderWidth: 2
-      });
-    } else {
-      const values = data.map(row => parseFloat(row[valueColumn]) || 0);
-      const stats = calculateBoxPlotStats(values);
-      labels = [valueColumn];
-      
-      datasets.push({
-        label: valueColumn,
-        data: [stats],
-        backgroundColor: 'rgba(45, 140, 240, 0.3)',
-        borderColor: '#2d8cf0',
-        borderWidth: 2
-      });
-    }
-
-    return {
-      type: 'boxplot',
-      data: {
-        labels: labels,
-        datasets: datasets
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          title: {
-            display: true,
-            text: title
-          },
-          legend: {
-            display: true
-          }
-        },
-        scales: {
-          y: {
-            title: {
-              display: true,
-              text: valueColumn
-            }
-          }
-        }
-      }
-    };
-  }
-
-  /**
    * Generate heatmap chart configuration
    * 
    * @param {Array} data - Data to visualize
@@ -951,24 +854,6 @@ class ChartGenerator {
   }
 
   /**
-   * Calculate percentile of a sorted array
-   * 
-   * @param {Array} sortedArray - Sorted array of numbers
-   * @param {number} percentile - Percentile to calculate (0-100)
-   * @returns {number} Percentile value
-   */
-  percentile(sortedArray, percentile) {
-    const index = (percentile / 100) * (sortedArray.length - 1);
-    const lower = Math.floor(index);
-    const upper = Math.ceil(index);
-    const weight = index % 1;
-    
-    if (upper >= sortedArray.length) return sortedArray[sortedArray.length - 1];
-    
-    return sortedArray[lower] * (1 - weight) + sortedArray[upper] * weight;
-  }
-
-  /**
    * Validate chart data and options
    * 
    * @param {Array} data - Data to validate
@@ -1014,10 +899,6 @@ class ChartGenerator {
         if (options.valueColumn) requiredColumns.push(options.valueColumn);
         break;
       case 'histogram':
-        if (!options.valueColumn) options.valueColumn = availableColumns[0];
-        requiredColumns = [options.valueColumn];
-        break;
-      case 'boxplot':
         if (!options.valueColumn) options.valueColumn = availableColumns[0];
         requiredColumns = [options.valueColumn];
         break;

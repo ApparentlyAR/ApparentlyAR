@@ -32,6 +32,12 @@ class ChartManager {
     /** @type {Object<string, {canvas: HTMLCanvasElement, chart: any, entity: any}>} Per-marker chart state */
     this.markerCharts = {};
 
+    /** @type {Object} Custom data loaded from Blockly */
+    this.customData = null;
+
+    /** @type {string} Current data source: 'sample' or 'custom' */
+    this.dataSource = 'sample';
+
     /**
      * Sample datasets for chart generation
      */
@@ -57,6 +63,69 @@ class ChartManager {
         { product: 'Laptop', sales: 150, revenue: 180000, region: 'South' },
         { product: 'Phone', sales: 180, revenue: 108000, region: 'South' }
       ]
+    };
+  }
+
+  /**
+   * Load custom data from Blockly processing
+   * @param {Array<Object>} data - Custom data array
+   * @param {string} filename - Source filename
+   */
+  loadCustomData(data, filename) {
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn('Invalid custom data provided');
+      return false;
+    }
+
+    this.customData = {
+      data: data,
+      filename: filename,
+      columns: Object.keys(data[0] || {}),
+      rowCount: data.length
+    };
+
+    this.dataSource = 'custom';
+    console.log(`Loaded custom data: ${filename} (${data.length} rows, ${this.customData.columns.length} columns)`);
+    return true;
+  }
+
+  /**
+   * Set data source to sample data
+   */
+  useSampleData() {
+    this.dataSource = 'sample';
+    this.customData = null;
+    console.log('Switched to sample data');
+  }
+
+  /**
+   * Get current data based on data source
+   * @param {string} datasetName - Dataset name (for sample data)
+   * @returns {Array<Object>} Current data array
+   */
+  getCurrentData(datasetName = 'students') {
+    if (this.dataSource === 'custom' && this.customData) {
+      return this.customData.data;
+    }
+    return this.sampleData[datasetName] || this.sampleData.students;
+  }
+
+  /**
+   * Get current data source info
+   * @returns {Object} Data source information
+   */
+  getDataSourceInfo() {
+    if (this.dataSource === 'custom' && this.customData) {
+      return {
+        source: 'custom',
+        filename: this.customData.filename,
+        rowCount: this.customData.rowCount,
+        columns: this.customData.columns
+      };
+    }
+    return {
+      source: 'sample',
+      available: Object.keys(this.sampleData)
     };
   }
 
@@ -100,7 +169,8 @@ class ChartManager {
     if (existing?.chart) {
       try { existing.chart.destroy(); } catch (_) {}
     }
-    const chart = this.generateChart(canvas, chartType, this.sampleData[datasetName]);
+    const currentData = this.getCurrentData(datasetName);
+    const chart = this.generateChart(canvas, chartType, currentData);
 
     // Ensure a plane entity exists under the marker and points to our canvas
     let entity = existing?.entity || marker.querySelector('[data-marker-chart]');
@@ -349,7 +419,8 @@ class ChartManager {
     canvas.id = chartId + '-canvas';
     
     // Generate chart texture
-    const chart = this.generateChart(canvas, chartType, this.sampleData[datasetName]);
+    const currentData = this.getCurrentData(datasetName);
+    const chart = this.generateChart(canvas, chartType, currentData);
     
     // Add canvas to assets
     const assets = document.querySelector('a-assets');
@@ -444,9 +515,118 @@ class ChartManager {
     };
     
     // Configure data based on type and dataset
+    chartConfig.data = this.prepareChartData(data, type);
+    
+    return new Chart(ctx, chartConfig);
+  }
+
+  /**
+   * Prepare chart data based on data structure and chart type
+   * @param {Array<Object>} data - Data array
+   * @param {string} type - Chart type
+   * @returns {Object} Chart.js data configuration
+   */
+  prepareChartData(data, type) {
+    if (!data || data.length === 0) {
+      return { labels: [], datasets: [] };
+    }
+
+    const columns = Object.keys(data[0]);
+    const numericColumns = columns.filter(col => 
+      data.some(row => !isNaN(parseFloat(row[col])) && row[col] !== null && row[col] !== '')
+    );
+    const textColumns = columns.filter(col => 
+      data.some(row => isNaN(parseFloat(row[col])) && row[col] !== null && row[col] !== '')
+    );
+
+    // For custom data, use intelligent column selection
+    if (this.dataSource === 'custom') {
+      return this.prepareCustomChartData(data, type, columns, numericColumns, textColumns);
+    }
+
+    // For sample data, use predefined configurations
+    return this.prepareSampleChartData(data, type);
+  }
+
+  /**
+   * Prepare chart data for custom datasets
+   * @param {Array<Object>} data - Data array
+   * @param {string} type - Chart type
+   * @param {Array<string>} columns - All columns
+   * @param {Array<string>} numericColumns - Numeric columns
+   * @param {Array<string>} textColumns - Text columns
+   * @returns {Object} Chart.js data configuration
+   */
+  prepareCustomChartData(data, type, columns, numericColumns, textColumns) {
+    const colors = [
+      'rgba(76, 175, 80, 0.8)',   // Green
+      'rgba(33, 150, 243, 0.8)',  // Blue
+      'rgba(255, 193, 7, 0.8)',   // Yellow
+      'rgba(244, 67, 54, 0.8)',   // Red
+      'rgba(156, 39, 176, 0.8)',  // Purple
+      'rgba(255, 152, 0, 0.8)',   // Orange
+      'rgba(0, 150, 136, 0.8)',   // Teal
+      'rgba(103, 58, 183, 0.8)'   // Deep Purple
+    ];
+
+    if (type === 'bar' || type === 'line') {
+      // Use first text column as labels, first numeric column as data
+      const labelColumn = textColumns[0] || columns[0];
+      const dataColumn = numericColumns[0] || columns[1] || columns[0];
+      
+      return {
+        labels: data.map(row => String(row[labelColumn] || '')),
+        datasets: [{
+          label: dataColumn,
+          data: data.map(row => parseFloat(row[dataColumn]) || 0),
+          backgroundColor: colors[0],
+          borderColor: colors[0].replace('0.8', '1'),
+          borderWidth: 2
+        }]
+      };
+    } else if (type === 'pie') {
+      // Use first text column as labels, first numeric column as data
+      const labelColumn = textColumns[0] || columns[0];
+      const dataColumn = numericColumns[0] || columns[1] || columns[0];
+      
+      return {
+        labels: data.map(row => String(row[labelColumn] || '')),
+        datasets: [{
+          data: data.map(row => parseFloat(row[dataColumn]) || 0),
+          backgroundColor: colors.slice(0, data.length)
+        }]
+      };
+    } else if (type === 'scatter') {
+      // Use first two numeric columns for x and y
+      const xColumn = numericColumns[0] || columns[0];
+      const yColumn = numericColumns[1] || columns[1] || columns[0];
+      
+      return {
+        datasets: [{
+          label: `${xColumn} vs ${yColumn}`,
+          data: data.map(row => ({ 
+            x: parseFloat(row[xColumn]) || 0, 
+            y: parseFloat(row[yColumn]) || 0 
+          })),
+          backgroundColor: colors[0]
+        }]
+      };
+    }
+
+    // Fallback
+    return { labels: [], datasets: [] };
+  }
+
+  /**
+   * Prepare chart data for sample datasets (legacy support)
+   * @param {Array<Object>} data - Data array
+   * @param {string} type - Chart type
+   * @returns {Object} Chart.js data configuration
+   */
+  prepareSampleChartData(data, type) {
     if (type === 'bar' || type === 'line') {
       if (data === this.sampleData.students) {
-        chartConfig.data = {
+        return {
           labels: data.map(d => d.name),
           datasets: [{
             label: 'Scores',
@@ -457,7 +637,7 @@ class ChartManager {
           }]
         };
       } else if (data === this.sampleData.weather) {
-        chartConfig.data = {
+        return {
           labels: data.map(d => d.month),
           datasets: [{
             label: 'Temperature (°C)',
@@ -468,7 +648,7 @@ class ChartManager {
           }]
         };
       } else if (data === this.sampleData.sales) {
-        chartConfig.data = {
+        return {
           labels: data.map(d => d.product),
           datasets: [{
             label: 'Sales',
@@ -481,7 +661,7 @@ class ChartManager {
       }
     } else if (type === 'pie') {
       if (data === this.sampleData.students) {
-        chartConfig.data = {
+        return {
           labels: data.map(d => d.name),
           datasets: [{
             data: data.map(d => d.score),
@@ -497,7 +677,7 @@ class ChartManager {
       }
     } else if (type === 'scatter') {
       if (data === this.sampleData.students) {
-        chartConfig.data = {
+        return {
           datasets: [{
             label: 'Age vs Score',
             data: data.map(d => ({ x: d.age, y: d.score })),
@@ -506,8 +686,9 @@ class ChartManager {
         };
       }
     }
-    
-    return new Chart(ctx, chartConfig);
+
+    // Fallback
+    return { labels: [], datasets: [] };
   }
 
   /**

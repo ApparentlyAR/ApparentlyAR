@@ -77,6 +77,44 @@ class FieldFileButton extends Blockly.Field {
               this._dialogOpen = false;
               
               console.log('[CSV Import] Data loaded, triggering autofill for all systems...');
+
+              // Persist the uploaded CSV to server immediately so it appears in /uploads for all users
+              (async () => {
+                try {
+                  if (typeof window !== 'undefined') {
+                    const saver = window.BlocklyPersistCsv || (window.AppApi && window.AppApi.saveCsv);
+                    if (saver) {
+                      let res;
+                      if (window.BlocklyPersistCsv) {
+                        res = await window.BlocklyPersistCsv(results.data);
+                      } else {
+                        res = await window.AppApi.saveCsv(results.data, file.name, true);
+                      }
+                      if (res && res.success && res.path && window.Blockly && window.Blockly.CsvImportData) {
+                        window.Blockly.CsvImportData.savedPath = res.path;
+                        console.log('[CSV Import] CSV persisted to', res.path);
+                      }
+                    }
+                  }
+                } catch (persistErr) {
+                  console.warn('[CSV Import] Persist to server failed (non-fatal):', persistErr);
+                }
+              })();
+
+              // Notify the application that CSV data has changed so UI elements can update
+              if (typeof window !== 'undefined') {
+                try {
+                  window.dispatchEvent(new CustomEvent('csvDataChanged', {
+                    detail: {
+                      filename: file.name,
+                      rows: Array.isArray(results.data) ? results.data.length : 0,
+                      columns: Array.isArray(results.data) && results.data[0] ? Object.keys(results.data[0]).length : 0
+                    }
+                  }));
+                } catch (eventError) {
+                  console.warn('[CSV Import] Failed to dispatch csvDataChanged event:', eventError);
+                }
+              }
               
               // Trigger autofill for all existing blocks when CSV data is loaded
               if (window.BlocklyAutofill && window.BlocklyAutofill.updateAllBlocksWithAutofill) {
@@ -106,6 +144,16 @@ class FieldFileButton extends Blockly.Field {
                 }, 200); // Slightly longer delay for visualization blocks
               } else {
                 console.warn('[CSV Import] BlocklyVisualizationAutofill not available');
+              }
+
+              // Also trigger autofill for transformation blocks
+              if (window.BlocklyTransformAutofill && window.BlocklyTransformAutofill.updateAllTransformationBlocksWithAutofill) {
+                console.log('[CSV Import] Triggering transformation blocks autofill');
+                setTimeout(() => {
+                  window.BlocklyTransformAutofill.updateAllTransformationBlocksWithAutofill();
+                }, 220); // Ensure runs after other systems
+              } else {
+                console.warn('[CSV Import] BlocklyTransformAutofill not available');
               }
             }
           });

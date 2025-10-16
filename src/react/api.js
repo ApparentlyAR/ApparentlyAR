@@ -88,11 +88,43 @@ async function processData(data, operations = []) {
 }
 
 /**
+ * Save processed data to CSV on the server
+ * @param {Array} data - rows to persist
+ * @param {string} filename - base filename (will be sanitized)
+ * @param {boolean} overwrite - whether to overwrite if file exists
+ */
+async function saveCsv(data, filename, overwrite = true) {
+  return httpJson('/api/save-csv', {
+    method: 'POST',
+    headers: BASE_HEADERS,
+    body: JSON.stringify({ data, filename, overwrite })
+  });
+}
+
+async function getCsv(filename) {
+  return httpJson(`/api/get-csv/${encodeURIComponent(filename)}`, {
+    method: 'GET',
+    headers: BASE_HEADERS
+  });
+}
+
+async function listCsvFiles() {
+  return httpJson('/api/list-files', { method: 'GET', headers: BASE_HEADERS });
+}
+
+async function uploadCsv(file) {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch('/api/upload-csv', { method: 'POST', body: form });
+  return res.json();
+}
+
+/**
  * Generate chart configuration from data
  * 
  * Creates chart configurations for various chart types using the backend
  * chart generation service. Supports all chart types including bar, line,
- * scatter, pie, doughnut, area, histogram, box plot, heatmap, and radar.
+ * scatter, pie, doughnut, area, histogram, heatmap, and radar.
  * 
  * @param {Array} data - Data to visualize
  * @param {string} chartType - Type of chart to generate
@@ -149,6 +181,10 @@ if (typeof window !== 'undefined') {
 	window.AppApi = {
 		getTestData,
 		processData,
+    saveCsv,
+    getCsv,
+    listCsvFiles,
+    uploadCsv,
 		generateChart,
 		generateArVisualization
 	};

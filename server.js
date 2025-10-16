@@ -12,10 +12,14 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const bodyParser = require('body-parser');
+const fs = require('fs');
+const os = require('os');
+const pathModule = require('path');
 
 // Import backend modules
 const dataProcessor = require('./src/backend/dataProcessor');
 const chartGenerator = require('./src/backend/chartGenerator');
+const { parseCSV } = require('./src/backend/csvHandler');
 const { sampleData, weatherData, salesData } = require('./src/backend/testData');
 
 // Import projects manager for persistent storage -Najla
@@ -32,10 +36,15 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware configuration
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 app.use('/src', express.static('src'));
-app.use(bodyParser.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(bodyParser.json({ limit: '10mb' }));
+
+// Configure multer for handling multipart/form-data (file uploads)
+const multer = require('multer');
+const upload = multer({ dest: os.tmpdir() }); // Store uploads temporarily
 
 /**
  * Serve the Login application page
@@ -147,22 +156,177 @@ app.post('/api/process-data', async (req, res) => {
     }
 
     const processedData = await dataProcessor.processData(data, operations);
-    
-    // For statistical operations, processedData might be a single value, not an array
-    // Only call getDataSummary if processedData is actually an array of objects
-    let summary = null;
-    if (Array.isArray(processedData) && processedData.length > 0 && typeof processedData[0] === 'object') {
-      summary = dataProcessor.getDataSummary(processedData);
-    }
-    
     res.json({ 
       success: true, 
       data: processedData,
-      summary: summary
+      summary: dataProcessor.getDataSummary(processedData)
     });
   } catch (error) {
     console.error('Data processing error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/list-files
+ * List all CSV files in the uploads directory.
+ */
+app.get('/api/list-files', async (req, res) => {
+  try {
+    const uploadsDir = pathModule.join(__dirname, 'uploads');
+    
+    if (!fs.existsSync(uploadsDir)) {
+      return res.json({ success: true, files: [] });
+    }
+
+    const files = fs.readdirSync(uploadsDir)
+      .filter(file => file.toLowerCase().endsWith('.csv'))
+      .sort((a, b) => {
+        // Sort by modification time, newest first
+        const statA = fs.statSync(pathModule.join(uploadsDir, a));
+        const statB = fs.statSync(pathModule.join(uploadsDir, b));
+        return statB.mtime - statA.mtime;
+      });
+
+    res.json({ success: true, files });
+  } catch (error) {
+    console.error('List files error:', error);
+    res.status(500).json({ error: 'Failed to list files' });
+  }
+});
+
+/**
+ * POST /api/upload-csv
+ * Accept a CSV file upload and place it into the uploads directory.
+ * Form field: file (multipart/form-data)
+ */
+app.post('/api/upload-csv', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Ensure uploads directory exists
+    const uploadsDir = pathModule.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const original = req.file.originalname || 'uploaded.csv';
+    const safeName = pathModule.basename(original).replace(/[^\w\-.]/g, '_');
+    const finalName = safeName.toLowerCase().endsWith('.csv') ? safeName : `${safeName}.csv`;
+    const targetPath = pathModule.join(uploadsDir, finalName);
+
+    // Move the temp file to uploads
+    const tempPath = req.file.path;
+    const fileBuffer = fs.readFileSync(tempPath);
+    fs.writeFileSync(targetPath, fileBuffer);
+    try { fs.unlinkSync(tempPath); } catch (_) {}
+
+    return res.json({ success: true, filename: finalName, path: `/uploads/${finalName}` });
+  } catch (error) {
+    console.error('Upload CSV error:', error);
+    res.status(500).json({ error: 'Failed to upload CSV' });
+  }
+});
+
+/**
+ * GET /api/get-csv/:filename
+ * Retrieve processed CSV data from the server.
+ * Returns the latest saved data for the given filename.
+ */
+app.get('/api/get-csv/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    if (!filename || typeof filename !== 'string') {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+
+    // Sanitize filename and ensure .csv extension
+    const safeName = pathModule.basename(filename).replace(/[^\w\-.]/g, '_');
+    const finalName = safeName.toLowerCase().endsWith('.csv') ? safeName : `${safeName}.csv`;
+
+    const filePath = pathModule.join(__dirname, 'uploads', finalName);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Read and parse the CSV file (use backend csvHandler to avoid browser-only deps)
+    const csvText = fs.readFileSync(filePath, 'utf8');
+    const parsed = parseCSV(csvText); // { headers, data }
+    const rows = Array.isArray(parsed?.data) ? parsed.data : [];
+
+    res.json({ 
+      success: true, 
+      data: rows,
+      filename: finalName,
+      path: `/uploads/${finalName}`
+    });
+  } catch (error) {
+    console.error('Get CSV error:', error);
+    res.status(500).json({ error: 'Failed to retrieve CSV' });
+  }
+});
+
+/**
+ * POST /api/save-csv
+ * Persist processed data back to a CSV file on the server.
+ * Body: { data: Array<object>, filename: string, overwrite?: boolean }
+ */
+app.post('/api/save-csv', async (req, res) => {
+  try {
+    const { data, filename, overwrite = true } = req.body || {};
+    if (!Array.isArray(data)) {
+      return res.status(400).json({ error: 'Invalid data: expected array' });
+    }
+    if (!filename || typeof filename !== 'string') {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+
+    // Sanitize filename and ensure .csv extension
+    const safeName = pathModule.basename(filename).replace(/[^\w\-.]/g, '_');
+    const finalName = safeName.toLowerCase().endsWith('.csv') ? safeName : `${safeName}.csv`;
+
+    // Ensure uploads directory exists
+    const uploadsDir = pathModule.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const targetPath = pathModule.join(uploadsDir, finalName);
+    if (!overwrite && fs.existsSync(targetPath)) {
+      return res.status(409).json({ error: 'File exists and overwrite=false' });
+    }
+
+    // Convert to CSV
+    const toCsv = (rows) => {
+      if (!rows.length) return '';
+      const headers = Array.from(
+        rows.reduce((set, row) => {
+          Object.keys(row || {}).forEach((k) => set.add(k));
+          return set;
+        }, new Set())
+      );
+      const escape = (val) => {
+        if (val == null) return '';
+        const s = String(val);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      const lines = [headers.join(',')];
+      for (const row of rows) {
+        lines.push(headers.map((h) => escape(row[h])).join(','));
+      }
+      return lines.join('\n');
+    };
+
+    const csvText = toCsv(data);
+    fs.writeFileSync(targetPath, csvText, 'utf8');
+
+    res.json({ success: true, filename: finalName, path: `/uploads/${finalName}` });
+  } catch (error) {
+    console.error('Save CSV error:', error);
+    res.status(500).json({ error: 'Failed to save CSV' });
   }
 });
 
@@ -258,10 +422,10 @@ app.get('/api/projects/:id', (req, res) => {
 });
 
 /**
- * Endpoint to save a new project
+ * Endpoint to save a new project with optional CSV file upload
  * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
-app.post('/api/projects', (req, res) => {
+app.post('/api/projects', upload.single('csvFile'), (req, res) => {
   try {
     const { name, description } = req.body;
     
@@ -269,8 +433,30 @@ app.post('/api/projects', (req, res) => {
       return res.status(400).json({ error: 'Project name is required' });
     }
     
+    // Create the project first
     const newProject = createProject({ name, description });
-    res.status(201).json(newProject);
+    
+    // If a CSV file was uploaded, process it and add to the project
+    if (req.file) {
+      const csvPath = req.file.path;
+      const csvContent = fs.readFileSync(csvPath, 'utf8');
+      const parsedData = parseCSV(csvContent);
+      
+      // Update the project to include the CSV data
+      const updatedProject = updateProject(newProject.id, {
+        name: newProject.name,
+        description: newProject.description,
+        csvData: parsedData.data,
+        csvHeaders: parsedData.headers
+      });
+      
+      // Clean up the temporary file
+      fs.unlinkSync(csvPath);
+      
+      res.status(201).json(updatedProject);
+    } else {
+      res.status(201).json(newProject);
+    }
   } catch (error) {
     console.error('Error creating project:', error);
     res.status(500).json({ error: 'Failed to create project' });
@@ -281,12 +467,38 @@ app.post('/api/projects', (req, res) => {
  * Endpoint to update a project by ID
  * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
-app.put('/api/projects/:id', (req, res) => {
+app.put('/api/projects/:id', upload.single('csvFile'), async (req, res) => {
   try {
     const projectId = parseInt(req.params.id);
-    const { name, description, status } = req.body;
     
-    const updatedProject = updateProject(projectId, { name, description, status });
+    // Get the existing project to preserve data that isn't being updated
+    const existingProject = getProjectById(projectId);
+    if (!existingProject) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Prepare the update data
+    let updateData = {
+      name: req.body.name || existingProject.name,
+      description: req.body.description || existingProject.description,
+      status: req.body.status || existingProject.status
+    };
+    
+    // If a CSV file was uploaded, process it and add to the project
+    if (req.file) {
+      const csvPath = req.file.path;
+      const csvContent = fs.readFileSync(csvPath, 'utf8');
+      const parsedData = parseCSV(csvContent);
+      
+      // Add CSV data to the update
+      updateData.csvData = parsedData.data;
+      updateData.csvHeaders = parsedData.headers;
+      
+      // Clean up the temporary file
+      fs.unlinkSync(csvPath);
+    }
+    
+    const updatedProject = updateProject(projectId, updateData);
     
     if (updatedProject) {
       res.json(updatedProject);

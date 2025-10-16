@@ -5,7 +5,7 @@
  * visualizations using Chart.js through the backend chart generation API.
  *
  * These blocks integrate with the backend chartGenerator.js to create bar charts,
- * line charts, scatter plots, pie charts, histograms, box plots, heatmaps, and more.
+ * line charts, scatter plots, pie charts, histograms, heatmaps, and more.
  *
  * @module VisualizationBlocks
  * @version 1.0.0
@@ -107,7 +107,6 @@
               ["Doughnut Chart", "doughnut"],
               ["Area Chart", "area"],
               ["Histogram", "histogram"],
-              ["Box Plot", "boxplot"],
               ["Heatmap", "heatmap"],
               ["Radar Chart", "radar"]
             ]
@@ -239,23 +238,6 @@
         "nextStatement": null,
         "colour": 330,
         "tooltip": "Create histogram with specified number of bins",
-        "helpUrl": ""
-      },
-
-      // Box Plot Config Block
-      {
-        "type": "boxplot_config",
-        "message0": "create box plot of %1 grouped by %2 title %3 from %4",
-        "args0": [
-          { "type": "field_dropdown", "name": "VALUE_COLUMN", "options": [["column", "column"]] },
-          { "type": "field_dropdown", "name": "GROUP_COLUMN", "options": [["none", "none"], ["column", "column"]] },
-          { "type": "field_input", "name": "TITLE", "text": "Box Plot" },
-          { "type": "input_value", "name": "DATA", "check": "Dataset" }
-        ],
-        "previousStatement": null,
-        "nextStatement": null,
-        "colour": 330,
-        "tooltip": "Create box plot with optional grouping",
         "helpUrl": ""
       },
 
@@ -439,11 +421,15 @@
 
     if (window.reactSetOutput) window.reactSetOutput('Chart generated successfully: ' + config.chartType);
     if (window.reactSetError) window.reactSetError(false);
+    
+    // Return a value to indicate this was handled via event system
+    return { handled: 'chartGenerated', chartType: config.chartType };
 
   } catch (error) {
     console.error('[generate_visualization] Error:', error);
     if (window.reactSetOutput) window.reactSetOutput('Error: ' + error.message);
     if (window.reactSetError) window.reactSetError(true);
+    return { error: error.message };
   }
 })();
 `;
@@ -512,11 +498,15 @@
 
     if (window.reactSetOutput) window.reactSetOutput('Chart created: ${safeTitle}');
     if (window.reactSetError) window.reactSetError(false);
+    
+    // Return a value to indicate this was handled via event system
+    return { handled: 'chartGenerated', chartType: '${chartType}' };
 
   } catch (error) {
     console.error('[quick_chart] Error:', error);
     if (window.reactSetOutput) window.reactSetOutput('Error: ' + error.message);
     if (window.reactSetError) window.reactSetError(true);
+    return { error: error.message };
   }
 })();
 `;
@@ -536,12 +526,12 @@
         const code = `(async () => {
   try {
     let __rawData = ${dataCode};
-    
+
     // If the data is a Promise (from async data blocks), await it
     if (__rawData && typeof __rawData.then === 'function') {
       __rawData = await __rawData;
     }
-    
+
     const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
@@ -571,66 +561,6 @@
 
   } catch (error) {
     console.error('[histogram_config] Error:', error);
-    if (window.reactSetOutput) window.reactSetOutput('Error: ' + error.message);
-    if (window.reactSetError) window.reactSetError(true);
-  }
-})();
-`;
-
-        return code;
-      };
-
-      // Box Plot Config Generator
-      Blockly.JavaScript['boxplot_config'] = function(block) {
-        const valueColumn = block.getFieldValue('VALUE_COLUMN') || 'column';
-        const groupColumn = block.getFieldValue('GROUP_COLUMN');
-        const title = block.getFieldValue('TITLE') || 'Box Plot';
-        const dataCode = getDataCode(block);
-
-        const safeTitle = title.replace(/'/g, "\\'").replace(/"/g, '\\"');
-        const hasGrouping = groupColumn && groupColumn !== 'none';
-
-        const code = `(async () => {
-  try {
-    let __rawData = ${dataCode};
-    
-    // If the data is a Promise (from async data blocks), await it
-    if (__rawData && typeof __rawData.then === 'function') {
-      __rawData = await __rawData;
-    }
-    
-    const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
-
-    if (!Array.isArray(__input) || __input.length === 0) {
-      throw new Error('No data available');
-    }
-
-    if (!window.AppApi || !window.AppApi.generateChart) {
-      throw new Error('Chart API not available');
-    }
-
-    const options = {
-      valueColumn: '${valueColumn}',
-      title: '${safeTitle}'
-    };
-
-    ${hasGrouping ? `options.groupColumn = '${groupColumn}';` : ''}
-
-    const chartResult = await window.AppApi.generateChart(__input, 'boxplot', options);
-
-    window.dispatchEvent(new CustomEvent('chartGenerated', {
-      detail: {
-        config: chartResult.config,
-        chartType: 'boxplot',
-        data: __input
-      }
-    }));
-
-    if (window.reactSetOutput) window.reactSetOutput('Box plot created: ${safeTitle}');
-    if (window.reactSetError) window.reactSetError(false);
-
-  } catch (error) {
-    console.error('[boxplot_config] Error:', error);
     if (window.reactSetOutput) window.reactSetOutput('Error: ' + error.message);
     if (window.reactSetError) window.reactSetError(true);
   }
@@ -712,7 +642,6 @@
         'generate_visualization',
         'quick_chart',
         'histogram_config',
-        'boxplot_config',
         'heatmap_config'
       ];
 
@@ -735,8 +664,8 @@
 
     // Only process visualization blocks
     const visualizationBlocks = [
-      'set_axes', 'quick_chart', 'histogram_config', 
-      'boxplot_config', 'heatmap_config'
+      'set_axes', 'quick_chart', 'histogram_config',
+      'heatmap_config'
     ];
     
     if (!visualizationBlocks.includes(blockType)) {
@@ -769,16 +698,6 @@
       case 'histogram_config':
         console.log('🔧 [Visualization Autofill] Updating histogram_config fields');
         updateFieldWithColumns(block.getField('VALUE_COLUMN'));
-        break;
-      case 'boxplot_config':
-        console.log('🔧 [Visualization Autofill] Updating boxplot_config fields');
-        updateFieldWithColumns(block.getField('VALUE_COLUMN'));
-        const groupField = block.getField('GROUP_COLUMN');
-        if (groupField && groupField.setOptions) {
-          const options = [['none', 'none'], ...columns.map(col => [col, col])];
-          groupField.setOptions(options);
-          console.log('🔧 [Visualization Autofill] Updated GROUP_COLUMN options');
-        }
         break;
       case 'heatmap_config':
         console.log('🔧 [Visualization Autofill] Updating heatmap_config fields');
@@ -815,8 +734,8 @@
     let visualizationBlocksFound = 0;
     allBlocks.forEach(block => {
       if (block && block.type && [
-        'set_axes', 'quick_chart', 'histogram_config', 
-        'boxplot_config', 'heatmap_config'
+        'set_axes', 'quick_chart', 'histogram_config',
+        'heatmap_config'
       ].includes(block.type)) {
         visualizationBlocksFound++;
         console.log('📊 [Visualization Autofill] Found visualization block:', block.type);
