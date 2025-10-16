@@ -42,6 +42,12 @@ class HybridARController {
     window.removeDevChart = () => this.removeDevChart();
     window.spawnMockMarkerChart = () => this.spawnMockMarkerChart();
     window.removeMockMarkerChart = () => this.removeMockMarkerChart();
+
+    /**
+     * When true, the next time a real marker is detected we will
+     * automatically re-parent the dev chart entity to marker-0.
+     */
+    this.autoAttachToMarker = false;
   }
 
   /**
@@ -155,6 +161,18 @@ class HybridARController {
     if (visibleMarkers > 0) {
       markerStatus.textContent = `${visibleMarkers} marker(s) detected`;
       markerStatus.className = 'status detecting';
+
+      // Auto-attach dev chart to marker once a marker is seen
+      if (this.autoAttachToMarker) {
+        const devContainer = document.getElementById('dev-marker-0');
+        const entity = devContainer ? devContainer.querySelector('[data-marker-chart]') : null;
+        if (entity) {
+          try {
+            this.moveDevChartToMarker();
+            this.autoAttachToMarker = false;
+          } catch (_) { /* ignore and try again on next tick */ }
+        }
+      }
     } else {
       markerStatus.textContent = 'Ready for markers';
       markerStatus.className = 'status ready';
@@ -486,6 +504,9 @@ class HybridARController {
       entity.setAttribute('material', `shader: flat; src: #${canvas.id}; transparent: true; side: double`);
       try { this.chartManager.forceMaterialRefresh(entity); } catch (_) {}
 
+      // Enable auto-attach to physical marker when it becomes visible
+      this.autoAttachToMarker = true;
+
       this.updateStatus('Mock marker chart spawned (centered)', 'ready');
     } catch (error) {
       console.error('Error spawning mock marker chart:', error);
@@ -508,6 +529,23 @@ class HybridARController {
     } catch (error) {
       console.error('Error removing mock marker chart:', error);
     }
+  }
+
+  /**
+   * Move the dev chart (camera-anchored) to the real marker-0 entity.
+   * Safe to call repeatedly; does nothing if either side is missing.
+   */
+  moveDevChartToMarker() {
+    const marker = document.getElementById('marker-0');
+    const devContainer = document.getElementById('dev-marker-0');
+    if (!marker || !devContainer) return;
+    const entity = devContainer.querySelector('[data-marker-chart]');
+    if (!entity) return;
+    try { marker.appendChild(entity); } catch (_) {}
+    entity.setAttribute('position', '0 2 0'); // default offset used by ChartManager
+    entity.setAttribute('rotation', '0 0 0');
+    try { this.chartManager.forceMaterialRefresh(entity); } catch (_) {}
+    this.updateStatus('Chart moved to marker-0', 'ready');
   }
 
   /**
@@ -644,6 +682,7 @@ class HybridARController {
     const uploadBtn = document.getElementById('upload-file-btn');
     const uploadInput = document.getElementById('upload-file');
     const loadFromBlocklyBtn = document.getElementById('load-from-blockly');
+    const moveToMarkerBtn = document.getElementById('move-to-marker');
     
     const handler = () => this.chartManager.updateMarkerChartFromControls('marker-0');
     const dataInfoHandler = () => this.updateDataInfo();
@@ -828,6 +867,30 @@ class HybridARController {
         } catch (err) {
           console.error('Load from Blockly error:', err);
           this.updateStatus('Load from Blockly failed: ' + err.message, 'error');
+        }
+      });
+    }
+
+    // Re-parent the dev chart back to the real marker-0 entity
+    if (moveToMarkerBtn) {
+      moveToMarkerBtn.addEventListener('click', () => {
+        try {
+          const marker = document.getElementById('marker-0');
+          const camera = document.querySelector('a-entity[camera]');
+          if (!marker || !camera) return;
+          const devContainer = document.getElementById('dev-marker-0');
+          if (!devContainer) return;
+          const entity = devContainer.querySelector('[data-marker-chart]');
+          if (!entity) return;
+          // Move entity under marker-0
+          try { marker.appendChild(entity); } catch (_) {}
+          entity.setAttribute('position', '0 2 0'); // original placement offset used by ChartManager
+          entity.setAttribute('rotation', '0 0 0');
+          try { this.chartManager.forceMaterialRefresh(entity); } catch (_) {}
+          this.updateStatus('Chart moved to marker-0', 'ready');
+        } catch (err) {
+          console.error('Move to marker error:', err);
+          this.updateStatus('Failed to move chart to marker', 'error');
         }
       });
     }
