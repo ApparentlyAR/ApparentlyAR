@@ -980,7 +980,7 @@
         });
         
         // Listen for chart generation from visualization blocks and persist for AR handoff
-        window.addEventListener('chartGenerated', (e) => {
+        window.addEventListener('chartGenerated', async (e) => {
           console.log('🎨 Chart generated event received:', e?.detail);
           const d = e?.detail ?? {};
         
@@ -990,7 +990,33 @@
               const cfg  = d.config || {};
               // Prefer event payload first, then fall back to cfg
               const opts = d.options || cfg.options || {};
-        
+
+              // Persist the exact dataset used so AR can pick up the latest CSV
+              try {
+                const dataToPersist = (Array.isArray(d?.data) ? d.data :
+                  (window.Blockly?.CsvImportData?.data && Array.isArray(window.Blockly.CsvImportData.data)
+                    ? window.Blockly.CsvImportData.data : null));
+                if (dataToPersist && dataToPersist.length) {
+                  if (window.Blockly && window.Blockly.CsvImportData) {
+                    window.Blockly.CsvImportData.data = dataToPersist;
+                  }
+                  if (window.BlocklyPersistCsv) {
+                    const res = await window.BlocklyPersistCsv(dataToPersist);
+                    if (res?.path && window.Blockly?.CsvImportData) {
+                      window.Blockly.CsvImportData.savedPath = res.path;
+                    }
+                  } else if (window.AppApi?.saveCsv) {
+                    const fallback = (window.Blockly?.CsvImportData?.filename) || 'transformed.csv';
+                    const res = await window.AppApi.saveCsv(dataToPersist, fallback, true);
+                    if (res?.path && window.Blockly?.CsvImportData) {
+                      window.Blockly.CsvImportData.savedPath = res.path;
+                    }
+                  }
+                }
+              } catch (persistErr) {
+                console.warn('Failed to persist dataset for AR (non-fatal):', persistErr);
+              }
+
               const json = {
                 chartType: d.chartType || cfg.type || cfg.chartType || null,
                 options:   opts,
@@ -1002,12 +1028,12 @@
                   (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null,
                 savedAt:   Date.now(),
               };
-        
+
               localStorage.setItem('ar_last_visualization', JSON.stringify(json));
             } catch (err) {
               console.warn('Failed to store last visualization for AR:', err);
             }
-        
+
             // Only render when payload is complete
             renderAdvancedChart(d);
           }
