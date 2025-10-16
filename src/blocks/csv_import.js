@@ -78,6 +78,29 @@ class FieldFileButton extends Blockly.Field {
               
               console.log('[CSV Import] Data loaded, triggering autofill for all systems...');
 
+              // Persist the uploaded CSV to server immediately so it appears in /uploads for all users
+              (async () => {
+                try {
+                  if (typeof window !== 'undefined') {
+                    const saver = window.BlocklyPersistCsv || (window.AppApi && window.AppApi.saveCsv);
+                    if (saver) {
+                      let res;
+                      if (window.BlocklyPersistCsv) {
+                        res = await window.BlocklyPersistCsv(results.data);
+                      } else {
+                        res = await window.AppApi.saveCsv(results.data, file.name, true);
+                      }
+                      if (res && res.success && res.path && window.Blockly && window.Blockly.CsvImportData) {
+                        window.Blockly.CsvImportData.savedPath = res.path;
+                        console.log('[CSV Import] CSV persisted to', res.path);
+                      }
+                    }
+                  }
+                } catch (persistErr) {
+                  console.warn('[CSV Import] Persist to server failed (non-fatal):', persistErr);
+                }
+              })();
+
               // Notify the application that CSV data has changed so UI elements can update
               if (typeof window !== 'undefined') {
                 try {
