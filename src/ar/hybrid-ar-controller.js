@@ -417,35 +417,54 @@ class HybridARController {
   async spawnMockMarkerChart() {
     try {
       await this.ensureBlocklyDataLoaded();
-      const marker = document.getElementById('marker-0');
-      if (!marker) {
-        throw new Error('marker-0 entity not found');
-      }
-
-      // Ensure a plane exists and a chart canvas is created via ChartManager
-      this.chartManager.createOrUpdateMarkerChart('marker-0', document.getElementById('chart-type').value, document.getElementById('sample-data').value);
-
-      // Re-anchor the chart entity to the camera so it renders dead-center
-      const entity = marker.querySelector('[data-marker-chart]');
       const camera = document.querySelector('a-entity[camera]');
-      if (entity && camera) {
-        entity.setAttribute('id', 'mock-marker-chart-entity');
-        try { camera.appendChild(entity); } catch (_) {}
-        entity.setAttribute('visible', true);
-        entity.setAttribute('position', '0 0 -2.5'); // dead-center, ~2.5m in front
-        entity.setAttribute('rotation', '0 180 0'); // face camera (camera looks down -Z)
-        entity.setAttribute('width', '1.2');
-        entity.setAttribute('height', '0.9');
+      if (!camera) throw new Error('camera entity not found');
 
-        // Re-apply material src to ensure canvas texture binding survives re-parenting
-        const entry = (this.chartManager.markerCharts || {})['marker-0'];
-        const canvasId = entry && entry.canvas ? entry.canvas.id : null;
-        if (canvasId) {
-          entity.setAttribute('material', `shader: flat; src: #${canvasId}; transparent: true; side: double`);
-        }
-        // Force texture refresh after re-parenting so the chart is visible
-        try { this.chartManager.forceMaterialRefresh(entity); } catch (_) {}
+      // Create a dev marker container anchored to camera (so we don't fight AR.js visibility)
+      let devContainer = document.getElementById('dev-marker-0');
+      if (!devContainer) {
+        devContainer = document.createElement('a-entity');
+        devContainer.setAttribute('id', 'dev-marker-0');
+        devContainer.setAttribute('position', '0 0 -2.5');
+        devContainer.setAttribute('rotation', '0 0 0');
+        try { camera.appendChild(devContainer); } catch (_) {}
       }
+
+      // Build chart from the CURRENT DATA SOURCE explicitly (custom or sample)
+      const chartType = document.getElementById('chart-type').value;
+      const dataForChart = this.chartManager.getCurrentData();
+
+      // Create (or reuse) canvas
+      let canvas = devContainer.querySelector('canvas#dev-marker-canvas');
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'dev-marker-canvas';
+        canvas.width = 400;
+        canvas.height = 300;
+        // Ensure it lives in <a-assets> for texture lookup
+        const assets = document.querySelector('a-assets');
+        if (assets) { try { assets.appendChild(canvas); } catch (_) {} }
+      }
+
+      // (Re)generate chart on the canvas
+      try { this.devMarkerChart && this.devMarkerChart.destroy && this.devMarkerChart.destroy(); } catch (_) {}
+      this.devMarkerChart = this.chartManager.generateChart(canvas, chartType, dataForChart);
+
+      // Create (or reuse) plane entity
+      let entity = devContainer.querySelector('[data-marker-chart]');
+      if (!entity) {
+        entity = document.createElement('a-plane');
+        entity.setAttribute('data-marker-chart', '');
+        devContainer.appendChild(entity);
+      }
+
+      entity.setAttribute('visible', true);
+      entity.setAttribute('position', '0 0 0');
+      entity.setAttribute('rotation', '0 0 0');
+      entity.setAttribute('width', '1.2');
+      entity.setAttribute('height', '0.9');
+      entity.setAttribute('material', `shader: flat; src: #${canvas.id}; transparent: true; side: double`);
+      try { this.chartManager.forceMaterialRefresh(entity); } catch (_) {}
 
       this.updateStatus('Mock marker chart spawned (centered)', 'ready');
     } catch (error) {
@@ -459,13 +478,11 @@ class HybridARController {
    */
   removeMockMarkerChart() {
     try {
-      const marker = document.getElementById('marker-0');
-      const camera = document.querySelector('a-entity[camera]');
-      let entity = null;
-      if (marker) entity = marker.querySelector('[data-marker-chart]');
-      if (!entity && camera) entity = camera.querySelector('#mock-marker-chart-entity');
-      if (entity) {
-        try { entity.remove(); } catch (_) {}
+      const devContainer = document.getElementById('dev-marker-0');
+      if (devContainer) {
+        const entity = devContainer.querySelector('[data-marker-chart]');
+        if (entity) { try { entity.remove(); } catch (_) {} }
+        try { devContainer.remove(); } catch (_) {}
       }
       this.updateStatus('Mock marker chart removed', 'ready');
     } catch (error) {
