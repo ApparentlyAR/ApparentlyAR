@@ -621,6 +621,8 @@ class HybridARController {
     const dataSourceSel = document.getElementById('data-source');
     const blocklyFileSel = document.getElementById('blockly-filename');
     const refreshBtn = document.getElementById('refresh-files');
+    const uploadBtn = document.getElementById('upload-file-btn');
+    const uploadInput = document.getElementById('upload-file');
     
     const handler = () => this.chartManager.updateMarkerChartFromControls('marker-0');
     const dataInfoHandler = () => this.updateDataInfo();
@@ -689,6 +691,32 @@ class HybridARController {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
         this.refreshBlocklyFiles();
+      });
+    }
+
+    // Upload CSV
+    if (uploadBtn && uploadInput) {
+      uploadBtn.addEventListener('click', () => uploadInput.click());
+      uploadInput.addEventListener('change', async (e) => {
+        try {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          if (!window.AppApi || !window.AppApi.uploadCsv) throw new Error('API not available');
+          this.updateStatus('Uploading CSV...', 'detecting');
+          const result = await window.AppApi.uploadCsv(file);
+          if (!result || !result.success) throw new Error(result?.error || 'Upload failed');
+          await this.refreshBlocklyFiles();
+          const sel = document.getElementById('blockly-filename');
+          if (sel && result.filename) { sel.value = result.filename; }
+          await this.loadBlocklyData(result.filename);
+          this.updateDevChartIfVisible();
+          this.updateStatus('CSV uploaded', 'ready');
+        } catch (err) {
+          console.error('Upload error:', err);
+          this.updateStatus('Upload failed: ' + err.message, 'error');
+        } finally {
+          if (uploadInput) uploadInput.value = '';
+        }
       });
     }
 

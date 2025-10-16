@@ -196,6 +196,41 @@ app.get('/api/list-files', async (req, res) => {
 });
 
 /**
+ * POST /api/upload-csv
+ * Accept a CSV file upload and place it into the uploads directory.
+ * Form field: file (multipart/form-data)
+ */
+app.post('/api/upload-csv', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Ensure uploads directory exists
+    const uploadsDir = pathModule.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const original = req.file.originalname || 'uploaded.csv';
+    const safeName = pathModule.basename(original).replace(/[^\w\-.]/g, '_');
+    const finalName = safeName.toLowerCase().endsWith('.csv') ? safeName : `${safeName}.csv`;
+    const targetPath = pathModule.join(uploadsDir, finalName);
+
+    // Move the temp file to uploads
+    const tempPath = req.file.path;
+    const fileBuffer = fs.readFileSync(tempPath);
+    fs.writeFileSync(targetPath, fileBuffer);
+    try { fs.unlinkSync(tempPath); } catch (_) {}
+
+    return res.json({ success: true, filename: finalName, path: `/uploads/${finalName}` });
+  } catch (error) {
+    console.error('Upload CSV error:', error);
+    res.status(500).json({ error: 'Failed to upload CSV' });
+  }
+});
+
+/**
  * GET /api/get-csv/:filename
  * Retrieve processed CSV data from the server.
  * Returns the latest saved data for the given filename.

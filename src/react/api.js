@@ -108,6 +108,17 @@ async function getCsv(filename) {
   });
 }
 
+async function listCsvFiles() {
+  return httpJson('/api/list-files', { method: 'GET', headers: BASE_HEADERS });
+}
+
+async function uploadCsv(file) {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch('/api/upload-csv', { method: 'POST', body: form });
+  return res.json();
+}
+
 /**
  * Generate chart configuration from data
  * 
@@ -172,6 +183,8 @@ if (typeof window !== 'undefined') {
 		processData,
     saveCsv,
     getCsv,
+    listCsvFiles,
+    uploadCsv,
 		generateChart,
 		generateArVisualization
 	};
