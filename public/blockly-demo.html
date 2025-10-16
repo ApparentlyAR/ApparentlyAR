@@ -258,6 +258,11 @@
               class="bg-panel border border-border text-white text-text hover:bg-yellow-500 bg-yellow-400 font-medium py-2 px-4 rounded-lg transition-colors">
               Enter AR
             </button>
+            <button id="download-csv-btn"
+              class="bg-panel border border-border text-white text-text hover:bg-green-500 bg-green-400 font-medium py-2 px-4 rounded-lg transition-colors"
+              title="Open latest saved CSV in a new tab">
+              Save CSV
+            </button>
              <button id="show-code-btn" onclick="toggleCodePanel()"
               class="bg-panel border border-border text-white text-text hover:bg-red-300 bg-red-400 font-medium py-2 px-4 rounded-lg transition-colors">
               Show code
@@ -994,6 +999,23 @@
           if(chartInstance) chartInstance.resize();
           updateToggleButtonPosition();
         });
+
+        // Open latest saved CSV in a new tab
+        const downloadBtn = document.getElementById('download-csv-btn');
+        if (downloadBtn) {
+          downloadBtn.addEventListener('click', async () => {
+            try {
+              const savedPath = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null;
+              const fallbackName = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || 'transformed.csv';
+              const sanitized = fallbackName.replace(/[^\w\-.]/g, '_').toLowerCase();
+              const expectedPath = `/uploads/${sanitized.endsWith('.csv') ? sanitized : sanitized + '.csv'}`;
+              const url = savedPath || expectedPath;
+              window.open(url, '_blank');
+            } catch (_e) {
+              // Ignore
+            }
+          });
+        }
 
         initializeResizing();
         updateToggleButtonPosition();

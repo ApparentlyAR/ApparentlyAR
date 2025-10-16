@@ -90,7 +90,11 @@
       if (!window.AppApi || !window.AppApi.saveCsv) return null;
       const fallback = 'transformed.csv';
       const filename = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || fallback;
-      return await window.AppApi.saveCsv(data, filename, true);
+      const res = await window.AppApi.saveCsv(data, filename, true);
+      if (window.Blockly && window.Blockly.CsvImportData && res && res.path) {
+        window.Blockly.CsvImportData.savedPath = res.path;
+      }
+      return res;
     } catch (_e) {
       // Non-fatal; saving is best-effort
       return null;
