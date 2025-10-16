@@ -36,10 +36,11 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware configuration
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 app.use('/src', express.static('src'));
-app.use(bodyParser.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(bodyParser.json({ limit: '10mb' }));
 
 // Configure multer for handling multipart/form-data (file uploads)
 const multer = require('multer');
@@ -163,6 +164,67 @@ app.post('/api/process-data', async (req, res) => {
   } catch (error) {
     console.error('Data processing error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/save-csv
+ * Persist processed data back to a CSV file on the server.
+ * Body: { data: Array<object>, filename: string, overwrite?: boolean }
+ */
+app.post('/api/save-csv', async (req, res) => {
+  try {
+    const { data, filename, overwrite = true } = req.body || {};
+    if (!Array.isArray(data)) {
+      return res.status(400).json({ error: 'Invalid data: expected array' });
+    }
+    if (!filename || typeof filename !== 'string') {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+
+    // Sanitize filename and ensure .csv extension
+    const safeName = pathModule.basename(filename).replace(/[^\w\-.]/g, '_');
+    const finalName = safeName.toLowerCase().endsWith('.csv') ? safeName : `${safeName}.csv`;
+
+    // Ensure uploads directory exists
+    const uploadsDir = pathModule.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const targetPath = pathModule.join(uploadsDir, finalName);
+    if (!overwrite && fs.existsSync(targetPath)) {
+      return res.status(409).json({ error: 'File exists and overwrite=false' });
+    }
+
+    // Convert to CSV
+    const toCsv = (rows) => {
+      if (!rows.length) return '';
+      const headers = Array.from(
+        rows.reduce((set, row) => {
+          Object.keys(row || {}).forEach((k) => set.add(k));
+          return set;
+        }, new Set())
+      );
+      const escape = (val) => {
+        if (val == null) return '';
+        const s = String(val);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      const lines = [headers.join(',')];
+      for (const row of rows) {
+        lines.push(headers.map((h) => escape(row[h])).join(','));
+      }
+      return lines.join('\n');
+    };
+
+    const csvText = toCsv(data);
+    fs.writeFileSync(targetPath, csvText, 'utf8');
+
+    res.json({ success: true, filename: finalName, path: `/uploads/${finalName}` });
+  } catch (error) {
+    console.error('Save CSV error:', error);
+    res.status(500).json({ error: 'Failed to save CSV' });
   }
 });
 

@@ -304,6 +304,13 @@
         <aside id="data-panel" class="bg-panel flex flex-col overflow-hidden">
             <div class="flex items-center justify-between p-2.5 border-b border-border">
               <strong class="text-sm font-medium">Data Panel</strong>
+              <button id="download-csv-btn"
+              class="bg-sky-400 hover:bg-sky-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              title="Open latest saved CSV in a new tab">
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            </button>
             </div>
           <div id="data-panel-content" class="overflow-auto flex-1 p-2">
               <div class="text-sm text-muted text-center py-8">
@@ -994,6 +1001,23 @@
           if(chartInstance) chartInstance.resize();
           updateToggleButtonPosition();
         });
+
+        // Open latest saved CSV in a new tab
+        const downloadBtn = document.getElementById('download-csv-btn');
+        if (downloadBtn) {
+          downloadBtn.addEventListener('click', async () => {
+            try {
+              const savedPath = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null;
+              const fallbackName = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || 'transformed.csv';
+              const sanitized = fallbackName.replace(/[^\w\-.]/g, '_').toLowerCase();
+              const expectedPath = `/uploads/${sanitized.endsWith('.csv') ? sanitized : sanitized + '.csv'}`;
+              const url = savedPath || expectedPath;
+              window.open(url, '_blank');
+            } catch (_e) {
+              // Ignore
+            }
+          });
+        }
 
         initializeResizing();
         updateToggleButtonPosition();

@@ -25,6 +25,18 @@ class DataProcessor {
     this.groupByData = this.groupByData.bind(this);
     this.calculateColumn = this.calculateColumn.bind(this);
     
+    // Transformation methods
+    this.renameColumn = this.renameColumn.bind(this);
+    this.dropColumn = this.dropColumn.bind(this);
+    this.fillMissing = this.fillMissing.bind(this);
+    this.replaceValues = this.replaceValues.bind(this);
+    this.castType = this.castType.bind(this);
+    this.stringTransform = this.stringTransform.bind(this);
+    this.splitColumn = this.splitColumn.bind(this);
+    this.concatColumns = this.concatColumns.bind(this);
+    this.dropDuplicates = this.dropDuplicates.bind(this);
+    this.roundNumber = this.roundNumber.bind(this);
+    
     // Statistical methods
     this.descriptiveStats = this.descriptiveStats.bind(this);
     this.calculateMean = this.calculateMean.bind(this);
@@ -46,6 +58,18 @@ class DataProcessor {
       select: this.selectColumns,
       groupBy: this.groupByData,
       calculate: this.calculateColumn,
+      
+      // Transformation operations
+      renameColumn: this.renameColumn,
+      dropColumn: this.dropColumn,
+      fillMissing: this.fillMissing,
+      replaceValues: this.replaceValues,
+      castType: this.castType,
+      stringTransform: this.stringTransform,
+      splitColumn: this.splitColumn,
+      concatColumns: this.concatColumns,
+      dropDuplicates: this.dropDuplicates,
+      roundNumber: this.roundNumber,
       
       // Statistical operations
       descriptiveStats: this.descriptiveStats,
@@ -97,8 +121,21 @@ class DataProcessor {
   async processData(data, operations) {
     let processedData = [...data];
     
+    // Validate inputs
+    if (!Array.isArray(operations)) {
+      throw new Error('Operations must be an array');
+    }
+    
     for (const operation of operations) {
+      if (!operation || typeof operation !== 'object') {
+        throw new Error('Each operation must be an object');
+      }
+      
       const { type, params } = operation;
+      
+      if (!type) {
+        throw new Error('Operation type is required');
+      }
       
       if (this.supportedOperations[type]) {
         processedData = await this.supportedOperations[type](processedData, params);
@@ -402,6 +439,245 @@ class DataProcessor {
    */
   getAvailableOperations() {
     return Object.keys(this.supportedOperations);
+  }
+
+  // ========================
+  // Transformation Operations
+  // ========================
+
+  /**
+   * Rename a column in the dataset
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.from - Original column name
+   * @param {string} params.to - New column name
+   * @returns {Array} Data with renamed column
+   */
+  renameColumn(data, params) {
+    const { from, to } = params;
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      // If the source column doesn't exist, do nothing (idempotent on re-run)
+      if (!Object.prototype.hasOwnProperty.call(row, from)) {
+        return row;
+      }
+      const { [from]: value, ...rest } = row;
+      return { ...rest, [to]: value };
+    });
+  }
+
+  /**
+   * Drop a column from the dataset
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name to drop
+   * @returns {Array} Data without the specified column
+   */
+  dropColumn(data, params) {
+    const { column } = params;
+    
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      const { [column]: omitted, ...rest } = row;
+      return rest;
+    });
+  }
+
+  /**
+   * Fill missing values in a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name to fill
+   * @param {*} params.value - Value to fill missing entries with
+   * @returns {Array} Data with filled missing values
+   */
+  fillMissing(data, params) {
+    const { column, value } = params;
+    
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      const val = row[column];
+      const needFill = val === null || val === undefined || val === '';
+      return needFill ? { ...row, [column]: value } : row;
+    });
+  }
+
+  /**
+   * Replace specific values in a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @param {*} params.fromValue - Value to replace
+   * @param {*} params.toValue - Replacement value
+   * @returns {Array} Data with replaced values
+   */
+  replaceValues(data, params) {
+    const { column, fromValue, toValue } = params;
+    
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      const val = row[column];
+      return (String(val) === String(fromValue)) ? { ...row, [column]: toValue } : row;
+    });
+  }
+
+  /**
+   * Cast column values to a specific type
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @param {string} params.to - Target type (number, string, boolean, date)
+   * @returns {Array} Data with cast values
+   */
+  castType(data, params) {
+    const { column, to } = params;
+    
+    const caster = (val) => {
+      if (to === 'number') {
+        const num = Number(val);
+        return Number.isFinite(num) ? num : null;
+      }
+      if (to === 'boolean') {
+        if (typeof val === 'boolean') return val;
+        const str = String(val).toLowerCase();
+        return str === 'true' || str === '1' || str === 'yes';
+      }
+      if (to === 'date') {
+        const timestamp = Date.parse(val);
+        return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+      }
+      return String(val);
+    };
+    
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      return { ...row, [column]: caster(row[column]) };
+    });
+  }
+
+  /**
+   * Apply string transformations to a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @param {string} params.mode - Transformation mode (lower, upper, cap, trim)
+   * @returns {Array} Data with transformed strings
+   */
+  stringTransform(data, params) {
+    const { column, mode } = params;
+    
+    const transformer = (str) => {
+      const s = (str === null || str === undefined) ? '' : String(str);
+      switch (mode) {
+        case 'lower': return s.toLowerCase();
+        case 'upper': return s.toUpperCase();
+        case 'cap': return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+        case 'trim': return s.trim();
+        default: return s;
+      }
+    };
+    
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      return { ...row, [column]: transformer(row[column]) };
+    });
+  }
+
+  /**
+   * Split a column by delimiter into two new columns
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column to split
+   * @param {string} params.delimiter - Delimiter to split on
+   * @param {string} params.output1 - Name for first part
+   * @param {string} params.output2 - Name for second part
+   * @returns {Array} Data with split columns
+   */
+  splitColumn(data, params) {
+    const { column, delimiter, output1, output2 } = params;
+    
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      const parts = String(row[column] ?? '').split(delimiter);
+      return { 
+        ...row, 
+        [output1]: parts[0] ?? '', 
+        [output2]: parts[1] ?? '' 
+      };
+    });
+  }
+
+  /**
+   * Concatenate two columns with a separator
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column1 - First column
+   * @param {string} params.column2 - Second column
+   * @param {string} params.separator - Separator to use
+   * @param {string} params.output - Output column name
+   * @returns {Array} Data with concatenated column
+   */
+  concatColumns(data, params) {
+    const { column1, column2, separator, output } = params;
+    
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      const val1 = row[column1];
+      const val2 = row[column2];
+      const combined = [val1, val2]
+        .filter(v => v !== undefined && v !== null)
+        .join(separator);
+      return { ...row, [output]: combined };
+    });
+  }
+
+  /**
+   * Remove duplicate rows based on a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column to check for duplicates
+   * @returns {Array} Data with duplicates removed
+   */
+  dropDuplicates(data, params) {
+    const { column } = params;
+    const seen = new Set();
+    
+    return data.filter(row => {
+      const key = row && typeof row === 'object' ? row[column] : row;
+      const strKey = String(key);
+      if (seen.has(strKey)) return false;
+      seen.add(strKey);
+      return true;
+    });
+  }
+
+  /**
+   * Round numeric values in a column
+   * 
+   * @param {Array} data - Input data array
+   * @param {Object} params - Parameters
+   * @param {string} params.column - Column name
+   * @param {number} params.decimals - Number of decimal places
+   * @returns {Array} Data with rounded values
+   */
+  roundNumber(data, params) {
+    const { column, decimals } = params;
+    
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      const num = Number(row[column]);
+      const val = Number.isFinite(num) ? Number(num.toFixed(decimals)) : row[column];
+      return { ...row, [column]: val };
+    });
   }
 
   // ========================
