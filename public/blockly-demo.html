@@ -981,28 +981,38 @@
         
         // Listen for chart generation from visualization blocks and persist for AR handoff
         window.addEventListener('chartGenerated', (e) => {
-            console.log('📊 Chart generated event received:', e.detail);
-            const d = e && e.detail ? e.detail : {};
-            if (d && d.config) {
-                try {
-                    const cfg = d.config || {};
-                    const opts = cfg.options || d.options || {};
-                    const json = {
-                        chartType: d.chartType || cfg.type || cfg.chartType || null,
-                        options: opts,
-                        xColumn: d.xColumn || opts.xColumn || cfg.xColumn || null,
-                        yColumn: d.yColumn || opts.yColumn || cfg.yColumn || null,
-                        filename: (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || null,
-                        savedPath: (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null,
-                        savedAt: Date.now()
-                    };
-                    localStorage.setItem('ar_last_visualization', JSON.stringify(json));
-                } catch (err) {
-                    console.warn('Failed to store last visualization for AR:', err);
-                }
-                renderAdvancedChart(d);
+          console.log('🎨 Chart generated event received:', e?.detail);
+          const d = e?.detail ?? {};
+        
+          // Keep previous behavior: only proceed when we have a valid config
+          if (d && d.config) {
+            try {
+              const cfg  = d.config || {};
+              // Prefer event payload first, then fall back to cfg
+              const opts = d.options || cfg.options || {};
+        
+              const json = {
+                chartType: d.chartType || cfg.type || cfg.chartType || null,
+                options:   opts,
+                xColumn:   d.xColumn || opts.xColumn || cfg.xColumn || null,
+                yColumn:   d.yColumn || opts.yColumn || cfg.yColumn || null,
+                filename:
+                  (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || null,
+                savedPath:
+                  (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null,
+                savedAt:   Date.now(),
+              };
+        
+              localStorage.setItem('ar_last_visualization', JSON.stringify(json));
+            } catch (err) {
+              console.warn('Failed to store last visualization for AR:', err);
             }
+        
+            // Only render when payload is complete
+            renderAdvancedChart(d);
+          }
         });
+
 
         workspace.addChangeListener((event) => {
           // Fix for toolbox not closing
