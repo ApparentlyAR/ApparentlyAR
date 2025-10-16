@@ -661,10 +661,20 @@
             await handleAdvancedVisualization(result);
           }
         } else {
-          console.log('📊 Taking standard data rendering path');
-          // Standard data rendering for basic blocks
-          renderDataPanel(result);
-          renderDataVisualization(result);
+          // If a chart was requested or just generated, skip fallback to avoid double render
+          const hasVizBlocks = /\[generate_visualization\]|\[quick_chart\]|histogram_config|heatmap_config/.test(code);
+          const justCharted = (Date.now() - (window.__lastChartGeneratedAt || 0)) < 3000;
+          if (!justCharted) {
+            if (!hasVizBlocks) {
+              console.log('📊 Taking standard data rendering path');
+              renderDataPanel(result);
+              renderDataVisualization(result);
+            } else {
+              console.log('⏭️ Skipping fallback render (visualization blocks present)');
+            }
+          } else {
+            console.log('⏭️ Skipping fallback render (chartGenerated just fired)');
+          }
         }
         
         // Dispatch event for backward compatibility with React components
@@ -812,6 +822,10 @@
     function renderDataVisualization(data, chartConfig = null) {
         console.log('🖼️ renderDataVisualization called with:', { data: !!data, chartConfig });
         const container = document.getElementById('react-chart-container');
+        if (!container) {
+            console.warn('renderDataVisualization: container not found; aborting to avoid Chart.js errors');
+            return;
+        }
         const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
         if (chartInstance) {
             console.log('🖼️ Destroying existing chart instance');
@@ -946,6 +960,10 @@
 
     // --- App Initialization ---
     function initializeApp() {
+        if (window.__apparentlyAR_init_done) {
+          return; // prevent double init and duplicate listeners
+        }
+        window.__apparentlyAR_init_done = true;
         // Set up breadcrumb navigation
         const urlParams = new URLSearchParams(window.location.search);
         const projectId = urlParams.get('id');
@@ -979,13 +997,71 @@
             if (window.BlocklyAutofill) window.BlocklyAutofill.updateAllBlocksWithAutofill();
         });
         
-        // Listen for chart generation from visualization blocks
-        window.addEventListener('chartGenerated', (e) => {
-            console.log('📊 Chart generated event received:', e.detail);
-            if (e.detail && e.detail.config) {
-                renderAdvancedChart(e.detail);
+        // Listen for chart generation from visualization blocks and persist for AR handoff
+        if (!window.__chartGeneratedHandlerInstalled) {
+        window.addEventListener('chartGenerated', async (e) => {
+          console.log('🎨 Chart generated event received:', e?.detail);
+          const d = e?.detail ?? {};
+        
+          // Keep previous behavior: only proceed when we have a valid config
+          if (d && d.config) {
+            try {
+              const cfg  = d.config || {};
+              // Prefer event payload first, then fall back to cfg
+              const opts = d.options || cfg.options || {};
+
+              // Persist the exact dataset used so AR can pick up the latest CSV
+              try {
+                const dataToPersist = (Array.isArray(d?.data) ? d.data :
+                  (window.Blockly?.CsvImportData?.data && Array.isArray(window.Blockly.CsvImportData.data)
+                    ? window.Blockly.CsvImportData.data : null));
+                if (dataToPersist && dataToPersist.length) {
+                  if (window.Blockly && window.Blockly.CsvImportData) {
+                    window.Blockly.CsvImportData.data = dataToPersist;
+                  }
+                  if (window.BlocklyPersistCsv) {
+                    const res = await window.BlocklyPersistCsv(dataToPersist);
+                    if (res?.path && window.Blockly?.CsvImportData) {
+                      window.Blockly.CsvImportData.savedPath = res.path;
+                    }
+                  } else if (window.AppApi?.saveCsv) {
+                    const fallback = (window.Blockly?.CsvImportData?.filename) || 'transformed.csv';
+                    const res = await window.AppApi.saveCsv(dataToPersist, fallback, true);
+                    if (res?.path && window.Blockly?.CsvImportData) {
+                      window.Blockly.CsvImportData.savedPath = res.path;
+                    }
+                  }
+                }
+              } catch (persistErr) {
+                console.warn('Failed to persist dataset for AR (non-fatal):', persistErr);
+              }
+
+              const json = {
+                chartType: d.chartType || cfg.type || cfg.chartType || null,
+                options:   opts,
+                xColumn:   d.xColumn || opts.xColumn || cfg.xColumn || null,
+                yColumn:   d.yColumn || opts.yColumn || cfg.yColumn || null,
+                filename:
+                  (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || null,
+                savedPath:
+                  (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null,
+                savedAt:   Date.now(),
+              };
+
+              localStorage.setItem('ar_last_visualization', JSON.stringify(json));
+              // Mark the moment a chart was just generated to suppress fallback rendering
+              window.__lastChartGeneratedAt = Date.now();
+            } catch (err) {
+              console.warn('Failed to store last visualization for AR:', err);
             }
+
+            // Only render when payload is complete
+            renderAdvancedChart(d);
+          }
         });
+        window.__chartGeneratedHandlerInstalled = true;
+        }
+
 
         workspace.addChangeListener((event) => {
           // Fix for toolbox not closing
@@ -1023,7 +1099,7 @@
         updateToggleButtonPosition();
     }
     
-    document.addEventListener('DOMContentLoaded', initializeApp);
+    // initializeApp is triggered after header.html is loaded above
   </script>
 </body>
 </html>

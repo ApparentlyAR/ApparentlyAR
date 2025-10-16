@@ -388,10 +388,18 @@
     const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
-      console.error('[generate_visualization] No data available');
-      if (window.reactSetOutput) window.reactSetOutput('Error: No data available for visualization');
-      if (window.reactSetError) window.reactSetError(true);
-      return;
+      console.warn('[generate_visualization] No data available (dispatching empty event to sync UI/AR)');
+      try { window.__lastChartGeneratedAt = Date.now(); } catch(_) {}
+      window.dispatchEvent(new CustomEvent('chartGenerated', {
+        detail: {
+          config: null,
+          chartType: config.chartType,
+          xColumn: (config && config.options) ? config.options.xColumn : null,
+          yColumn: (config && config.options) ? config.options.yColumn : null,
+          data: []
+        }
+      }));
+      return { handled: 'chartGenerated', chartType: config.chartType, empty: true };
     }
 
     if (!config.chartType) {
@@ -407,14 +415,22 @@
       throw new Error('Chart API not available');
     }
 
+    // Persist the exact dataset used for visualization so AR can load it
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __input; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__input); } catch (_) {} }
+
     const chartResult = await window.AppApi.generateChart(__input, config.chartType, config.options || {});
     console.log('[generate_visualization] Chart generated:', chartResult);
 
+    // Mark time to help UI suppress fallback rendering, then trigger event
+    try { window.__lastChartGeneratedAt = Date.now(); } catch(_) {}
     // Trigger chart display event
     window.dispatchEvent(new CustomEvent('chartGenerated', {
       detail: {
         config: chartResult.config,
         chartType: config.chartType,
+        xColumn: (config && config.options) ? config.options.xColumn : null,
+        yColumn: (config && config.options) ? config.options.yColumn : null,
         data: __input
       }
     }));
@@ -459,10 +475,12 @@
     const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
-      console.error('[quick_chart] No data available');
-      if (window.reactSetOutput) window.reactSetOutput('Error: No data available for chart');
-      if (window.reactSetError) window.reactSetError(true);
-      return;
+      console.warn('[quick_chart] No data available (dispatching empty event to sync UI/AR)');
+      try { window.__lastChartGeneratedAt = Date.now(); } catch(_) {}
+      window.dispatchEvent(new CustomEvent('chartGenerated', {
+        detail: { config: null, chartType: '${chartType}', xColumn: '${xColumn}', yColumn: '${yColumn}', data: [] }
+      }));
+      return { handled: 'chartGenerated', chartType: '${chartType}', empty: true };
     }
 
     // Check if columns are placeholders
@@ -479,6 +497,10 @@
       throw new Error('Chart API not available');
     }
 
+    // Persist the exact dataset used for visualization so AR can load it
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __input; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__input); } catch (_) {} }
+
     const chartResult = await window.AppApi.generateChart(__input, '${chartType}', {
       xColumn: '${xColumn}',
       yColumn: '${yColumn}',
@@ -487,11 +509,15 @@
 
     console.log('[quick_chart] Chart generated:', chartResult);
 
+    // Mark time to help UI suppress fallback rendering, then trigger event
+    try { window.__lastChartGeneratedAt = Date.now(); } catch(_) {}
     // Trigger chart display event
     window.dispatchEvent(new CustomEvent('chartGenerated', {
       detail: {
         config: chartResult.config,
         chartType: '${chartType}',
+        xColumn: '${xColumn}',
+        yColumn: '${yColumn}',
         data: __input
       }
     }));
@@ -535,7 +561,10 @@
     const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
-      throw new Error('No data available');
+      console.warn('[histogram_config] No data available (dispatching empty event to sync UI/AR)');
+      try { window.__lastChartGeneratedAt = Date.now(); } catch(_) {}
+      window.dispatchEvent(new CustomEvent('chartGenerated', { detail: { config: null, chartType: 'histogram', data: [] } }));
+      return { handled: 'chartGenerated', chartType: 'histogram', empty: true };
     }
 
     if (!window.AppApi || !window.AppApi.generateChart) {
@@ -592,7 +621,10 @@
     const __input = (window.BlocklyNormalizeData ? window.BlocklyNormalizeData(__rawData) : (__rawData || []));
 
     if (!Array.isArray(__input) || __input.length === 0) {
-      throw new Error('No data available');
+      console.warn('[heatmap_config] No data available (dispatching empty event to sync UI/AR)');
+      try { window.__lastChartGeneratedAt = Date.now(); } catch(_) {}
+      window.dispatchEvent(new CustomEvent('chartGenerated', { detail: { config: null, chartType: 'heatmap', data: [] } }));
+      return { handled: 'chartGenerated', chartType: 'heatmap', empty: true };
     }
 
     if (!window.AppApi || !window.AppApi.generateChart) {
