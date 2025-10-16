@@ -623,6 +623,7 @@ class HybridARController {
     const refreshBtn = document.getElementById('refresh-files');
     const uploadBtn = document.getElementById('upload-file-btn');
     const uploadInput = document.getElementById('upload-file');
+    const loadFromBlocklyBtn = document.getElementById('load-from-blockly');
     
     const handler = () => this.chartManager.updateMarkerChartFromControls('marker-0');
     const dataInfoHandler = () => this.updateDataInfo();
@@ -747,6 +748,38 @@ class HybridARController {
     if (removeMockMarkerBtn) {
       removeMockMarkerBtn.addEventListener('click', () => {
         this.removeMockMarkerChart();
+      });
+    }
+
+    // Load last visualization produced in Blockly (handoff via localStorage and /uploads CSV)
+    if (loadFromBlocklyBtn) {
+      loadFromBlocklyBtn.addEventListener('click', async () => {
+        try {
+          const raw = localStorage.getItem('ar_last_visualization');
+          if (!raw) throw new Error('No saved visualization found. Generate one in Blockly first.');
+          const cfg = JSON.parse(raw);
+          // Switch to Blockly Data source
+          const dataSourceSel = document.getElementById('data-source');
+          if (dataSourceSel) dataSourceSel.value = 'blockly';
+          const blocklyGroup = document.getElementById('blockly-data-group');
+          const sampleGroup = document.getElementById('sample-data-group');
+          if (blocklyGroup && sampleGroup) { blocklyGroup.style.display = 'block'; sampleGroup.style.display = 'none'; }
+          await this.refreshBlocklyFiles();
+          const sel = document.getElementById('blockly-filename');
+          if (sel && cfg.filename) { sel.value = cfg.filename; }
+          if (cfg.filename) { await this.loadBlocklyData(cfg.filename); }
+          this.updateDataInfo();
+          this.updateMarkerChart();
+          // Apply chart type if provided
+          if (cfg.chartType) {
+            const typeSel = document.getElementById('chart-type');
+            if (typeSel) typeSel.value = cfg.chartType;
+          }
+          await this.spawnMockMarkerChart();
+        } catch (err) {
+          console.error('Load from Blockly error:', err);
+          this.updateStatus('Load from Blockly failed: ' + err.message, 'error');
+        }
       });
     }
   }
