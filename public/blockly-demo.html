@@ -344,32 +344,32 @@
   </div>
 
   <!-- Help Modal -->
-  <div id="help-overlay" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="help-slide-title">
-    <div class="w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-2xl p-6 flex flex-col gap-5 overflow-hidden">
-      <div class="w-full h-56 bg-gradient-to-br from-blue-100 to-slate-200 rounded-xl flex items-center justify-center text-slate-500 font-semibold tracking-wide relative overflow-hidden" id="help-slide-image-wrapper">
-        <img id="help-slide-image" src="" alt="" class="max-h-full max-w-full object-contain hidden" />
+  <div id="help-overlay" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] flex items-center justify-center px-8 md:px-12" role="dialog" aria-modal="true" aria-labelledby="help-slide-title">
+    <div class="w-full max-w-5xl max-h-[92vh] bg-white rounded-3xl shadow-2xl p-10 flex flex-col gap-6 overflow-hidden">
+      <div class="w-full h-[28rem] bg-gradient-to-br from-blue-100 to-slate-200 rounded-2xl flex items-center justify-center text-slate-500 font-semibold tracking-wide relative overflow-hidden" id="help-slide-image-wrapper">
+        <img id="help-slide-image" src="" alt="" class="max-h-full max-w-full object-contain hidden md:max-h-[26rem]" />
         <span id="help-slide-image-label">Slide Image</span>
       </div>
-      <div class="space-y-2">
-        <h2 class="text-2xl font-semibold text-slate-800" id="help-slide-title">Welcome to ApparentlyAR Blockly</h2>
-        <p class="text-base leading-relaxed text-slate-600" id="help-slide-text">
+      <div class="space-y-3">
+        <h2 class="text-3xl font-semibold text-slate-800" id="help-slide-title">Welcome to ApparentlyAR Blockly</h2>
+        <p class="text-lg leading-relaxed text-slate-600 whitespace-pre-line" id="help-slide-text">
           Learn how to combine blocks to fetch data, transform it, and generate visualizations.
         </p>
       </div>
-      <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center justify-between gap-4">
         <button type="button" id="help-prev-btn" aria-label="Previous slide"
-          class="min-w-[3rem] h-12 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center font-semibold transition-colors duration-200 hover:bg-indigo-100 hover:border-indigo-200 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed">
+          class="min-w-[3.25rem] h-12 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center text-lg font-semibold transition-colors duration-200 hover:bg-indigo-100 hover:border-indigo-200 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed">
           &#8592;
         </button>
         <div class="flex-1 h-1.5 bg-slate-200 rounded-full relative overflow-hidden" aria-hidden="true">
           <div class="absolute inset-y-0 left-0 bg-indigo-500 rounded-full transition-all duration-200" id="help-progress-bar" style="width: 0%;"></div>
         </div>
         <button type="button" id="help-next-btn" aria-label="Next slide"
-          class="min-w-[3rem] h-12 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center font-semibold transition-colors duration-200 hover:bg-indigo-100 hover:border-indigo-200 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed">
+          class="min-w-[3.25rem] h-12 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center text-lg font-semibold transition-colors duration-200 hover:bg-indigo-100 hover:border-indigo-200 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed">
           &#8594;
         </button>
       </div>
-      <button type="button" class="self-end mt-2 inline-flex items-center gap-2 rounded-full bg-rose-400 hover:bg-rose-500 text-white font-semibold px-6 py-2.5 transition-colors duration-200" id="help-skip-btn">
+      <button type="button" class="self-end mt-2 inline-flex items-center gap-2 rounded-full bg-rose-400 hover:bg-rose-500 text-white font-semibold px-7 py-3 transition-colors duration-200" id="help-skip-btn">
         Skip tutorial
       </button>
     </div>
@@ -636,6 +636,16 @@
 
     const helpSlides = [
       {
+        title: 'Welcome to ApparentlyAR Simulation!',
+        text: 'Learn how to combine blocks to fetch data, transform it, and generate visualizations.\n We will teach you on how to use the interface.',
+        hideImage: true
+      },
+      {
+        title: 'Interface',
+        text: 'Here is how everything is laid out',
+        imageSrc: '/src/assets/Interface_Hints.svg'
+      },
+      {
         title: 'Start with CSV Import',
         text: 'Use the CSV Import block to load data from a CSV. Click the "+" button to choose a CSV file from the project page or any csv in your computer.',
         imageSrc: '/src/assets/Import_CSV.svg',
@@ -660,6 +670,7 @@
     ];
     let helpSlideIndex = 0;
     const helpOverlay = document.getElementById('help-overlay');
+    const helpSlideImageWrapper = document.getElementById('help-slide-image-wrapper');
     const helpSlideImage = document.getElementById('help-slide-image');
     const helpSlideImageLabel = document.getElementById('help-slide-image-label');
     const helpSlideTitle = document.getElementById('help-slide-title');
@@ -673,23 +684,30 @@
     function renderHelpSlide() {
       if (!helpSlides.length) return;
       const slide = helpSlides[Math.min(Math.max(helpSlideIndex, 0), helpSlides.length - 1)];
-      if (helpSlideImage) {
-        if (slide.imageSrc) {
-          helpSlideImage.src = slide.imageSrc;
-          helpSlideImage.alt = slide.imageAlt || slide.title;
-          helpSlideImage.classList.remove('hidden');
-          if (helpSlideImageLabel) helpSlideImageLabel.classList.add('hidden');
+      if (helpSlideImageWrapper) {
+        if (slide.hideImage) {
+          helpSlideImageWrapper.classList.add('hidden');
         } else {
-          helpSlideImage.src = '';
-          helpSlideImage.alt = '';
-          helpSlideImage.classList.add('hidden');
-          if (helpSlideImageLabel) {
-            helpSlideImageLabel.classList.remove('hidden');
-            helpSlideImageLabel.textContent = slide.imageLabel || 'Slide Image';
+          helpSlideImageWrapper.classList.remove('hidden');
+          if (helpSlideImage) {
+            if (slide.imageSrc) {
+              helpSlideImage.src = slide.imageSrc;
+              helpSlideImage.alt = slide.imageAlt || slide.title;
+              helpSlideImage.classList.remove('hidden');
+              if (helpSlideImageLabel) helpSlideImageLabel.classList.add('hidden');
+            } else {
+              helpSlideImage.src = '';
+              helpSlideImage.alt = '';
+              helpSlideImage.classList.add('hidden');
+              if (helpSlideImageLabel) {
+                helpSlideImageLabel.classList.remove('hidden');
+                helpSlideImageLabel.textContent = slide.imageLabel || 'Slide Image';
+              }
+            }
           }
         }
       }
-      if (!slide.imageSrc && helpSlideImageLabel && !helpSlideImageLabel.textContent) {
+      if ((!slide.imageSrc || slide.hideImage) && helpSlideImageLabel && !helpSlideImageLabel.textContent) {
         helpSlideImageLabel.textContent = slide.imageLabel || 'Slide Image';
       }
       if (helpSlideTitle) helpSlideTitle.textContent = slide.title;
@@ -763,6 +781,32 @@
         changeHelpSlide(-1);
       }
     });
+
+    // Make it so that it is only a one time view (initial help)
+    const HELP_SEEN_KEY = 'apparentlyar:blocklyHelpSeen';
+    function shouldShowHelpOnLoad() {
+      if (typeof window === 'undefined' || !window.localStorage) return false;
+      try {
+        return window.localStorage.getItem(HELP_SEEN_KEY) !== 'true';
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function markHelpSeen() {
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      try {
+        window.localStorage.setItem(HELP_SEEN_KEY, 'true');
+      } catch (_) {
+        /* ignore storage errors */
+      }
+    }
+
+    const originalOpenHelpModal = openHelpModal;
+    openHelpModal = function () {
+      originalOpenHelpModal();
+      markHelpSeen();
+    };
 
 
     function updateToggleButtonPosition() {
@@ -1188,6 +1232,12 @@
 
         initializeResizing();
         updateToggleButtonPosition();
+
+        if (shouldShowHelpOnLoad()) {
+          setTimeout(() => {
+            openHelpModal();
+          }, 300);
+        }
     }
     
     document.addEventListener('DOMContentLoaded', initializeApp);
