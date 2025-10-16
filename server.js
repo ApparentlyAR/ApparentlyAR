@@ -168,6 +168,108 @@ app.post('/api/process-data', async (req, res) => {
 });
 
 /**
+ * GET /api/list-files
+ * List all CSV files in the uploads directory.
+ */
+app.get('/api/list-files', async (req, res) => {
+  try {
+    const uploadsDir = pathModule.join(__dirname, 'uploads');
+    
+    if (!fs.existsSync(uploadsDir)) {
+      return res.json({ success: true, files: [] });
+    }
+
+    const files = fs.readdirSync(uploadsDir)
+      .filter(file => file.toLowerCase().endsWith('.csv'))
+      .sort((a, b) => {
+        // Sort by modification time, newest first
+        const statA = fs.statSync(pathModule.join(uploadsDir, a));
+        const statB = fs.statSync(pathModule.join(uploadsDir, b));
+        return statB.mtime - statA.mtime;
+      });
+
+    res.json({ success: true, files });
+  } catch (error) {
+    console.error('List files error:', error);
+    res.status(500).json({ error: 'Failed to list files' });
+  }
+});
+
+/**
+ * POST /api/upload-csv
+ * Accept a CSV file upload and place it into the uploads directory.
+ * Form field: file (multipart/form-data)
+ */
+app.post('/api/upload-csv', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Ensure uploads directory exists
+    const uploadsDir = pathModule.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const original = req.file.originalname || 'uploaded.csv';
+    const safeName = pathModule.basename(original).replace(/[^\w\-.]/g, '_');
+    const finalName = safeName.toLowerCase().endsWith('.csv') ? safeName : `${safeName}.csv`;
+    const targetPath = pathModule.join(uploadsDir, finalName);
+
+    // Move the temp file to uploads
+    const tempPath = req.file.path;
+    const fileBuffer = fs.readFileSync(tempPath);
+    fs.writeFileSync(targetPath, fileBuffer);
+    try { fs.unlinkSync(tempPath); } catch (_) {}
+
+    return res.json({ success: true, filename: finalName, path: `/uploads/${finalName}` });
+  } catch (error) {
+    console.error('Upload CSV error:', error);
+    res.status(500).json({ error: 'Failed to upload CSV' });
+  }
+});
+
+/**
+ * GET /api/get-csv/:filename
+ * Retrieve processed CSV data from the server.
+ * Returns the latest saved data for the given filename.
+ */
+app.get('/api/get-csv/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    if (!filename || typeof filename !== 'string') {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+
+    // Sanitize filename and ensure .csv extension
+    const safeName = pathModule.basename(filename).replace(/[^\w\-.]/g, '_');
+    const finalName = safeName.toLowerCase().endsWith('.csv') ? safeName : `${safeName}.csv`;
+
+    const filePath = pathModule.join(__dirname, 'uploads', finalName);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Read and parse the CSV file (use backend csvHandler to avoid browser-only deps)
+    const csvText = fs.readFileSync(filePath, 'utf8');
+    const parsed = parseCSV(csvText); // { headers, data }
+    const rows = Array.isArray(parsed?.data) ? parsed.data : [];
+
+    res.json({ 
+      success: true, 
+      data: rows,
+      filename: finalName,
+      path: `/uploads/${finalName}`
+    });
+  } catch (error) {
+    console.error('Get CSV error:', error);
+    res.status(500).json({ error: 'Failed to retrieve CSV' });
+  }
+});
+
+/**
  * POST /api/save-csv
  * Persist processed data back to a CSV file on the server.
  * Body: { data: Array<object>, filename: string, overwrite?: boolean }
