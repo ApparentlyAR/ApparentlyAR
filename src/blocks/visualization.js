@@ -415,6 +415,8 @@
       detail: {
         config: chartResult.config,
         chartType: config.chartType,
+        xColumn: (config && config.options) ? config.options.xColumn : null,
+        yColumn: (config && config.options) ? config.options.yColumn : null,
         data: __input
       }
     }));
@@ -492,6 +494,8 @@
       detail: {
         config: chartResult.config,
         chartType: '${chartType}',
+        xColumn: '${xColumn}',
+        yColumn: '${yColumn}',
         data: __input
       }
     }));

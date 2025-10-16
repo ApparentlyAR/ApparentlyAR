@@ -467,7 +467,7 @@ class ChartManager {
    * @param {Array} data - Chart data
    * @returns {Chart} Chart.js instance
    */
-  generateChart(canvas, type, data) {
+  generateChart(canvas, type, data, chartConfigOverride = null) {
     const ctx = canvas.getContext('2d');
 
     let chartConfig = {
@@ -514,8 +514,8 @@ class ChartManager {
       }
     };
     
-    // Configure data based on type and dataset
-    chartConfig.data = this.prepareChartData(data, type);
+    // Configure data based on type and dataset (allow override from Blockly cfg)
+    chartConfig.data = this.prepareChartData(data, type, chartConfigOverride);
     
     return new Chart(ctx, chartConfig);
   }
@@ -526,7 +526,7 @@ class ChartManager {
    * @param {string} type - Chart type
    * @returns {Object} Chart.js data configuration
    */
-  prepareChartData(data, type) {
+  prepareChartData(data, type, chartConfigOverride = null) {
     if (!data || data.length === 0) {
       return { labels: [], datasets: [] };
     }
@@ -539,6 +539,11 @@ class ChartManager {
       data.some(row => isNaN(parseFloat(row[col])) && row[col] !== null && row[col] !== '')
     );
 
+    // If override config supplied (from Blockly), use it regardless of source
+    if (chartConfigOverride && (chartConfigOverride.xColumn || chartConfigOverride.yColumn)) {
+      return this.prepareOverriddenChartData(data, type, chartConfigOverride);
+    }
+
     // For custom data, use intelligent column selection
     if (this.dataSource === 'custom') {
       return this.prepareCustomChartData(data, type, columns, numericColumns, textColumns);
@@ -546,6 +551,56 @@ class ChartManager {
 
     // For sample data, use predefined configurations
     return this.prepareSampleChartData(data, type);
+  }
+
+  /**
+   * Prepare chart data using an explicit override (from Blockly config)
+   */
+  prepareOverriddenChartData(data, type, cfg) {
+    const xCol = cfg.xColumn;
+    const yCol = cfg.yColumn;
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
+
+    if (type === 'scatter') {
+      if (!xCol || !yCol) return { labels: [], datasets: [] };
+      return {
+        datasets: [{
+          label: `${xCol} vs ${yCol}`,
+          data: data.map(row => ({ x: parseFloat(row[xCol]) || 0, y: parseFloat(row[yCol]) || 0 })),
+          backgroundColor: colors[0]
+        }]
+      };
+    }
+
+    // Bar / Line / Pie: single Y column against labels from X column
+    if (xCol && yCol) {
+      const labels = data.map(row => String(row[xCol] ?? ''));
+      const series = data.map(row => parseFloat(row[yCol]) || 0);
+      if (type === 'pie') {
+        return {
+          labels,
+          datasets: [{ data: series, backgroundColor: labels.map((_, i) => `${colors[i % colors.length]}CC`) }]
+        };
+      }
+      return {
+        labels,
+        datasets: [{
+          label: yCol,
+          data: series,
+          backgroundColor: `${colors[0]}80`,
+          borderColor: colors[0]
+        }]
+      };
+    }
+
+    // If only one provided, fall back to custom detection
+    return this.prepareCustomChartData(
+      data,
+      type,
+      Object.keys(data[0] || {}),
+      Object.keys(data[0] || {}).filter(c => data.some(r => !isNaN(parseFloat(r[c])))),
+      Object.keys(data[0] || {}).filter(c => data.some(r => isNaN(parseFloat(r[c]))))
+    );
   }
 
   /**

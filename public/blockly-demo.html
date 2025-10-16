@@ -982,13 +982,16 @@
         // Listen for chart generation from visualization blocks and persist for AR handoff
         window.addEventListener('chartGenerated', (e) => {
             console.log('📊 Chart generated event received:', e.detail);
-            if (e.detail && e.detail.config) {
+            const d = e && e.detail ? e.detail : {};
+            if (d && d.config) {
                 try {
+                    const cfg = d.config || {};
+                    const opts = cfg.options || d.options || {};
                     const json = {
-                        chartType: e.detail.config.chartType || null,
-                        options: e.detail.config.options || {},
-                        xColumn: e.detail.config.xColumn || null,
-                        yColumn: e.detail.config.yColumn || null,
+                        chartType: d.chartType || cfg.type || cfg.chartType || null,
+                        options: opts,
+                        xColumn: d.xColumn || opts.xColumn || cfg.xColumn || null,
+                        yColumn: d.yColumn || opts.yColumn || cfg.yColumn || null,
                         filename: (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || null,
                         savedPath: (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null,
                         savedAt: Date.now()
@@ -997,7 +1000,7 @@
                 } catch (err) {
                     console.warn('Failed to store last visualization for AR:', err);
                 }
-                renderAdvancedChart(e.detail);
+                renderAdvancedChart(d);
             }
         });
 

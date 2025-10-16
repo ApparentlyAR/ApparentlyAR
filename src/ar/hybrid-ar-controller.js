@@ -446,9 +446,29 @@ class HybridARController {
         if (assets) { try { assets.appendChild(canvas); } catch (_) {} }
       }
 
-      // (Re)generate chart on the canvas
+      // (Re)generate chart on the canvas (include override from last saved visualization if present)
+      let overrideCfg = null;
+      try {
+        const rawCfg = localStorage.getItem('ar_last_visualization');
+        if (rawCfg) {
+          const parsed = JSON.parse(rawCfg);
+          const xCol = parsed?.xColumn || parsed?.options?.xColumn || parsed?.config?.xColumn || parsed?.config?.options?.xColumn || null;
+          const yCol = parsed?.yColumn || parsed?.options?.yColumn || parsed?.config?.yColumn || parsed?.config?.options?.yColumn || null;
+          if (xCol || yCol) {
+            overrideCfg = { xColumn: xCol, yColumn: yCol };
+          }
+          // If chart type provided, prefer it
+          const savedType = parsed?.chartType || parsed?.config?.chartType || parsed?.config?.type || null;
+          if (savedType) {
+            try { document.getElementById('chart-type').value = parsed.chartType; } catch (_) {}
+            chartType = savedType;
+          }
+        }
+      } catch (_) {}
+
       try { this.devMarkerChart && this.devMarkerChart.destroy && this.devMarkerChart.destroy(); } catch (_) {}
-      this.devMarkerChart = this.chartManager.generateChart(canvas, chartType, dataForChart);
+      this.devMarkerChart = this.chartManager.generateChart(canvas, chartType, dataForChart, overrideCfg);
+      console.log('[AR] Chart rendered with:', { chartType, overrideCfg, rows: Array.isArray(dataForChart) ? dataForChart.length : 0 });
 
       // Create (or reuse) plane entity
       let entity = devContainer.querySelector('[data-marker-chart]');
@@ -758,6 +778,18 @@ class HybridARController {
           const raw = localStorage.getItem('ar_last_visualization');
           if (!raw) throw new Error('No saved visualization found. Generate one in Blockly first.');
           const cfg = JSON.parse(raw);
+          const deriveFilename = () => {
+            if (cfg.savedPath && typeof cfg.savedPath === 'string') {
+              const idx = cfg.savedPath.lastIndexOf('/');
+              return cfg.savedPath.substring(idx + 1);
+            }
+            const base = (cfg.filename || '').trim();
+            if (!base) return '';
+            // Mirror server sanitization: replace invalids with '_' and ensure .csv
+            const safe = base.replace(/[^\w\-.]/g, '_');
+            return safe.toLowerCase().endsWith('.csv') ? safe : `${safe}.csv`;
+          };
+          const expectedFile = deriveFilename();
           // Switch to Blockly Data source
           const dataSourceSel = document.getElementById('data-source');
           if (dataSourceSel) dataSourceSel.value = 'blockly';
@@ -766,8 +798,25 @@ class HybridARController {
           if (blocklyGroup && sampleGroup) { blocklyGroup.style.display = 'block'; sampleGroup.style.display = 'none'; }
           await this.refreshBlocklyFiles();
           const sel = document.getElementById('blockly-filename');
-          if (sel && cfg.filename) { sel.value = cfg.filename; }
-          if (cfg.filename) { await this.loadBlocklyData(cfg.filename); }
+          if (sel) {
+            // Try exact match, then case-insensitive match
+            let chosen = '';
+            const options = Array.from(sel.options || []);
+            const exact = options.find(o => o.value === expectedFile);
+            if (exact) chosen = exact.value;
+            else {
+              const lower = options.find(o => o.value.toLowerCase() === expectedFile.toLowerCase());
+              if (lower) chosen = lower.value;
+            }
+            if (!chosen && options.length > 0) {
+              // As last resort, use most recent file from list-files (already sorted by mtime)
+              chosen = options[0].value;
+            }
+            if (chosen) sel.value = chosen;
+            if (chosen) await this.loadBlocklyData(chosen);
+          } else if (expectedFile) {
+            await this.loadBlocklyData(expectedFile);
+          }
           this.updateDataInfo();
           this.updateMarkerChart();
           // Apply chart type if provided
