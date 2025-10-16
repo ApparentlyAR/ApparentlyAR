@@ -88,6 +88,20 @@ async function processData(data, operations = []) {
 }
 
 /**
+ * Save processed data to CSV on the server
+ * @param {Array} data - rows to persist
+ * @param {string} filename - base filename (will be sanitized)
+ * @param {boolean} overwrite - whether to overwrite if file exists
+ */
+async function saveCsv(data, filename, overwrite = true) {
+  return httpJson('/api/save-csv', {
+    method: 'POST',
+    headers: BASE_HEADERS,
+    body: JSON.stringify({ data, filename, overwrite })
+  });
+}
+
+/**
  * Generate chart configuration from data
  * 
  * Creates chart configurations for various chart types using the backend
@@ -149,6 +163,7 @@ if (typeof window !== 'undefined') {
 	window.AppApi = {
 		getTestData,
 		processData,
+    saveCsv,
 		generateChart,
 		generateArVisualization
 	};

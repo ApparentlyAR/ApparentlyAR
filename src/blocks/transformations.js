@@ -79,6 +79,28 @@
   }
 
   /**
+   * Persist the current dataset to a CSV file on the server.
+   * Writes to /uploads/<filename> (sanitized) via backend API.
+   * Attached to window for access from generated block code.
+   * @param {Array<Object>} data
+   */
+  async function persistCsvToServer(data) {
+    try {
+      if (!Array.isArray(data)) return null;
+      if (!window.AppApi || !window.AppApi.saveCsv) return null;
+      const fallback = 'transformed.csv';
+      const filename = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || fallback;
+      return await window.AppApi.saveCsv(data, filename, true);
+    } catch (_e) {
+      // Non-fatal; saving is best-effort
+      return null;
+    }
+  }
+  if (typeof window !== 'undefined') {
+    window.BlocklyPersistCsv = persistCsvToServer;
+  }
+
+  /**
    * Initializes all transformation block definitions and JavaScript generators
    * 
    * Defines 10 transformation blocks:
@@ -315,6 +337,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'renameColumn', params: { from: '${from}', to: '${to}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Rename column error:', error);
@@ -362,6 +385,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'dropColumn', params: { column: '${column}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Drop column error:', error);
@@ -410,6 +434,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'fillMissing', params: { column: '${column}', value: '${value}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Fill missing error:', error);
@@ -459,6 +484,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'replaceValues', params: { column: '${column}', fromValue: '${fromVal}', toValue: '${toVal}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Replace values error:', error);
@@ -510,6 +536,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'castType', params: { column: '${column}', to: '${to}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Cast type error:', error);
@@ -561,6 +588,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'stringTransform', params: { column: '${column}', mode: '${mode}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('String transform error:', error);
@@ -611,6 +639,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'splitColumn', params: { column: '${column}', delimiter: '${delim}', output1: '${out1}', output2: '${out2}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Split column error:', error);
@@ -661,6 +690,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'concatColumns', params: { column1: '${c1}', column2: '${c2}', separator: '${sep}', output: '${out}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Concat columns error:', error);
@@ -708,6 +738,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'dropDuplicates', params: { column: '${column}' } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Drop duplicates error:', error);
@@ -756,6 +787,7 @@
     const __res = await window.AppApi.processData(__input, [{ type: 'roundNumber', params: { column: '${column}', decimals: ${decimals} } }]);
     const __data = (__res && __res.data) ? __res.data : __input;
     if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
     return __data;
   } catch (error) {
     console.error('Round number error:', error);

@@ -456,9 +456,12 @@ class DataProcessor {
    */
   renameColumn(data, params) {
     const { from, to } = params;
-    
     return data.map(row => {
       if (!row || typeof row !== 'object') return row;
+      // If the source column doesn't exist, do nothing (idempotent on re-run)
+      if (!Object.prototype.hasOwnProperty.call(row, from)) {
+        return row;
+      }
       const { [from]: value, ...rest } = row;
       return { ...rest, [to]: value };
     });
