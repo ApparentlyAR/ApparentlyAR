@@ -345,47 +345,47 @@
       const safeValue = value.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
       const code = `(async () => {
-  const __normalize = window.BlocklyNormalizeData || function(input) {
-    if (Array.isArray(input)) { return input; }
-    if (input && Array.isArray(input.data)) { return input.data; }
-    if (typeof input === 'string') {
-      try {
-        const parsed = JSON.parse(input);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (_) {
-        return [];
-      }
-    }
-    return [];
-  };
-  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? (window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data) : null);
-  try {
-    let __rawData = ${dataCode};
-    if (__rawData && typeof __rawData.then === 'function') {
-      __rawData = await __rawData;
-    }
-    let __input = __normalize(__rawData);
-    if (!Array.isArray(__input)) {
-      __input = __csvFallback();
-    }
-    if (!Array.isArray(__input)) {
-      for (let __i = 0; __i < 60 && !Array.isArray(__input); __i++) {
-        await new Promise(r => setTimeout(r, 50));
-        __input = __csvFallback();
-      }
-    }
-    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${safeColumn}') || (${JSON.stringify(['value'])}).includes('${safeValue}');
-    if (__isPlaceholder) { return __input; }
-    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
-    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
-    const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);
-    const __data = (__res && __res.data) ? __res.data : __input;
-    return __data;
-  } catch (error) {
-    console.error('Filter data error:', error);
-    return __csvFallback();
-  }
-})()`;
+        const __normalize = window.BlocklyNormalizeData || function(input) {
+          if (Array.isArray(input)) { return input; }
+          if (input && Array.isArray(input.data)) { return input.data; }
+          if (typeof input === 'string') {
+            try {
+              const parsed = JSON.parse(input);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+              return [];
+            }
+          }
+          return [];
+        };
+        const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? (window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data) : null);
+        try {
+          let __rawData = ${dataCode};
+          if (__rawData && typeof __rawData.then === 'function') {
+            __rawData = await __rawData;
+          }
+          let __input = __normalize(__rawData);
+          if (!Array.isArray(__input)) {
+            __input = __csvFallback();
+          }
+          if (!Array.isArray(__input)) {
+            for (let __i = 0; __i < 60 && !Array.isArray(__input); __i++) {
+              await new Promise(r => setTimeout(r, 50));
+              __input = __csvFallback();
+            }
+          }
+          const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${safeColumn}') || (${JSON.stringify(['value'])}).includes('${safeValue}');
+          if (__isPlaceholder) { return __input; }
+          if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+          if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+          const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);
+          const __data = (__res && __res.data) ? __res.data : __input;
+          return __data;
+        } catch (error) {
+          console.error('Filter data error:', error);
+          return __csvFallback();
+        }
+      })()`;
       
       return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
     };

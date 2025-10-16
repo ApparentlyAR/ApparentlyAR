@@ -258,11 +258,6 @@
               class="bg-panel border border-border text-white text-text hover:bg-yellow-500 bg-yellow-400 font-medium py-2 px-4 rounded-lg transition-colors">
               Enter AR
             </button>
-            <button id="download-csv-btn"
-              class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-              title="Open latest saved CSV in a new tab">
-              Save CSV
-            </button>
              <button id="show-code-btn" onclick="toggleCodePanel()"
               class="bg-panel border border-border text-white text-text hover:bg-red-300 bg-red-400 font-medium py-2 px-4 rounded-lg transition-colors">
               Show code
@@ -309,6 +304,11 @@
         <aside id="data-panel" class="bg-panel flex flex-col overflow-hidden">
             <div class="flex items-center justify-between p-2.5 border-b border-border">
               <strong class="text-sm font-medium">Data Panel</strong>
+              <button id="download-csv-btn"
+              class="bg-sky-400 hover:bg-sky-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              title="Open latest saved CSV in a new tab">
+              Save CSV
+            </button>
             </div>
           <div id="data-panel-content" class="overflow-auto flex-1 p-2">
               <div class="text-sm text-muted text-center py-8">
