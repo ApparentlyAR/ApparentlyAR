@@ -191,23 +191,21 @@ class DataProcessor {
           const maxTime = Date.parse(max);
           const haveDateBounds = Number.isFinite(minTime) && Number.isFinite(maxTime);
 
-          return data.filter(row => {
-            const cellValue = row[column];
-            if (cellValue === null || cellValue === undefined || cellValue === '') return false;
+          // Check if the current row's cellValue is between min and max
+          if (cellValue === null || cellValue === undefined || cellValue === '') return false;
 
-            if (haveNumericBounds) {
-              const vNum = Number(cellValue);
-              if (Number.isFinite(vNum)) return vNum >= minNum && vNum <= maxNum;
-            }
-            if (haveDateBounds) {
-              const vTime = Date.parse(cellValue);
-              if (Number.isFinite(vTime)) return vTime >= minTime && vTime <= maxTime;
-            }
-            const vStr = String(cellValue);
-            const minStr = String(min);
-            const maxStr = String(max);
-            return vStr.localeCompare(minStr) >= 0 && vStr.localeCompare(maxStr) <= 0;
-          });
+          if (haveNumericBounds) {
+            const vNum = Number(cellValue);
+            if (Number.isFinite(vNum)) return vNum >= minNum && vNum <= maxNum;
+          }
+          if (haveDateBounds) {
+            const vTime = Date.parse(cellValue);
+            if (Number.isFinite(vTime)) return vTime >= minTime && vTime <= maxTime;
+          }
+          const vStr = String(cellValue);
+          const minStr = String(min);
+          const maxStr = String(max);
+          return vStr.localeCompare(minStr) >= 0 && vStr.localeCompare(maxStr) <= 0;
         }
         default:
           return true;
