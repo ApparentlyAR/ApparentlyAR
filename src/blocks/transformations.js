@@ -6,11 +6,12 @@
  * manipulation operations including renaming columns, dropping duplicates, 
  * rounding numbers, splitting/concatenating columns, and more.
  * 
- * All transformations operate on in-memory CSV data and update the global
- * Blockly.CsvImportData.data state. These complement server-side operations
- * by providing quick, synchronous per-row edits.
+ * All transformations use the backend API for processing and update the global
+ * Blockly.CsvImportData.data state. This ensures consistent data processing
+ * and better performance for large datasets.
  * 
  * Features:
+ * - Backend API integration for all transformations
  * - Automatic column dropdown population (autofill)
  * - Real-time data transformation
  * - Chainable operations
@@ -235,6 +236,7 @@
     ]);
 
     if (Blockly.JavaScript) {
+      // Global normalizer to coerce various inputs (PapaParse result, JSON string) into an array of rows
       if (typeof window !== 'undefined' && !window.BlocklyNormalizeData) {
         window.BlocklyNormalizeData = function(input) {
           if (Array.isArray(input)) return input;
@@ -277,8 +279,7 @@
       /**
        * JavaScript generator for rename column block
        * 
-       * Generates code that renames a column in the dataset by destructuring
-       * the old column name and creating a new property with the new name.
+       * Generates code that renames a column in the dataset using the backend API.
        * Updates global CSV data state.
        * 
        * @param {Object} block - Blockly block instance
@@ -288,29 +289,45 @@
         const dataCode = getDataCode(block);
         const from = (block.getFieldValue('FROM') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
         const to = (block.getFieldValue('TO') || 'new_name').replace(/'/g, "\\'").replace(/"/g,'\\"');
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${from}')) return __input;\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    const { ['${from}']: __val, ...rest } = row;\n`+
-          `    const out = { ...rest };\n`+
-          `    out['${to}'] = (__val !== undefined) ? __val : row['${from}'];\n`+
-          `    return out;\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${from}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'renameColumn', params: { from: '${from}', to: '${to}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Rename column error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
       /**
        * JavaScript generator for drop column block
        * 
-       * Generates code that removes a column from the dataset using destructuring.
+       * Generates code that removes a column from the dataset using the backend API.
        * Updates global CSV data state.
        * 
        * @param {Object} block - Blockly block instance
@@ -319,20 +336,38 @@
       Blockly.JavaScript['tf_drop_column'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    const { ['${column}']: __omit, ...rest } = row;\n`+
-          `    return rest;\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'dropColumn', params: { column: '${column}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Drop column error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
@@ -340,7 +375,7 @@
        * JavaScript generator for fill missing values block
        * 
        * Generates code that replaces null, undefined, or empty string values
-       * in a column with a specified fill value.
+       * in a column with a specified fill value using the backend API.
        * 
        * @param {Object} block - Blockly block instance
        * @returns {Array} Tuple of [code string, order precedence]
@@ -349,31 +384,46 @@
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
         const value = (block.getFieldValue('VALUE') || '0').replace(/'/g, "\\'").replace(/"/g,'\\"');
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
-          `  const __fill = '${value}';\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    const v = row['${column}'];\n`+
-          `    const needFill = v === null || v === undefined || v === '';\n`+
-          `    if (!needFill) return row;\n`+
-          `    return { ...row, ['${column}']: __fill };\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'fillMissing', params: { column: '${column}', value: '${value}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Fill missing error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
       /**
        * JavaScript generator for replace values block
        * 
-       * Generates code that replaces specific values in a column with new values.
-       * Uses string comparison to match values.
+       * Generates code that replaces specific values in a column with new values
+       * using the backend API.
        * 
        * @param {Object} block - Blockly block instance
        * @returns {Array} Tuple of [code string, order precedence]
@@ -383,27 +433,45 @@
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
         const fromVal = (block.getFieldValue('FROM_VALUE') || 'old').replace(/'/g, "\\'").replace(/"/g,'\\"');
         const toVal = (block.getFieldValue('TO_VALUE') || 'new').replace(/'/g, "\\'").replace(/"/g,'\\"');
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    const v = row['${column}'];\n`+
-          `    return (String(v) === '${fromVal}') ? { ...row, ['${column}']: '${toVal}' } : row;\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'replaceValues', params: { column: '${column}', fromValue: '${fromVal}', toValue: '${toVal}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Replace values error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
       /**
        * JavaScript generator for cast type block
        * 
-       * Generates code that converts column values to a specified type:
+       * Generates code that converts column values to a specified type using the backend API:
        * - number: Converts to finite numbers or null
        * - boolean: Converts to true/false based on truthiness
        * - date: Parses dates and converts to ISO strings
@@ -416,32 +484,45 @@
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
         const to = block.getFieldValue('TO') || 'number';
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
-          `  const __caster = (v) => {\n`+
-          `    if ('${to}'==='number') { const n = Number(v); return Number.isFinite(n) ? n : null; }\n`+
-          `    if ('${to}'==='boolean') { if (typeof v==='boolean') return v; const s=String(v).toLowerCase(); return s==='true'||s==='1'||s==='yes'; }\n`+
-          `    if ('${to}'==='date') { const t=Date.parse(v); return Number.isFinite(t)? new Date(t).toISOString(): null; }\n`+
-          `    return String(v);\n`+
-          `  };\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    return { ...row, ['${column}']: __caster(row['${column}']) };\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'castType', params: { column: '${column}', to: '${to}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Cast type error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
       /**
        * JavaScript generator for string transform block
        * 
-       * Generates code that applies string transformations:
+       * Generates code that applies string transformations using the backend API:
        * - lower: Convert to lowercase
        * - upper: Convert to uppercase
        * - cap: Capitalize first letter
@@ -454,35 +535,46 @@
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/"/g,'\\"');
         const mode = block.getFieldValue('MODE') || 'lower';
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
-          `  const __tx = (s) => {\n`+
-          `    const str = (s===null||s===undefined)?'':String(s);\n`+
-          `    if ('${mode}'==='lower') return str.toLowerCase();\n`+
-          `    if ('${mode}'==='upper') return str.toUpperCase();\n`+
-          `    if ('${mode}'==='cap') return str.charAt(0).toUpperCase()+str.slice(1).toLowerCase();\n`+
-          `    if ('${mode}'==='trim') return str.trim();\n`+
-          `    return str;\n`+
-          `  };\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    return { ...row, ['${column}']: __tx(row['${column}']) };\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'stringTransform', params: { column: '${column}', mode: '${mode}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('String transform error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
       /**
        * JavaScript generator for split column block
        * 
-       * Generates code that splits a column by a delimiter into two new columns.
-       * Preserves the original column and adds two new columns for the split parts.
+       * Generates code that splits a column by a delimiter into two new columns
+       * using the backend API. Preserves the original column and adds two new columns for the split parts.
        * 
        * @param {Object} block - Blockly block instance
        * @returns {Array} Tuple of [code string, order precedence]
@@ -493,28 +585,46 @@
         const delim = (block.getFieldValue('DELIM') || ',').replace(/'/g, "\\'").replace(/\"/g,'\\"');
         const out1 = (block.getFieldValue('OUT1') || 'part1').replace(/'/g, "\\'").replace(/\"/g,'\\"');
         const out2 = (block.getFieldValue('OUT2') || 'part2').replace(/'/g, "\\'").replace(/\"/g,'\\"');
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    const parts = String(row['${column}'] ?? '').split('${delim}');\n`+
-          `    return { ...row, ['${out1}']: parts[0] ?? '', ['${out2}']: parts[1] ?? '' };\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'splitColumn', params: { column: '${column}', delimiter: '${delim}', output1: '${out1}', output2: '${out2}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Split column error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
       /**
        * JavaScript generator for concatenate columns block
        * 
-       * Generates code that combines two columns with a separator into a new column.
-       * Preserves the original columns.
+       * Generates code that combines two columns with a separator into a new column
+       * using the backend API. Preserves the original columns.
        * 
        * @param {Object} block - Blockly block instance
        * @returns {Array} Tuple of [code string, order precedence]
@@ -525,28 +635,46 @@
         const c2 = (block.getFieldValue('COL2') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
         const sep = (block.getFieldValue('SEP') || ' ').replace(/'/g, "\\'").replace(/\"/g,'\\"');
         const out = (block.getFieldValue('OUT') || 'combined').replace(/'/g, "\\'").replace(/\"/g,'\\"');
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${c1}') || ${JSON.stringify(['column'])}.includes('${c2}')) return __input;\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    const a = row['${c1}']; const b = row['${c2}'];\n`+
-          `    return { ...row, ['${out}']: [a,b].filter(v=>v!==undefined&&v!==null).join('${sep}') };\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${c1}') || (${JSON.stringify(['column'])}).includes('${c2}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'concatColumns', params: { column1: '${c1}', column2: '${c2}', separator: '${sep}', output: '${out}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Concat columns error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
       /**
        * JavaScript generator for drop duplicates block
        * 
-       * Generates code that removes duplicate rows based on a column value.
-       * Keeps the first occurrence and removes subsequent duplicates.
+       * Generates code that removes duplicate rows based on a column value
+       * using the backend API. Keeps the first occurrence and removes subsequent duplicates.
        * 
        * @param {Object} block - Blockly block instance
        * @returns {Array} Tuple of [code string, order precedence]
@@ -554,23 +682,38 @@
       Blockly.JavaScript['tf_drop_duplicates'] = function(block) {
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
-          `  const seen = new Set();\n`+
-          `  const __data = __input.filter(row => {\n`+
-          `    const key = row && typeof row==='object' ? row['${column}'] : row;\n`+
-          `    const s = String(key);\n`+
-          `    if (seen.has(s)) return false;\n`+
-          `    seen.add(s);\n`+
-          `    return true;\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'dropDuplicates', params: { column: '${column}' } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Drop duplicates error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
@@ -578,7 +721,7 @@
        * JavaScript generator for round number block
        * 
        * Generates code that rounds numeric values in a column to a specified
-       * number of decimal places. Non-numeric values are preserved unchanged.
+       * number of decimal places using the backend API. Non-numeric values are preserved unchanged.
        * 
        * @param {Object} block - Blockly block instance
        * @returns {Array} Tuple of [code string, order precedence]
@@ -587,21 +730,38 @@
         const dataCode = getDataCode(block);
         const column = (block.getFieldValue('COLUMN') || 'column').replace(/'/g, "\\'").replace(/\"/g,'\\"');
         const decimals = Number(block.getFieldValue('DECIMALS') || 0);
-        const code = `(async () => {\n`+
-          `  let __raw = ${dataCode};\n`+
-          `  if (__raw && typeof __raw.then==='function') __raw = await __raw;\n`+
-          `  const __input = (window.BlocklyNormalizeData?window.BlocklyNormalizeData(__raw):(__raw||[]));\n`+
-          `  if (!Array.isArray(__input) || __input.length===0) return __input;\n`+
-          `  if (${JSON.stringify(['column'])}.includes('${column}')) return __input;\n`+
-          `  const __data = __input.map(row => {\n`+
-          `    if (!row || typeof row!=='object') return row;\n`+
-          `    const n = Number(row['${column}']);\n`+
-          `    const val = Number.isFinite(n) ? Number(n.toFixed(${decimals})) : row['${column}'];\n`+
-          `    return { ...row, ['${column}']: val };\n`+
-          `  });\n`+
-          `  (${assignCsvData.toString()})(__data);\n`+
-          `  return __data;\n`+
-          `})()`;
+        const code = `(async () => {
+  const __normalize = window.BlocklyNormalizeData || function(input) {
+    if (Array.isArray(input)) return input;
+    if (input && Array.isArray(input.data)) return input.data;
+    if (typeof input === 'string') {
+      try { const p = JSON.parse(input); return Array.isArray(p) ? p : []; } catch (_) { return []; }
+    }
+    return [];
+  };
+  const __csvFallback = () => __normalize(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null);
+  try {
+    let __rawData = ${dataCode};
+    if (__rawData && typeof __rawData.then === 'function') {
+      __rawData = await __rawData;
+    }
+    let __input = __normalize(__rawData);
+    if (!Array.isArray(__input)) {
+      __input = __csvFallback();
+    }
+    if (!Array.isArray(__input)) { throw new Error('Input data must be an array'); }
+    const __isPlaceholder = (${JSON.stringify(['column'])}).includes('${column}');
+    if (__isPlaceholder) { return __input; }
+    if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
+    const __res = await window.AppApi.processData(__input, [{ type: 'roundNumber', params: { column: '${column}', decimals: ${decimals} } }]);
+    const __data = (__res && __res.data) ? __res.data : __input;
+    if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+    return __data;
+  } catch (error) {
+    console.error('Round number error:', error);
+    return __csvFallback();
+  }
+})()`;
         return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
       };
 
@@ -741,5 +901,3 @@
 
   waitForBlockly();
 })();
-
-

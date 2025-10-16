@@ -26,6 +26,168 @@ global.window = global.window || {};
 global.console = console;
 global.setTimeout = setTimeout;
 
+// Mock the API
+global.window.AppApi = {
+  processData: jest.fn().mockImplementation(async (data, operations) => {
+    // Simulate backend processing by applying operations directly
+    let result = Array.isArray(data) ? [...data] : [];
+
+    for (const operation of (operations || [])) {
+      const { type, params = {} } = operation || {};
+
+      switch (type) {
+        case 'renameColumn': {
+          const { from, to } = params;
+          result = result.map(row => {
+            const { [from]: value, ...rest } = row;
+            return { ...rest, [to]: value };
+          });
+          break;
+        }
+        case 'dropColumn': {
+          const { column } = params;
+          result = result.map(row => {
+            const { [column]: _, ...rest } = row;
+            return rest;
+          });
+          break;
+        }
+        case 'fillMissing': {
+          const { column, value } = params;
+          result = result.map(row => ({
+            ...row,
+            [column]: row[column] == null || row[column] === '' ? value : row[column]
+          }));
+          break;
+        }
+        case 'replaceValues': {
+          const { column, fromValue, toValue } = params;
+          result = result.map(row => ({
+            ...row,
+            [column]: row[column] === fromValue ? toValue : row[column]
+          }));
+          break;
+        }
+        case 'castType': {
+          const { column, to } = params;
+          result = result.map(row => {
+            const value = row[column];
+            let convertedValue = value;
+            switch (to) {
+              case 'number':
+                convertedValue = value == null || value === '' ? null : Number(value);
+                break;
+              case 'boolean': {
+                if (typeof value === 'boolean') {
+                  convertedValue = value;
+                } else if (typeof value === 'string') {
+                  const v = value.trim().toLowerCase();
+                  convertedValue = v === 'true' || v === '1';
+                } else if (typeof value === 'number') {
+                  convertedValue = value !== 0;
+                } else {
+                  convertedValue = Boolean(value);
+                }
+                break;
+              }
+              case 'string':
+                convertedValue = value == null ? '' : String(value);
+                break;
+              case 'date':
+                convertedValue = value == null ? null : new Date(value);
+                break;
+            }
+            return { ...row, [column]: convertedValue };
+          });
+          break;
+        }
+        case 'stringTransform': {
+          const { column, mode } = params;
+          result = result.map(row => {
+            const value = row[column];
+            let transformedValue = value;
+            if (typeof value === 'string') {
+              switch (mode) {
+                case 'lower':
+                  transformedValue = value.toLowerCase();
+                  break;
+                case 'upper':
+                  transformedValue = value.toUpperCase();
+                  break;
+                case 'cap':
+                  transformedValue = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+                  break;
+                case 'trim':
+                  transformedValue = value.trim();
+                  break;
+              }
+            }
+            return { ...row, [column]: transformedValue };
+          });
+          break;
+        }
+        case 'splitColumn': {
+          const { column, delimiter, output1, output2 } = params;
+          result = result.map(row => {
+            const value = row[column];
+            if (typeof value === 'string' && value.includes(delimiter)) {
+              const parts = value.split(delimiter);
+              return {
+                ...row,
+                [output1]: parts[0] || '',
+                [output2]: parts[1] || ''
+              };
+            }
+            return row;
+          });
+          break;
+        }
+        case 'concatColumns': {
+          const { column1, column2, separator, output } = params;
+          result = result.map(row => ({
+            ...row,
+            [output]: `${row[column1] || ''}${separator}${row[column2] || ''}`
+          }));
+          break;
+        }
+        case 'dropDuplicates': {
+          const { column } = params;
+          const seen = new Set();
+          result = result.filter(row => {
+            const key = row[column];
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          break;
+        }
+        case 'roundNumber': {
+          const { column, decimals } = params;
+          result = result.map(row => ({
+            ...row,
+            [column]: typeof row[column] === 'number' ? Number(row[column].toFixed(decimals)) : row[column]
+          }));
+          break;
+        }
+      }
+    }
+
+    return { data: result };
+  })
+};
+
+// Mock CSV data management
+global.window.Blockly = global.window.Blockly || {};
+global.window.Blockly.CsvImportData = {
+  data: []
+};
+
+// Mock autofill system
+global.window.BlocklyTransformAutofill = {
+  applyAutofillToTransformationBlock: jest.fn(),
+  updateAllTransformationBlocksWithAutofill: jest.fn()
+};
+
 // Mock Blockly environment
 global.Blockly = {
   defineBlocksWithJsonArray: jest.fn(),
@@ -97,6 +259,9 @@ describe('Data Transformation Blocks Integration', () => {
       { name: 'Diana', age: 28.8, salary: 65000, department: 'Sales', score: 88.7, email: 'diana@company.com' },
       { name: 'Eve', age: 25.7, salary: 50000, department: 'Engineering', score: 85.5, email: 'eve@company.com' } // Duplicate for testing
     ];
+
+    // Initialize CSV data
+    window.Blockly.CsvImportData.data = [...testData];
 
     // Mock block that returns field values
     mockBlock = {
