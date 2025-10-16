@@ -101,6 +101,13 @@ async function saveCsv(data, filename, overwrite = true) {
   });
 }
 
+async function getCsv(filename) {
+  return httpJson(`/api/get-csv/${encodeURIComponent(filename)}`, {
+    method: 'GET',
+    headers: BASE_HEADERS
+  });
+}
+
 /**
  * Generate chart configuration from data
  * 
@@ -164,6 +171,7 @@ if (typeof window !== 'undefined') {
 		getTestData,
 		processData,
     saveCsv,
+    getCsv,
 		generateChart,
 		generateArVisualization
 	};

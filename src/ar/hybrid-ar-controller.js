@@ -36,6 +36,12 @@ class HybridARController {
     };
     window.setCalibration = (x, y) => this.coordinateSystem.setCalibration(x, y);
     window.resetCalibration = () => this.coordinateSystem.resetCalibration();
+    window.refreshBlocklyFiles = () => this.refreshBlocklyFiles();
+    window.loadBlocklyData = (filename) => this.loadBlocklyData(filename);
+    window.spawnDevChart = () => this.spawnDevChart();
+    window.removeDevChart = () => this.removeDevChart();
+    window.spawnMockMarkerChart = () => this.spawnMockMarkerChart();
+    window.removeMockMarkerChart = () => this.removeMockMarkerChart();
   }
 
   /**
@@ -62,6 +68,9 @@ class HybridARController {
 
       // Initialize marker-anchored chart (marker 0) based on current controls
       this.chartManager.updateMarkerChartFromControls('marker-0');
+
+      // Initialize data info display
+      this.updateDataInfo();
 
       this.updateStatus('Hybrid AR ready - markers active, start hand tracking when ready', 'ready');
       
@@ -126,13 +135,22 @@ class HybridARController {
   monitorMarkers() {
     const markers = document.querySelectorAll('a-marker');
     let visibleMarkers = 0;
-    
-    markers.forEach(marker => {
-      if (marker.object3D && marker.object3D.visible) {
-        visibleMarkers++;
-      }
-    });
-    
+
+    // Dev: allow mocking marker-0 visibility via checkbox
+    const mockMarker = document.getElementById('mock-marker-0');
+    const isMocked = mockMarker && mockMarker.checked;
+    if (isMocked) {
+      visibleMarkers = 1;
+      // Keep the marker-anchored chart updated when mocking is enabled
+      this.chartManager.updateMarkerChartFromControls('marker-0');
+    } else {
+      markers.forEach(marker => {
+        if (marker.object3D && marker.object3D.visible) {
+          visibleMarkers++;
+        }
+      });
+    }
+
     const markerStatus = document.getElementById('marker-status');
     if (visibleMarkers > 0) {
       markerStatus.textContent = `${visibleMarkers} marker(s) detected`;
@@ -285,6 +303,284 @@ class HybridARController {
   }
 
   /**
+   * Refresh the list of available Blockly files
+   */
+  async refreshBlocklyFiles() {
+    try {
+      this.updateStatus('Refreshing Blockly files...', 'detecting');
+      
+      // Get list of files from uploads directory
+      const response = await fetch('/api/list-files');
+      if (!response.ok) {
+        throw new Error('Failed to fetch file list');
+      }
+      
+      const result = await response.json();
+      const fileSelect = document.getElementById('blockly-filename');
+      
+      if (result.success && result.files && result.files.length > 0) {
+        fileSelect.innerHTML = result.files.map(file => 
+          `<option value="${file}">${file}</option>`
+        ).join('');
+        
+        // Auto-select first file if none selected
+        if (!fileSelect.value && result.files.length > 0) {
+          fileSelect.value = result.files[0];
+          await this.loadBlocklyData(result.files[0]);
+        }
+      } else {
+        fileSelect.innerHTML = '<option value="">No files available</option>';
+      }
+      
+      this.updateStatus('Files refreshed', 'ready');
+    } catch (error) {
+      console.error('Error refreshing files:', error);
+      this.updateStatus('Failed to refresh files: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Load data from a Blockly CSV file
+   * @param {string} filename - Name of the CSV file
+   */
+  async loadBlocklyData(filename) {
+    if (!filename) {
+      console.warn('No filename provided for Blockly data loading');
+      return;
+    }
+
+    try {
+      this.updateStatus(`Loading ${filename}...`, 'detecting');
+      
+      if (!window.AppApi || !window.AppApi.getCsv) {
+        throw new Error('API not available');
+      }
+      
+      const result = await window.AppApi.getCsv(filename);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load data');
+      }
+      
+      // Load data into chart manager
+      const success = this.chartManager.loadCustomData(result.data, filename);
+      if (!success) {
+        throw new Error('Failed to load data into chart manager');
+      }
+      
+      // Update UI
+      this.updateDataInfo();
+      this.updateMarkerChart();
+      
+      this.updateStatus(`Loaded ${filename} (${result.data.length} rows)`, 'ready');
+    } catch (error) {
+      console.error('Error loading Blockly data:', error);
+      this.updateStatus('Failed to load data: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Update the data info display
+   */
+  updateDataInfo() {
+    const info = this.chartManager.getDataSourceInfo();
+    const sourceEl = document.getElementById('current-source');
+    const datasetEl = document.getElementById('current-dataset');
+    const rowsEl = document.getElementById('current-rows');
+    const columnsEl = document.getElementById('current-columns');
+    
+    if (info.source === 'custom') {
+      sourceEl.textContent = 'Blockly Data';
+      datasetEl.textContent = info.filename;
+      rowsEl.textContent = info.rowCount;
+      columnsEl.textContent = info.columns.length;
+    } else {
+      sourceEl.textContent = 'Sample Data';
+      const sampleSelect = document.getElementById('sample-data');
+      datasetEl.textContent = sampleSelect.options[sampleSelect.selectedIndex].text;
+      const currentData = this.chartManager.getCurrentData();
+      rowsEl.textContent = currentData.length;
+      columnsEl.textContent = Object.keys(currentData[0] || {}).length;
+    }
+  }
+
+  /**
+   * Update marker chart with current data
+   */
+  updateMarkerChart() {
+    this.chartManager.updateMarkerChartFromControls('marker-0');
+  }
+
+  /**
+   * Spawn a marker-anchored chart even if physical marker isn't present
+   * Creates an a-plane under marker-0 and binds it to a canvas just like AR.js would.
+   */
+  async spawnMockMarkerChart() {
+    try {
+      await this.ensureBlocklyDataLoaded();
+      const marker = document.getElementById('marker-0');
+      if (!marker) {
+        throw new Error('marker-0 entity not found');
+      }
+
+      // Ensure a plane exists and a chart canvas is created via ChartManager
+      this.chartManager.createOrUpdateMarkerChart('marker-0', document.getElementById('chart-type').value, document.getElementById('sample-data').value);
+
+      // Re-anchor the chart entity to the camera so it renders dead-center
+      const entity = marker.querySelector('[data-marker-chart]');
+      const camera = document.querySelector('a-entity[camera]');
+      if (entity && camera) {
+        entity.setAttribute('id', 'mock-marker-chart-entity');
+        try { camera.appendChild(entity); } catch (_) {}
+        entity.setAttribute('visible', true);
+        entity.setAttribute('position', '0 0 -2.5'); // dead-center, ~2.5m in front
+        entity.setAttribute('rotation', '0 180 0'); // face camera (camera looks down -Z)
+        entity.setAttribute('width', '1.2');
+        entity.setAttribute('height', '0.9');
+
+        // Re-apply material src to ensure canvas texture binding survives re-parenting
+        const entry = (this.chartManager.markerCharts || {})['marker-0'];
+        const canvasId = entry && entry.canvas ? entry.canvas.id : null;
+        if (canvasId) {
+          entity.setAttribute('material', `shader: flat; src: #${canvasId}; transparent: true; side: double`);
+        }
+        // Force texture refresh after re-parenting so the chart is visible
+        try { this.chartManager.forceMaterialRefresh(entity); } catch (_) {}
+      }
+
+      this.updateStatus('Mock marker chart spawned (centered)', 'ready');
+    } catch (error) {
+      console.error('Error spawning mock marker chart:', error);
+      this.updateStatus('Failed to spawn marker chart: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Remove the mock marker chart entity if present
+   */
+  removeMockMarkerChart() {
+    try {
+      const marker = document.getElementById('marker-0');
+      const camera = document.querySelector('a-entity[camera]');
+      let entity = null;
+      if (marker) entity = marker.querySelector('[data-marker-chart]');
+      if (!entity && camera) entity = camera.querySelector('#mock-marker-chart-entity');
+      if (entity) {
+        try { entity.remove(); } catch (_) {}
+      }
+      this.updateStatus('Mock marker chart removed', 'ready');
+    } catch (error) {
+      console.error('Error removing mock marker chart:', error);
+    }
+  }
+
+  /**
+   * Spawn a dev mode chart overlay for testing without markers
+   */
+  async spawnDevChart() {
+    try {
+      const overlay = document.getElementById('dev-chart-overlay');
+      const canvas = document.getElementById('dev-chart-canvas');
+      
+      if (!overlay || !canvas) {
+        console.error('Dev chart elements not found');
+        return;
+      }
+
+      // Ensure Blockly data is loaded if selected
+      await this.ensureBlocklyDataLoaded();
+
+      // Get current chart configuration
+      const chartType = document.getElementById('chart-type').value;
+      const currentData = this.chartManager.getCurrentData();
+      
+      // Generate chart on the dev canvas
+      const chart = this.chartManager.generateChart(canvas, chartType, currentData);
+      
+      // Store reference for cleanup
+      this.devChart = chart;
+      
+      // Show the overlay
+      overlay.style.display = 'block';
+      
+      // Update status
+      this.updateStatus('Dev chart spawned - no marker needed!', 'ready');
+      
+      console.log('Dev chart spawned with', chartType, 'chart using current data');
+    } catch (error) {
+      console.error('Error spawning dev chart:', error);
+      this.updateStatus('Failed to spawn dev chart: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Ensure Blockly data is loaded when data source is 'blockly'.
+   */
+  async ensureBlocklyDataLoaded() {
+    try {
+      const dataSourceSel = document.getElementById('data-source');
+      const isBlockly = dataSourceSel && dataSourceSel.value === 'blockly';
+      const needsLoad = this.chartManager.dataSource !== 'custom' || !this.chartManager.customData;
+      if (isBlockly && needsLoad) {
+        const blocklyFileSel = document.getElementById('blockly-filename');
+        let filename = blocklyFileSel ? blocklyFileSel.value : '';
+        if (!filename && window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) {
+          filename = window.Blockly.CsvImportData.filename;
+        }
+        if (filename) {
+          await this.loadBlocklyData(filename);
+        }
+      }
+    } catch (_) { /* non-fatal */ }
+  }
+
+  /**
+   * Update dev chart if it's currently visible
+   */
+  updateDevChartIfVisible() {
+    const overlay = document.getElementById('dev-chart-overlay');
+    if (overlay && overlay.style.display === 'block' && this.devChart) {
+      // Re-spawn the chart with new settings
+      this.removeDevChart();
+      setTimeout(() => { this.spawnDevChart(); }, 100);
+    }
+  }
+
+  /**
+   * Remove the dev mode chart overlay
+   */
+  removeDevChart() {
+    try {
+      const overlay = document.getElementById('dev-chart-overlay');
+      
+      if (!overlay) {
+        console.error('Dev chart overlay not found');
+        return;
+      }
+
+      // Destroy chart instance if it exists
+      if (this.devChart) {
+        try {
+          this.devChart.destroy();
+        } catch (e) {
+          console.warn('Error destroying dev chart:', e);
+        }
+        this.devChart = null;
+      }
+
+      // Hide the overlay
+      overlay.style.display = 'none';
+      
+      // Update status
+      this.updateStatus('Dev chart removed', 'ready');
+      
+      console.log('Dev chart removed');
+    } catch (error) {
+      console.error('Error removing dev chart:', error);
+      this.updateStatus('Failed to remove dev chart: ' + error.message, 'error');
+    }
+  }
+
+  /**
    * Setup event listeners
    */
   setupEventListeners() {
@@ -305,14 +601,108 @@ class HybridARController {
     // Update marker 0 chart when controls change
     const typeSel = document.getElementById('chart-type');
     const dataSel = document.getElementById('sample-data');
+    const dataSourceSel = document.getElementById('data-source');
+    const blocklyFileSel = document.getElementById('blockly-filename');
+    const refreshBtn = document.getElementById('refresh-files');
+    
     const handler = () => this.chartManager.updateMarkerChartFromControls('marker-0');
+    const dataInfoHandler = () => this.updateDataInfo();
+    
     if (typeSel) {
-      typeSel.addEventListener('change', handler);
-      typeSel.addEventListener('input', handler);
+      typeSel.addEventListener('change', () => {
+        handler();
+        this.updateDevChartIfVisible();
+      });
+      typeSel.addEventListener('input', () => {
+        handler();
+        this.updateDevChartIfVisible();
+      });
     }
     if (dataSel) {
-      dataSel.addEventListener('change', handler);
-      dataSel.addEventListener('input', handler);
+      dataSel.addEventListener('change', () => {
+        handler();
+        dataInfoHandler();
+      });
+      dataSel.addEventListener('input', () => {
+        handler();
+        dataInfoHandler();
+      });
+    }
+    
+    // Handle data source switching
+    if (dataSourceSel) {
+      dataSourceSel.addEventListener('change', async (e) => {
+        const source = e.target.value;
+        const sampleGroup = document.getElementById('sample-data-group');
+        const blocklyGroup = document.getElementById('blockly-data-group');
+        
+        if (source === 'sample') {
+          sampleGroup.style.display = 'block';
+          blocklyGroup.style.display = 'none';
+          this.chartManager.useSampleData();
+        } else if (source === 'blockly') {
+          sampleGroup.style.display = 'none';
+          blocklyGroup.style.display = 'block';
+          await this.refreshBlocklyFiles();
+          // Auto-load selected file if any
+          const sel = document.getElementById('blockly-filename');
+          const selected = sel && sel.value ? sel.value : (window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.filename : '');
+          if (selected) {
+            await this.loadBlocklyData(selected);
+          }
+        }
+        
+        this.updateDataInfo();
+        this.updateMarkerChart();
+        this.updateDevChartIfVisible();
+      });
+    }
+    
+    // Handle Blockly file selection
+    if (blocklyFileSel) {
+      blocklyFileSel.addEventListener('change', async (e) => {
+        if (e.target.value) {
+          await this.loadBlocklyData(e.target.value);
+          this.updateDevChartIfVisible();
+        }
+      });
+    }
+    
+    // Handle refresh button
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        this.refreshBlocklyFiles();
+      });
+    }
+
+    // Handle dev mode buttons
+    const spawnDevBtn = document.getElementById('spawn-dev-chart');
+    const removeDevBtn = document.getElementById('remove-dev-chart');
+    
+    if (spawnDevBtn) {
+      spawnDevBtn.addEventListener('click', async () => {
+        await this.spawnDevChart();
+      });
+    }
+    
+    if (removeDevBtn) {
+      removeDevBtn.addEventListener('click', () => {
+        this.removeDevChart();
+      });
+    }
+
+    // Dev mock marker buttons
+    const spawnMockMarkerBtn = document.getElementById('spawn-mock-marker-chart');
+    const removeMockMarkerBtn = document.getElementById('remove-mock-marker-chart');
+    if (spawnMockMarkerBtn) {
+      spawnMockMarkerBtn.addEventListener('click', async () => {
+        await this.spawnMockMarkerChart();
+      });
+    }
+    if (removeMockMarkerBtn) {
+      removeMockMarkerBtn.addEventListener('click', () => {
+        this.removeMockMarkerChart();
+      });
     }
   }
 }

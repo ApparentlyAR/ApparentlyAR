@@ -18,6 +18,9 @@
   <!-- Chart.js for data visualization -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- Frontend API (provides window.AppApi with getCsv/list-files/etc.) -->
+  <script src="../src/react/api.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -213,6 +216,42 @@
     video.mirrored {
       transform: scaleX(-1);
     }
+
+    /* Dev mode chart overlay */
+    #dev-chart-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 300px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #FF6B35;
+      border-radius: 8px;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #dev-chart-overlay canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 6px;
+    }
+
+    #dev-chart-overlay .dev-chart-header {
+      position: absolute;
+      top: -30px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: #FF6B35;
+      font-weight: bold;
+      font-size: 14px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 5px;
+      border-radius: 4px 4px 0 0;
+    }
   </style>
 </head>
 
@@ -269,6 +308,12 @@
   <!-- Hand landmarks overlay -->
   <canvas id="hand-overlay"></canvas>
 
+  <!-- Dev mode chart overlay -->
+  <div id="dev-chart-overlay">
+    <div class="dev-chart-header">DEV MODE - Test Chart</div>
+    <canvas id="dev-chart-canvas"></canvas>
+  </div>
+
   <!-- Controls Panel -->
   <div class="controls-panel">
     <button class="back-button" onclick="window.location.href='/blockly'">
@@ -293,6 +338,14 @@
     </div>
 
     <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: #FF6B35; font-size: 14px;">Dev Mode</h3>
+      <button id="spawn-dev-chart" style="background: #FF6B35; margin-bottom: 5px;">Spawn Floating Test Chart</button>
+      <button id="remove-dev-chart" style="background: #666; margin-bottom: 10px;">Remove Floating Chart</button>
+      <button id="spawn-mock-marker-chart" style="background: #ef4444; margin-bottom: 5px;">Spawn Marker Chart (No Paper)</button>
+      <button id="remove-mock-marker-chart" style="background: #666;">Remove Marker Chart</button>
+    </div>
+
+    <div class="control-group">
       <label for="chart-type">Chart Type (Hand Controls):</label>
       <select id="chart-type">
         <option value="bar">Bar Chart</option>
@@ -303,12 +356,38 @@
     </div>
 
     <div class="control-group">
+      <label for="data-source">Data Source:</label>
+      <select id="data-source">
+        <option value="sample">Sample Data</option>
+        <option value="blockly">Blockly Data</option>
+      </select>
+    </div>
+
+    <div class="control-group" id="sample-data-group">
       <label for="sample-data">Sample Data:</label>
       <select id="sample-data">
         <option value="students">Student Grades</option>
         <option value="weather">Weather Data</option>
         <option value="sales">Sales Data</option>
       </select>
+    </div>
+
+    <div class="control-group" id="blockly-data-group" style="display: none;">
+      <label for="blockly-filename">Blockly File:</label>
+      <select id="blockly-filename">
+        <option value="">No files available</option>
+      </select>
+      <button id="refresh-files" style="width: 100%; margin-top: 5px; background: #666;">Refresh Files</button>
+    </div>
+
+    <div class="stats">
+      <h3>Data Info</h3>
+      <div id="data-info" style="font-size: 11px;">
+        <div>Source: <span id="current-source">Sample Data</span></div>
+        <div>Dataset: <span id="current-dataset">Student Grades</span></div>
+        <div>Rows: <span id="current-rows">-</span></div>
+        <div>Columns: <span id="current-columns">-</span></div>
+      </div>
     </div>
 
     <div class="stats">

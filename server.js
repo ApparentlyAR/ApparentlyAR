@@ -168,6 +168,73 @@ app.post('/api/process-data', async (req, res) => {
 });
 
 /**
+ * GET /api/list-files
+ * List all CSV files in the uploads directory.
+ */
+app.get('/api/list-files', async (req, res) => {
+  try {
+    const uploadsDir = pathModule.join(__dirname, 'uploads');
+    
+    if (!fs.existsSync(uploadsDir)) {
+      return res.json({ success: true, files: [] });
+    }
+
+    const files = fs.readdirSync(uploadsDir)
+      .filter(file => file.toLowerCase().endsWith('.csv'))
+      .sort((a, b) => {
+        // Sort by modification time, newest first
+        const statA = fs.statSync(pathModule.join(uploadsDir, a));
+        const statB = fs.statSync(pathModule.join(uploadsDir, b));
+        return statB.mtime - statA.mtime;
+      });
+
+    res.json({ success: true, files });
+  } catch (error) {
+    console.error('List files error:', error);
+    res.status(500).json({ error: 'Failed to list files' });
+  }
+});
+
+/**
+ * GET /api/get-csv/:filename
+ * Retrieve processed CSV data from the server.
+ * Returns the latest saved data for the given filename.
+ */
+app.get('/api/get-csv/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    if (!filename || typeof filename !== 'string') {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+
+    // Sanitize filename and ensure .csv extension
+    const safeName = pathModule.basename(filename).replace(/[^\w\-.]/g, '_');
+    const finalName = safeName.toLowerCase().endsWith('.csv') ? safeName : `${safeName}.csv`;
+
+    const filePath = pathModule.join(__dirname, 'uploads', finalName);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Read and parse the CSV file (use backend csvHandler to avoid browser-only deps)
+    const csvText = fs.readFileSync(filePath, 'utf8');
+    const parsed = parseCSV(csvText); // { headers, data }
+    const rows = Array.isArray(parsed?.data) ? parsed.data : [];
+
+    res.json({ 
+      success: true, 
+      data: rows,
+      filename: finalName,
+      path: `/uploads/${finalName}`
+    });
+  } catch (error) {
+    console.error('Get CSV error:', error);
+    res.status(500).json({ error: 'Failed to retrieve CSV' });
+  }
+});
+
+/**
  * POST /api/save-csv
  * Persist processed data back to a CSV file on the server.
  * Body: { data: Array<object>, filename: string, overwrite?: boolean }
