@@ -661,10 +661,20 @@
             await handleAdvancedVisualization(result);
           }
         } else {
-          console.log('📊 Taking standard data rendering path');
-          // Standard data rendering for basic blocks
-          renderDataPanel(result);
-          renderDataVisualization(result);
+          // If a chart was requested or just generated, skip fallback to avoid double render
+          const hasVizBlocks = /\[generate_visualization\]|\[quick_chart\]|histogram_config|heatmap_config/.test(code);
+          const justCharted = (Date.now() - (window.__lastChartGeneratedAt || 0)) < 3000;
+          if (!justCharted) {
+            if (!hasVizBlocks) {
+              console.log('📊 Taking standard data rendering path');
+              renderDataPanel(result);
+              renderDataVisualization(result);
+            } else {
+              console.log('⏭️ Skipping fallback render (visualization blocks present)');
+            }
+          } else {
+            console.log('⏭️ Skipping fallback render (chartGenerated just fired)');
+          }
         }
         
         // Dispatch event for backward compatibility with React components
@@ -812,6 +822,10 @@
     function renderDataVisualization(data, chartConfig = null) {
         console.log('🖼️ renderDataVisualization called with:', { data: !!data, chartConfig });
         const container = document.getElementById('react-chart-container');
+        if (!container) {
+            console.warn('renderDataVisualization: container not found; aborting to avoid Chart.js errors');
+            return;
+        }
         const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
         if (chartInstance) {
             console.log('🖼️ Destroying existing chart instance');
@@ -946,6 +960,10 @@
 
     // --- App Initialization ---
     function initializeApp() {
+        if (window.__apparentlyAR_init_done) {
+          return; // prevent double init and duplicate listeners
+        }
+        window.__apparentlyAR_init_done = true;
         // Set up breadcrumb navigation
         const urlParams = new URLSearchParams(window.location.search);
         const projectId = urlParams.get('id');
@@ -980,6 +998,7 @@
         });
         
         // Listen for chart generation from visualization blocks and persist for AR handoff
+        if (!window.__chartGeneratedHandlerInstalled) {
         window.addEventListener('chartGenerated', async (e) => {
           console.log('🎨 Chart generated event received:', e?.detail);
           const d = e?.detail ?? {};
@@ -1030,6 +1049,8 @@
               };
 
               localStorage.setItem('ar_last_visualization', JSON.stringify(json));
+              // Mark the moment a chart was just generated to suppress fallback rendering
+              window.__lastChartGeneratedAt = Date.now();
             } catch (err) {
               console.warn('Failed to store last visualization for AR:', err);
             }
@@ -1038,6 +1059,8 @@
             renderAdvancedChart(d);
           }
         });
+        window.__chartGeneratedHandlerInstalled = true;
+        }
 
 
         workspace.addChangeListener((event) => {
@@ -1076,7 +1099,7 @@
         updateToggleButtonPosition();
     }
     
-    document.addEventListener('DOMContentLoaded', initializeApp);
+    // initializeApp is triggered after header.html is loaded above
   </script>
 </body>
 </html>

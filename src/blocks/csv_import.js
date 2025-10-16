@@ -247,8 +247,9 @@ function registerCsvImportGenerator() {
   const generator = function() {
     console.log('CSV import JavaScript generator called');
     console.log('Current CSV data at generation time:', Blockly.CsvImportData.data ? 'has data' : 'null/undefined');
-    // Generate code to return the parsed CSV data with better null safety
-    const code = '(window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.data : null)';
+    // Always start pipelines from the original, unmodified dataset when using the csv_import block.
+    // This prevents previous runs (that mutated CsvImportData.data) from narrowing subsequent filters.
+    const code = '(window.Blockly && window.Blockly.CsvImportData ? (window.Blockly.CsvImportData.originalData || window.Blockly.CsvImportData.data) : null)';
     console.log('Generated code:', code);
     return [code, Blockly.JavaScript.ORDER_ATOMIC];
   };
