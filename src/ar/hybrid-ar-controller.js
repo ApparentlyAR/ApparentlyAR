@@ -43,6 +43,60 @@ class HybridARController {
     window.spawnMockMarkerChart = () => this.spawnMockMarkerChart();
     window.removeMockMarkerChart = () => this.removeMockMarkerChart();
 
+    // Phase 0 Manual Testing Hooks - programmatic control API
+    window.testCycleX = (steps = 1) => {
+      this.chartManager.cycleX(steps);
+      this.updateMarkerChart();
+    };
+    window.testCycleY = (steps = 1) => {
+      this.chartManager.cycleY(steps);
+      this.updateMarkerChart();
+    };
+    window.testCycleSort = (steps = 1) => {
+      this.chartManager.cycleSort(steps);
+      this.updateMarkerChart();
+    };
+    window.testToggleSortDir = () => {
+      this.chartManager.toggleSortDir();
+      this.updateMarkerChart();
+    };
+    window.testClearSort = () => {
+      this.chartManager.clearSort();
+      this.updateMarkerChart();
+    };
+    window.testCycleFilterColumn = (steps = 1) => {
+      this.chartManager.cycleFilterColumn(steps);
+      this.updateMarkerChart();
+    };
+    window.testCycleFilterValue = (steps = 1) => {
+      this.chartManager.cycleFilterValue(steps);
+      this.updateMarkerChart();
+    };
+    window.testClearFilter = () => {
+      this.chartManager.clearFilter();
+      this.updateMarkerChart();
+    };
+    window.testCycleChartType = (steps = 1) => {
+      this.chartManager.cycleChartType(steps);
+      this.updateMarkerChart();
+    };
+    window.getControlState = () => {
+      return this.chartManager.getControlStatus();
+    };
+    window.saveControlState = () => {
+      this.chartManager.saveControls();
+      console.log('Control state saved');
+    };
+    window.loadControlState = () => {
+      const loaded = this.chartManager.loadControls();
+      if (loaded) {
+        this.updateMarkerChart();
+        console.log('Control state loaded and chart updated');
+      } else {
+        console.log('No saved control state found');
+      }
+    };
+
     /**
      * When true, the next time a real marker is detected we will
      * automatically re-parent the dev chart entity to marker-0.

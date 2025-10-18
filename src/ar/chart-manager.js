@@ -64,6 +64,22 @@ class ChartManager {
         { product: 'Phone', sales: 180, revenue: 108000, region: 'South' }
       ]
     };
+
+    /** @type {Object} AR control state for interactive chart manipulation */
+    this.controls = {
+      xIndex: 0,           // Current X axis column index
+      yIndex: 1,           // Current Y axis column index
+      sortIndex: -1,       // Sort column index (-1 = none)
+      sortDir: 'asc',      // Sort direction: 'asc' or 'desc'
+      filter: {
+        colIndex: -1,      // Filter column index (-1 = none)
+        valIndex: -1       // Filter value index (-1 = none)
+      },
+      chartType: 'bar'     // Current chart type
+    };
+
+    /** @type {Object|null} Schema snapshot: columns, types, distinct values */
+    this.schema = null;
   }
 
   /**
@@ -130,15 +146,444 @@ class ChartManager {
   }
 
   /**
+   * Classify columns in dataset by type (numeric vs text) and build value lists
+   * @param {Array<Object>} data - Dataset to analyze
+   * @returns {Object} Schema with columns, textColumns, numericColumns, valuesByTextCol
+   */
+  classifyColumns(data) {
+    if (!data || data.length === 0) {
+      return {
+        columns: [],
+        textColumns: [],
+        numericColumns: [],
+        valuesByTextCol: {}
+      };
+    }
+
+    const columns = Object.keys(data[0] || {});
+    const numericColumns = [];
+    const textColumns = [];
+    const valuesByTextCol = {};
+
+    // Classify each column based on content
+    columns.forEach(col => {
+      let numericCount = 0;
+      let totalCount = 0;
+      const distinctValues = new Set();
+
+      data.forEach(row => {
+        const val = row[col];
+        if (val !== null && val !== undefined && val !== '') {
+          totalCount++;
+          const parsed = parseFloat(val);
+          if (!isNaN(parsed) && isFinite(parsed)) {
+            numericCount++;
+          }
+          // Track distinct values for all columns (for potential filtering)
+          distinctValues.add(String(val));
+        }
+      });
+
+      // Column is numeric if >50% of non-empty values are numeric
+      const isNumeric = totalCount > 0 && (numericCount / totalCount) > 0.5;
+
+      if (isNumeric) {
+        numericColumns.push(col);
+      } else {
+        textColumns.push(col);
+        // Store distinct values sorted naturally
+        valuesByTextCol[col] = Array.from(distinctValues).sort();
+      }
+    });
+
+    return {
+      columns,
+      textColumns,
+      numericColumns,
+      valuesByTextCol
+    };
+  }
+
+  /**
+   * Build complete schema from current data source
+   * Updates this.schema and returns it
+   * @returns {Object} Complete schema
+   */
+  buildSchema() {
+    const data = this.getCurrentData();
+    this.schema = this.classifyColumns(data);
+    return this.schema;
+  }
+
+  /**
+   * Apply active filter and sort to base dataset
+   * @param {Array<Object>} baseData - Original dataset
+   * @returns {Array<Object>} Filtered and sorted dataset
+   */
+  getEffectiveData(baseData) {
+    if (!baseData || baseData.length === 0) {
+      return [];
+    }
+
+    let result = [...baseData]; // Create copy to avoid mutation
+
+    // Ensure schema exists
+    if (!this.schema) {
+      this.buildSchema();
+    }
+
+    // Apply filter if active
+    if (this.controls.filter.colIndex >= 0 && this.controls.filter.valIndex >= 0) {
+      const filterCol = this.schema.textColumns[this.controls.filter.colIndex];
+      if (filterCol) {
+        const distinctValues = this.schema.valuesByTextCol[filterCol] || [];
+        const filterValue = distinctValues[this.controls.filter.valIndex];
+        if (filterValue !== undefined) {
+          result = result.filter(row => String(row[filterCol]) === filterValue);
+        }
+      }
+    }
+
+    // Apply sort if active
+    if (this.controls.sortIndex >= 0) {
+      const sortCol = this.schema.numericColumns[this.controls.sortIndex];
+      if (sortCol) {
+        const direction = this.controls.sortDir === 'asc' ? 1 : -1;
+        result.sort((a, b) => {
+          // Numeric-aware comparison
+          const aVal = parseFloat(a[sortCol]);
+          const bVal = parseFloat(b[sortCol]);
+
+          // Handle non-numeric values
+          const aNum = isNaN(aVal) ? -Infinity : aVal;
+          const bNum = isNaN(bVal) ? -Infinity : bVal;
+
+          return (aNum - bNum) * direction;
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get current axis override configuration from control indices
+   * @returns {Object|null} {xColumn, yColumn} or null if schema not available
+   */
+  currentAxisOverride() {
+    if (!this.schema || this.schema.columns.length === 0) {
+      return null;
+    }
+
+    const { columns } = this.schema;
+    const { xIndex, yIndex } = this.controls;
+
+    // Safe wrapping with modulo (handle negative indices)
+    const safeXIndex = ((xIndex % columns.length) + columns.length) % columns.length;
+    const safeYIndex = ((yIndex % columns.length) + columns.length) % columns.length;
+
+    return {
+      xColumn: columns[safeXIndex],
+      yColumn: columns[safeYIndex]
+    };
+  }
+
+  /**
+   * Cycle X axis column by given steps
+   * @param {number} steps - Number of steps to cycle (positive or negative)
+   */
+  cycleX(steps = 1) {
+    if (!this.schema || this.schema.columns.length === 0) {
+      console.warn('Cannot cycle X: schema not available');
+      return;
+    }
+
+    const { columns } = this.schema;
+    this.controls.xIndex = ((this.controls.xIndex + steps) % columns.length + columns.length) % columns.length;
+    console.log(`X axis → ${columns[this.controls.xIndex]}`);
+  }
+
+  /**
+   * Cycle Y axis column by given steps
+   * @param {number} steps - Number of steps to cycle (positive or negative)
+   */
+  cycleY(steps = 1) {
+    if (!this.schema || this.schema.columns.length === 0) {
+      console.warn('Cannot cycle Y: schema not available');
+      return;
+    }
+
+    const { columns } = this.schema;
+    this.controls.yIndex = ((this.controls.yIndex + steps) % columns.length + columns.length) % columns.length;
+    console.log(`Y axis → ${columns[this.controls.yIndex]}`);
+  }
+
+  /**
+   * Cycle sort column through numeric columns + "none"
+   * @param {number} steps - Number of steps to cycle (positive or negative)
+   */
+  cycleSort(steps = 1) {
+    if (!this.schema) {
+      console.warn('Cannot cycle sort: schema not available');
+      return;
+    }
+
+    const { numericColumns } = this.schema;
+    // Total options = numericColumns.length + 1 (for "none" at index -1)
+    const totalOptions = numericColumns.length + 1;
+
+    if (totalOptions === 1) {
+      // Only "none" option available
+      this.controls.sortIndex = -1;
+      console.log('Sort → none (no numeric columns available)');
+      return;
+    }
+
+    // Map -1 (none) to 0, and numeric indices to 1..n
+    let currentPos = this.controls.sortIndex + 1;
+    currentPos = ((currentPos + steps) % totalOptions + totalOptions) % totalOptions;
+
+    // Map back: 0 → -1 (none), 1..n → 0..(n-1)
+    this.controls.sortIndex = currentPos - 1;
+
+    if (this.controls.sortIndex === -1) {
+      console.log('Sort → none');
+    } else {
+      console.log(`Sort → ${numericColumns[this.controls.sortIndex]} (${this.controls.sortDir})`);
+    }
+  }
+
+  /**
+   * Toggle sort direction between ascending and descending
+   */
+  toggleSortDir() {
+    this.controls.sortDir = this.controls.sortDir === 'asc' ? 'desc' : 'asc';
+    if (this.controls.sortIndex >= 0 && this.schema) {
+      const sortCol = this.schema.numericColumns[this.controls.sortIndex];
+      console.log(`Sort direction → ${this.controls.sortDir} (${sortCol})`);
+    } else {
+      console.log(`Sort direction → ${this.controls.sortDir}`);
+    }
+  }
+
+  /**
+   * Clear sort (set to none)
+   */
+  clearSort() {
+    this.controls.sortIndex = -1;
+    console.log('Sort cleared');
+  }
+
+  /**
+   * Cycle filter column through text columns
+   * @param {number} steps - Number of steps to cycle (positive or negative)
+   */
+  cycleFilterColumn(steps = 1) {
+    if (!this.schema) {
+      console.warn('Cannot cycle filter column: schema not available');
+      return;
+    }
+
+    const { textColumns } = this.schema;
+
+    if (textColumns.length === 0) {
+      console.warn('No text columns available for filtering');
+      this.controls.filter.colIndex = -1;
+      this.controls.filter.valIndex = -1;
+      return;
+    }
+
+    // If currently at "none" (-1), start at first column
+    if (this.controls.filter.colIndex === -1) {
+      this.controls.filter.colIndex = 0;
+      this.controls.filter.valIndex = -1; // Reset value selection
+    } else {
+      this.controls.filter.colIndex = ((this.controls.filter.colIndex + steps) % textColumns.length + textColumns.length) % textColumns.length;
+      this.controls.filter.valIndex = -1; // Reset value selection when column changes
+    }
+
+    console.log(`Filter column → ${textColumns[this.controls.filter.colIndex]}`);
+  }
+
+  /**
+   * Cycle filter value for current filter column
+   * @param {number} steps - Number of steps to cycle (positive or negative)
+   */
+  cycleFilterValue(steps = 1) {
+    if (!this.schema || this.controls.filter.colIndex === -1) {
+      console.warn('Cannot cycle filter value: no filter column selected');
+      return;
+    }
+
+    const { textColumns, valuesByTextCol } = this.schema;
+    const filterCol = textColumns[this.controls.filter.colIndex];
+
+    if (!filterCol || !valuesByTextCol[filterCol]) {
+      console.warn('Filter column not found in schema');
+      return;
+    }
+
+    const values = valuesByTextCol[filterCol];
+
+    if (values.length === 0) {
+      console.warn('No values available for filter column');
+      return;
+    }
+
+    // If currently at "none" (-1), start at first value
+    if (this.controls.filter.valIndex === -1) {
+      this.controls.filter.valIndex = 0;
+    } else {
+      this.controls.filter.valIndex = ((this.controls.filter.valIndex + steps) % values.length + values.length) % values.length;
+    }
+
+    console.log(`Filter → ${filterCol} = ${values[this.controls.filter.valIndex]}`);
+  }
+
+  /**
+   * Clear filter (set column and value to none)
+   */
+  clearFilter() {
+    this.controls.filter.colIndex = -1;
+    this.controls.filter.valIndex = -1;
+    console.log('Filter cleared');
+  }
+
+  /**
+   * Cycle through chart types
+   * @param {number} steps - Number of steps to cycle (positive or negative)
+   */
+  cycleChartType(steps = 1) {
+    const chartTypes = ['bar', 'line', 'scatter', 'pie', 'area'];
+    const currentIndex = chartTypes.indexOf(this.controls.chartType);
+
+    const newIndex = ((currentIndex + steps) % chartTypes.length + chartTypes.length) % chartTypes.length;
+    this.controls.chartType = chartTypes[newIndex];
+
+    console.log(`Chart type → ${this.controls.chartType}`);
+  }
+
+  /**
+   * Get current control status as human-readable string
+   * @returns {string} Status string (e.g., "Bar | X: month | Y: sales | Sort: revenue (desc) | Filter: region = North")
+   */
+  getControlStatus() {
+    if (!this.schema) {
+      return 'No data loaded';
+    }
+
+    const parts = [];
+
+    // Chart type
+    parts.push(this.controls.chartType.charAt(0).toUpperCase() + this.controls.chartType.slice(1));
+
+    // X and Y axes
+    const override = this.currentAxisOverride();
+    if (override) {
+      parts.push(`X: ${override.xColumn}`);
+      parts.push(`Y: ${override.yColumn}`);
+    }
+
+    // Sort
+    if (this.controls.sortIndex >= 0 && this.schema.numericColumns[this.controls.sortIndex]) {
+      const sortCol = this.schema.numericColumns[this.controls.sortIndex];
+      parts.push(`Sort: ${sortCol} (${this.controls.sortDir})`);
+    } else {
+      parts.push('Sort: none');
+    }
+
+    // Filter
+    if (this.controls.filter.colIndex >= 0 && this.controls.filter.valIndex >= 0) {
+      const filterCol = this.schema.textColumns[this.controls.filter.colIndex];
+      const filterVal = this.schema.valuesByTextCol[filterCol]?.[this.controls.filter.valIndex];
+      if (filterCol && filterVal !== undefined) {
+        parts.push(`Filter: ${filterCol} = ${filterVal}`);
+      } else {
+        parts.push('Filter: none');
+      }
+    } else {
+      parts.push('Filter: none');
+    }
+
+    return parts.join(' | ');
+  }
+
+  /**
+   * Save current controls to localStorage
+   * @param {string} datasetKey - Optional dataset identifier (defaults to current data source)
+   */
+  saveControls(datasetKey = null) {
+    try {
+      const key = datasetKey || this.getDatasetKey();
+      const storageKey = `ar_controls_${key}`;
+
+      const state = {
+        controls: this.controls,
+        timestamp: Date.now()
+      };
+
+      localStorage.setItem(storageKey, JSON.stringify(state));
+      console.log(`Controls saved to ${storageKey}`);
+    } catch (error) {
+      console.warn('Failed to save controls to localStorage:', error);
+    }
+  }
+
+  /**
+   * Load controls from localStorage
+   * @param {string} datasetKey - Optional dataset identifier (defaults to current data source)
+   * @returns {boolean} True if controls were loaded successfully
+   */
+  loadControls(datasetKey = null) {
+    try {
+      const key = datasetKey || this.getDatasetKey();
+      const storageKey = `ar_controls_${key}`;
+
+      const saved = localStorage.getItem(storageKey);
+      if (!saved) {
+        console.log(`No saved controls found for ${storageKey}`);
+        return false;
+      }
+
+      const state = JSON.parse(saved);
+      if (state && state.controls) {
+        this.controls = state.controls;
+        console.log(`Controls loaded from ${storageKey} (saved ${new Date(state.timestamp).toLocaleString()})`);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.warn('Failed to load controls from localStorage:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get dataset key for persistence
+   * @returns {string} Dataset key
+   */
+  getDatasetKey() {
+    if (this.dataSource === 'custom' && this.customData) {
+      // Use filename hash or sanitized filename
+      return this.customData.filename.replace(/[^a-zA-Z0-9]/g, '_');
+    }
+
+    // For sample data, use data source name
+    const dataSel = document.getElementById('sample-data');
+    return `sample_${dataSel ? dataSel.value : 'default'}`;
+  }
+
+  /**
    * Create or update a chart anchored to a specific AR.js marker.
-   * The chart type and dataset must be provided. Subsequent calls update
-   * the existing canvas texture and reuse the plane entity.
+   * Uses current controls state for chart type, axes, filter, and sort.
+   * Legacy parameters (chartType, datasetName) are ignored if controls are active.
    *
    * @param {string} markerId - DOM id of the <a-marker> (e.g., 'marker-0')
-   * @param {string} chartType - Chart.js type ('bar' | 'line' | 'pie' | 'scatter')
-   * @param {string} datasetName - One of sample datasets keys ('students'|'weather'|'sales')
+   * @param {string} chartType - Chart.js type (DEPRECATED: uses controls.chartType)
+   * @param {string} datasetName - Dataset name (DEPRECATED: uses current data source)
    */
-  createOrUpdateMarkerChart(markerId, chartType, datasetName) {
+  createOrUpdateMarkerChart(markerId, chartType = null, datasetName = null) {
     const marker = document.getElementById(markerId);
     if (!marker) {
       console.warn(`Marker not found: ${markerId}`);
@@ -150,6 +595,19 @@ class ChartManager {
       console.warn('No <a-assets> found for chart textures');
       return;
     }
+
+    // Build schema from current data
+    const baseData = this.getCurrentData(datasetName);
+    this.buildSchema();
+
+    // Apply controls: filter and sort
+    const effectiveData = this.getEffectiveData(baseData);
+
+    // Get axis override from controls
+    const axisOverride = this.currentAxisOverride();
+
+    // Use chartType from controls (or fall back to parameter for backward compatibility)
+    const effectiveChartType = this.controls.chartType || chartType || 'bar';
 
     const key = markerId;
     const existing = this.markerCharts[key];
@@ -165,12 +623,11 @@ class ChartManager {
       assets.appendChild(canvas);
     }
 
-    // (Re)generate Chart.js on the canvas
+    // (Re)generate Chart.js on the canvas with axis override
     if (existing?.chart) {
       try { existing.chart.destroy(); } catch (_) {}
     }
-    const currentData = this.getCurrentData(datasetName);
-    const chart = this.generateChart(canvas, chartType, currentData);
+    const chart = this.generateChart(canvas, effectiveChartType, effectiveData, axisOverride);
 
     // Ensure a plane entity exists under the marker and points to our canvas
     let entity = existing?.entity || marker.querySelector('[data-marker-chart]');
@@ -190,8 +647,12 @@ class ChartManager {
     // Save state
     this.markerCharts[key] = { canvas, chart, entity };
 
+    // Save controls to localStorage
+    this.saveControls();
+
     // Log for debugging
-    console.log(`Marker chart updated on ${markerId}: ${chartType} using ${datasetName}`);
+    console.log(`Marker chart updated on ${markerId}: ${effectiveChartType} with ${effectiveData.length}/${baseData.length} rows`);
+    console.log(this.getControlStatus());
   }
 
   /**
