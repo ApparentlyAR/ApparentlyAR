@@ -18,6 +18,7 @@ class HybridARController {
       this.updateStatus.bind(this),
       this.coordinateSystem
     );
+    this.markerInteractionController = null;
 
     // Bind methods
     this.init = this.init.bind(this);
@@ -75,6 +76,10 @@ class HybridARController {
       // Initialize marker-anchored chart (marker 0) based on current controls
       this.chartManager.updateMarkerChartFromControls('marker-0');
 
+      // Initialize marker interaction controller
+      this.markerInteractionController = new MarkerInteractionController(this.chartManager);
+      this.setupMarkerListeners();
+
       // Initialize data info display
       this.updateDataInfo();
 
@@ -88,18 +93,18 @@ class HybridARController {
 
   /**
    * Wait for AR.js to fully initialize
-   * 
+   *
    * @param {number} timeout - Timeout in milliseconds
    * @returns {Promise} Initialization promise
    */
   waitForArjsInit(timeout = 10000) {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
-      
+
       const checkInit = () => {
         const video = document.querySelector('video');
         const scene = document.querySelector('a-scene');
-        
+
         if (video && scene && scene.hasLoaded && video.videoWidth > 0) {
           resolve();
         } else if (Date.now() - startTime > timeout) {
@@ -108,9 +113,36 @@ class HybridARController {
           setTimeout(checkInit, 200);
         }
       };
-      
+
       checkInit();
     });
+  }
+
+  /**
+   * Setup marker listeners for interaction tracking
+   * Markers 1-6 have rotation-based interactions
+   */
+  setupMarkerListeners() {
+    // Markers 1-6 have interactions (Marker 0 is for chart display)
+    for (let i = 1; i <= 6; i++) {
+      const marker = document.querySelector(`#marker-${i}`);
+      if (!marker) {
+        console.warn(`[MarkerInteraction] Marker ${i} element not found`);
+        continue;
+      }
+
+      marker.addEventListener('markerFound', () => {
+        console.log(`[MarkerInteraction] Marker ${i} found`);
+        this.markerInteractionController.startTrackingRotation(i, marker);
+      });
+
+      marker.addEventListener('markerLost', () => {
+        console.log(`[MarkerInteraction] Marker ${i} lost`);
+        this.markerInteractionController.stopTrackingRotation(i);
+      });
+    }
+
+    console.log('[MarkerInteraction] Marker listeners setup complete');
   }
 
   /**
