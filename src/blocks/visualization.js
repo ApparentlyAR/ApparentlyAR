@@ -89,34 +89,167 @@
     }
   }
 
-  function initializeVisualizationBlocks() {
-    Blockly.defineBlocksWithJsonArray([
-      // Set Chart Type Block
-      {
-        "type": "set_chart_type",
-        "message0": "set chart type to %1",
-        "args0": [
-          {
-            "type": "field_dropdown",
-            "name": "CHART_TYPE",
-            "options": [
-              ["Bar Chart", "bar"],
-              ["Line Chart", "line"],
-              ["Scatter Plot", "scatter"],
-              ["Pie Chart", "pie"],
-              ["Doughnut Chart", "doughnut"],
-              ["Area Chart", "area"],
-              ["Histogram", "histogram"],
-              ["Heatmap", "heatmap"],
-              ["Radar Chart", "radar"]
-            ]
+  // Chart type metadata with descriptions
+  const CHART_TYPE_INFO = {
+    'bar': {
+      label: 'Bar Chart',
+      description: 'Displays categorical data with rectangular bars. Best for comparing values across different categories or showing data changes over time.',
+      bestFor: 'Comparing quantities, rankings, or frequencies'
+    },
+    'line': {
+      label: 'Line Chart',
+      description: 'Shows trends and changes over time with connected data points. Ideal for continuous data and identifying patterns.',
+      bestFor: 'Time series data, trends, and continuous measurements'
+    },
+    'scatter': {
+      label: 'Scatter Plot',
+      description: 'Plots individual data points to show relationships between two variables. Useful for identifying correlations and outliers.',
+      bestFor: 'Correlation analysis, distribution patterns, and outlier detection'
+    },
+    'pie': {
+      label: 'Pie Chart',
+      description: 'Circular chart divided into slices showing proportions. Each slice represents a percentage of the whole.',
+      bestFor: 'Showing part-to-whole relationships and percentages'
+    },
+    'doughnut': {
+      label: 'Doughnut Chart',
+      description: 'Similar to pie chart but with a hollow center. Better for comparing multiple datasets or adding central information.',
+      bestFor: 'Part-to-whole relationships with additional context'
+    },
+    'area': {
+      label: 'Area Chart',
+      description: 'Line chart with filled area below the line. Emphasizes magnitude of change over time and cumulative totals.',
+      bestFor: 'Cumulative trends, volume over time, and stacked comparisons'
+    },
+    'histogram': {
+      label: 'Histogram',
+      description: 'Shows distribution of numerical data by grouping values into bins. Reveals frequency and patterns in datasets.',
+      bestFor: 'Data distribution, frequency analysis, and identifying normal distributions'
+    },
+    'heatmap': {
+      label: 'Heatmap',
+      description: 'Uses color intensity to represent values in a matrix. Excellent for spotting patterns in large datasets.',
+      bestFor: 'Correlation matrices, pattern detection, and multi-dimensional data'
+    },
+    'radar': {
+      label: 'Radar Chart',
+      description: 'Displays multivariate data on axes starting from the same point. Shows strengths and weaknesses across categories.',
+      bestFor: 'Multi-variable comparisons, performance metrics, and profile analysis'
+    }
+  };
+
+  // Custom dropdown field with hover tooltips
+  // Make it globally accessible by attaching to Blockly
+  if (typeof Blockly !== 'undefined') {
+    Blockly.FieldDropdownWithTooltip = class extends Blockly.FieldDropdown {
+      constructor(options, validator, chartTypeInfo) {
+        super(options, validator);
+        this.tooltipDiv_ = null;
+        this.chartTypeInfo_ = chartTypeInfo || CHART_TYPE_INFO;
+      }
+
+      showEditor_() {
+        super.showEditor_();
+
+        // Add hover listeners to dropdown menu items after menu is shown
+        setTimeout(() => {
+          const menuItems = document.querySelectorAll('.blocklyMenuItemContent');
+          menuItems.forEach((item) => {
+            item.addEventListener('mouseenter', (e) => this.showTooltip_(e, item));
+            item.addEventListener('mouseleave', () => this.hideTooltip_());
+          });
+        }, 50);
+      }
+
+      showTooltip_(event, menuItem) {
+        const text = menuItem.textContent.trim();
+        let chartType = null;
+
+        // Find the chart type based on the label
+        for (const [key, info] of Object.entries(this.chartTypeInfo_)) {
+          if (info.label === text) {
+            chartType = key;
+            break;
           }
-        ],
-        "output": "ChartConfig",
-        "colour": 330,
-        "tooltip": "Create a chart configuration with specified type",
-        "helpUrl": ""
-      },
+        }
+
+        if (!chartType || !this.chartTypeInfo_[chartType]) {
+          return;
+        }
+
+        const info = this.chartTypeInfo_[chartType];
+
+        // Remove existing tooltip if any
+        this.hideTooltip_();
+
+        // Create tooltip div
+        this.tooltipDiv_ = document.createElement('div');
+        this.tooltipDiv_.className = 'blockly-chart-tooltip';
+        this.tooltipDiv_.innerHTML = `
+          <div class="blockly-chart-tooltip-header">
+            <h4>${info.label}</h4>
+            <span class="blockly-chart-tooltip-badge">${chartType}</span>
+          </div>
+          <p class="blockly-chart-tooltip-description">${info.description}</p>
+          <div class="blockly-chart-tooltip-footer">
+            <p class="blockly-chart-tooltip-label">Best for:</p>
+            <p class="blockly-chart-tooltip-bestfor">${info.bestFor}</p>
+          </div>
+        `;
+
+        document.body.appendChild(this.tooltipDiv_);
+
+        // Position tooltip near the dropdown menu
+        const menuContainer = menuItem.closest('.blocklyMenu') || menuItem.closest('.blocklyDropDownDiv');
+        const menuRect = menuContainer ? menuContainer.getBoundingClientRect() : menuItem.getBoundingClientRect();
+        this.tooltipDiv_.style.position = 'fixed';
+        this.tooltipDiv_.style.left = (menuRect.right + 10) + 'px';
+        this.tooltipDiv_.style.top = menuRect.top + 'px';
+        this.tooltipDiv_.style.zIndex = '10000';
+      }
+
+      hideTooltip_() {
+        if (this.tooltipDiv_) {
+          this.tooltipDiv_.remove();
+          this.tooltipDiv_ = null;
+        }
+      }
+
+      dispose() {
+        this.hideTooltip_();
+        super.dispose();
+      }
+    };
+  }
+
+  function initializeVisualizationBlocks() {
+    // Define set_chart_type block programmatically with custom dropdown
+    const chartTypeOptions = [
+      ["Bar Chart", "bar"],
+      ["Line Chart", "line"],
+      ["Scatter Plot", "scatter"],
+      ["Pie Chart", "pie"],
+      ["Doughnut Chart", "doughnut"],
+      ["Area Chart", "area"],
+      ["Histogram", "histogram"],
+      ["Heatmap", "heatmap"],
+      ["Radar Chart", "radar"]
+    ];
+
+    Blockly.Blocks['set_chart_type'] = {
+      init: function() {
+        this.appendDummyInput()
+          .appendField("set chart type to")
+          .appendField(new Blockly.FieldDropdownWithTooltip(chartTypeOptions, null, CHART_TYPE_INFO), "CHART_TYPE");
+        this.setOutput(true, "ChartConfig");
+        this.setColour(330);
+        this.setTooltip("Create a chart configuration with specified type");
+        this.setHelpUrl("");
+      }
+    };
+
+    // Define other blocks with JSON
+    Blockly.defineBlocksWithJsonArray([
 
       // Set Axes Block
       {

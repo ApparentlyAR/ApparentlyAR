@@ -228,6 +228,69 @@
         z-index: 1; /* Ensures header is above scrolling content */
         background-color: #F9FAFB; /* Added background to fix the "hole" */
     }
+
+    /* Blockly Chart Tooltip Styles */
+    .blockly-chart-tooltip {
+      background: #1a1f35;
+      border: 2px solid #4F46E5;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      width: 380px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #F8F9FA;
+      pointer-events: none;
+    }
+
+    .blockly-chart-tooltip-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .blockly-chart-tooltip-header h4 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      color: #F8F9FA;
+    }
+
+    .blockly-chart-tooltip-badge {
+      background: rgba(79, 70, 229, 0.2);
+      color: #A5B4FC;
+      border: 1px solid rgba(79, 70, 229, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .blockly-chart-tooltip-description {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #D1D5DB;
+      margin: 0 0 16px 0;
+    }
+
+    .blockly-chart-tooltip-footer {
+      border-top: 1px solid rgba(229, 231, 235, 0.1);
+      padding-top: 12px;
+    }
+
+    .blockly-chart-tooltip-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #F8F9FA;
+      margin: 0 0 8px 0;
+    }
+
+    .blockly-chart-tooltip-bestfor {
+      font-size: 14px;
+      color: #A5B4FC;
+      margin: 0;
+      font-weight: 500;
+    }
   </style>
 </head>
 
