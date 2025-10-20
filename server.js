@@ -22,14 +22,14 @@ const chartGenerator = require('./src/backend/chartGenerator');
 const { parseCSV } = require('./src/backend/csvHandler');
 const { sampleData, weatherData, salesData } = require('./src/backend/testData');
 
-// Import projects manager for persistent storage -Najla
+// Import projects manager for persistent storage 
 const {
   getAllProjects,
   getProjectById,
   createProject,
   updateProject,
   deleteProject
-} = require('./src/backend/projectsManager'); // -Najla
+} = require('./src/backend/projectsManager'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -287,7 +287,6 @@ app.post('/api/ar-visualization', async (req, res) => {
 
 /**
  * Endpoint to fetch all projects
- * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.get('/api/projects', (req, res) => {
   try {
@@ -301,7 +300,6 @@ app.get('/api/projects', (req, res) => {
 
 /**
  * Endpoint to fetch a single project by ID
- * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.get('/api/projects/:id', (req, res) => {
   try {
@@ -321,7 +319,6 @@ app.get('/api/projects/:id', (req, res) => {
 
 /**
  * Endpoint to save a new project with optional CSV file upload
- * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.post('/api/projects', upload.single('csvFile'), (req, res) => {
   try {
@@ -363,7 +360,6 @@ app.post('/api/projects', upload.single('csvFile'), (req, res) => {
 
 /**
  * Endpoint to update a project by ID
- * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.put('/api/projects/:id', upload.single('csvFile'), async (req, res) => {
   try {
@@ -411,7 +407,6 @@ app.put('/api/projects/:id', upload.single('csvFile'), async (req, res) => {
 
 /**
  * Endpoint to delete a project by ID
- * @author Najla - Added endpoint for deleting projects from JSON storage
  */
 app.delete('/api/projects/:id', (req, res) => {
   try {
