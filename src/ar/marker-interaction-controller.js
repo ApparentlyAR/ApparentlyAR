@@ -17,8 +17,7 @@ class MarkerInteractionController {
     this.currentSortOrder = 'ascending';
     this.currentChartType = 'bar';
     this.currentFilterColumn = null;
-    this.currentFilterThreshold = null;
-    this.filterRange = null;
+    this.currentFilterValue = null;
 
     // Rotation tracking
     this.rotationIntervals = {}; // markerNum -> intervalId
@@ -115,7 +114,7 @@ class MarkerInteractionController {
         this.handleSortOrderRotation(degrees);
         break;
       case 5:
-        this.handleFilterThresholdRotation(degrees);
+        this.handleFilterCategoryRotation(degrees);
         break;
       case 6:
         this.handleChartTypeRotation(degrees);
@@ -144,7 +143,7 @@ class MarkerInteractionController {
     // To be implemented in Phase 1
   }
 
-  handleFilterThresholdRotation(degrees) {
+  handleFilterCategoryRotation(degrees) {
     // To be implemented in Phase 6
   }
 
@@ -203,7 +202,7 @@ class MarkerInteractionController {
         sortOrder: this.currentSortOrder,
         chartType: this.currentChartType,
         filterColumn: this.currentFilterColumn,
-        filterThreshold: this.currentFilterThreshold,
+        filterValue: this.currentFilterValue,
         availableColumns: this.availableColumns
       }
     }));
