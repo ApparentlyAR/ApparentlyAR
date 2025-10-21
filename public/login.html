@@ -84,24 +84,60 @@
             document.getElementById('password-modal').classList.add('hidden');
         });
 
-        document.getElementById('submit-password').addEventListener('click', function() {
-            const password = document.getElementById('facilitator-password').value;
-            
-            if (password === 'secret') {
-                // Redirect to teacher dashboard
-                window.location.href = '/teacher-dashboard';
-            } else {
-                // Show error message
-                document.getElementById('password-error').classList.remove('hidden');
-                document.getElementById('facilitator-password').value = '';
-                document.getElementById('facilitator-password').focus();
+        async function attemptFacilitatorLogin() {
+            const passwordInput = document.getElementById('facilitator-password');
+            const errorMessage = document.getElementById('password-error');
+            const submitButton = document.getElementById('submit-password');
+
+            errorMessage.classList.add('hidden');
+            errorMessage.textContent = 'Incorrect password. Please try again.';
+
+            if (!passwordInput.value) {
+                errorMessage.textContent = 'Please enter a password.';
+                errorMessage.classList.remove('hidden');
+                passwordInput.focus();
+                return;
             }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch('/api/facilitator/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: passwordInput.value })
+                });
+
+                if (response.ok) {
+                    window.location.href = '/teacher-dashboard';
+                    return;
+                }
+
+                const result = await response.json().catch(() => ({}));
+                const message = result?.error || 'Invalid password.';
+                errorMessage.textContent = message;
+                errorMessage.classList.remove('hidden');
+                passwordInput.value = '';
+                passwordInput.focus();
+            } catch (error) {
+                console.error('Facilitator login failed:', error);
+                errorMessage.textContent = 'Unable to reach the server. Please try again.';
+                errorMessage.classList.remove('hidden');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit';
+            }
+        }
+
+        document.getElementById('submit-password').addEventListener('click', function() {
+            attemptFacilitatorLogin();
         });
 
         // Allow pressing Enter to submit
         document.getElementById('facilitator-password').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
-                document.getElementById('submit-password').click();
+                attemptFacilitatorLogin();
             }
         });
     </script>
