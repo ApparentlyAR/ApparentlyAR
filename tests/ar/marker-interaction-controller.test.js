@@ -120,7 +120,7 @@ describe('MarkerInteractionController', () => {
       expect(controller.currentSortOrder).toBe('ascending');
       expect(controller.currentChartType).toBe('bar');
       expect(controller.currentFilterColumn).toBe(null);
-      expect(controller.currentFilterThreshold).toBe(null);
+      expect(controller.currentFilterValue).toBe(null);
     });
 
     test('should handle empty columns gracefully', () => {
@@ -283,8 +283,8 @@ describe('MarkerInteractionController', () => {
       expect(spy).toHaveBeenCalledWith(270);
     });
 
-    test('should route marker 5 to handleFilterThresholdRotation', () => {
-      const spy = jest.spyOn(controller, 'handleFilterThresholdRotation');
+    test('should route marker 5 to handleFilterCategoryRotation', () => {
+      const spy = jest.spyOn(controller, 'handleFilterCategoryRotation');
       controller.handleMarkerRotation(5, 120);
       expect(spy).toHaveBeenCalledWith(120);
     });
@@ -365,7 +365,7 @@ describe('MarkerInteractionController', () => {
       expect(event.detail).toHaveProperty('sortOrder');
       expect(event.detail).toHaveProperty('chartType');
       expect(event.detail).toHaveProperty('filterColumn');
-      expect(event.detail).toHaveProperty('filterThreshold');
+      expect(event.detail).toHaveProperty('filterValue');
       expect(event.detail).toHaveProperty('availableColumns');
     });
   });
@@ -408,9 +408,9 @@ describe('MarkerInteractionController', () => {
       expect(() => controller.handleSortOrderRotation(90)).not.toThrow();
     });
 
-    test('handleFilterThresholdRotation should be defined', () => {
-      expect(controller.handleFilterThresholdRotation).toBeDefined();
-      expect(() => controller.handleFilterThresholdRotation(90)).not.toThrow();
+    test('handleFilterCategoryRotation should be defined', () => {
+      expect(controller.handleFilterCategoryRotation).toBeDefined();
+      expect(() => controller.handleFilterCategoryRotation(90)).not.toThrow();
     });
 
     test('handleChartTypeRotation should be defined', () => {
