@@ -41,13 +41,28 @@ class MarkerInteractionController {
    */
   refreshAvailableColumns() {
     this.availableColumns = window.BlocklyAutofill?.getAvailableColumns() || [];
+    if (this.availableColumns.length === 0) {
+      const fallbackData = this.chartManager?.getCurrentData?.();
+      if (Array.isArray(fallbackData) && fallbackData.length) {
+        this.availableColumns = Object.keys(fallbackData[0]);
+      }
+    }
     console.log('[MarkerInteraction] Available columns:', this.availableColumns);
 
-    // Initialize defaults
     if (this.availableColumns.length > 0) {
-      this.currentXColumn = this.currentXColumn || this.availableColumns[0];
-      this.currentYColumn = this.currentYColumn || (this.availableColumns[1] || this.availableColumns[0]);
-      this.currentSortColumn = this.currentSortColumn || this.availableColumns[0];
+      if (!this.availableColumns.includes(this.currentXColumn)) {
+        this.currentXColumn = this.availableColumns[0];
+      }
+      if (!this.availableColumns.includes(this.currentYColumn)) {
+        this.currentYColumn = this.availableColumns[1] || this.availableColumns[0];
+      }
+      if (!this.availableColumns.includes(this.currentSortColumn)) {
+        this.currentSortColumn = this.availableColumns[0];
+      }
+    } else {
+      this.currentXColumn = null;
+      this.currentYColumn = null;
+      this.currentSortColumn = null;
     }
 
     this.dispatchStateChange();
@@ -151,12 +166,119 @@ class MarkerInteractionController {
     // To be implemented in Phase 2
   }
 
+  setChartType(type) {
+    if (!type) return;
+    if (this.currentChartType !== type) {
+      this.currentChartType = type;
+      this.dispatchStateChange();
+    }
+    this.updateChartDebounced();
+  }
+
+  setXAxisColumn(column) {
+    if (!column) return;
+    if (!this.availableColumns.includes(column)) {
+      console.warn(`[MarkerInteraction] Invalid X-axis column: ${column}`);
+      return;
+    }
+    if (this.currentXColumn !== column) {
+      this.currentXColumn = column;
+      this.dispatchStateChange();
+    }
+    this.updateChartDebounced();
+  }
+
+  setYAxisColumn(column) {
+    if (!column) return;
+    if (!this.availableColumns.includes(column)) {
+      console.warn(`[MarkerInteraction] Invalid Y-axis column: ${column}`);
+      return;
+    }
+    if (this.currentYColumn !== column) {
+      this.currentYColumn = column;
+      this.dispatchStateChange();
+    }
+    this.updateChartDebounced();
+  }
+
+  setSortColumn(column) {
+    if (!column) return;
+    if (!this.availableColumns.includes(column)) {
+      console.warn(`[MarkerInteraction] Invalid sort column: ${column}`);
+      return;
+    }
+    if (this.currentSortColumn !== column) {
+      this.currentSortColumn = column;
+      this.dispatchStateChange();
+    }
+    this.applySortingDebounced();
+  }
+
+  setSortOrder(order) {
+    if (!order) return;
+    const normalized = order === 'descending' ? 'descending' : 'ascending';
+    if (this.currentSortOrder !== normalized) {
+      this.currentSortOrder = normalized;
+      this.dispatchStateChange();
+    }
+    this.applySortingDebounced();
+  }
+
+  resetConfiguration() {
+    if (this.availableColumns.length > 0) {
+      this.currentXColumn = this.availableColumns[0];
+      this.currentYColumn = this.availableColumns[1] || this.availableColumns[0];
+      this.currentSortColumn = this.availableColumns[0];
+    } else {
+      this.currentXColumn = null;
+      this.currentYColumn = null;
+      this.currentSortColumn = null;
+    }
+    this.currentSortOrder = 'ascending';
+    this.currentChartType = 'bar';
+    this.dispatchStateChange();
+    this.updateChartDebounced();
+  }
+
   /**
    * Update chart with current configuration (placeholder)
    */
   async updateChart() {
-    // To be implemented in future phases
-    console.log('[MarkerInteraction] updateChart called (placeholder)');
+    try {
+      const chartType = this.currentChartType || 'bar';
+      let columns = this.availableColumns;
+      if (!Array.isArray(columns) || columns.length === 0) {
+        const data = this.chartManager?.getCurrentData?.();
+        if (Array.isArray(data) && data.length) {
+          columns = Object.keys(data[0]);
+          this.availableColumns = columns;
+        } else {
+          console.warn('[MarkerInteraction] No data available to update chart');
+          return;
+        }
+      }
+
+      if (!columns.includes(this.currentXColumn)) {
+        this.currentXColumn = columns[0];
+      }
+      if (!columns.includes(this.currentYColumn)) {
+        this.currentYColumn = columns[1] || columns[0];
+      }
+
+      const config = {
+        chartType,
+        xColumn: this.currentXColumn,
+        yColumn: this.currentYColumn
+      };
+
+      if (typeof this.chartManager?.updateMarkerChartWithConfig === 'function') {
+        await this.chartManager.updateMarkerChartWithConfig('marker-0', config);
+      } else if (typeof this.chartManager?.updateMarkerChartFromControls === 'function') {
+        this.chartManager.updateMarkerChartFromControls('marker-0');
+      }
+    } catch (error) {
+      console.error('[MarkerInteraction] Failed to update chart:', error);
+    }
   }
 
   /**
@@ -173,6 +295,20 @@ class MarkerInteractionController {
   async applyFilter() {
     // To be implemented in Phase 6
     console.log('[MarkerInteraction] applyFilter called (placeholder)');
+  }
+
+  getStateSnapshot() {
+    const columns = Array.isArray(this.availableColumns) ? [...this.availableColumns] : [];
+    return {
+      xColumn: this.currentXColumn,
+      yColumn: this.currentYColumn,
+      sortColumn: this.currentSortColumn,
+      sortOrder: this.currentSortOrder,
+      chartType: this.currentChartType,
+      filterColumn: this.currentFilterColumn,
+      filterValue: this.currentFilterValue,
+      availableColumns: columns
+    };
   }
 
   /**
@@ -195,16 +331,7 @@ class MarkerInteractionController {
    */
   dispatchStateChange() {
     window.dispatchEvent(new CustomEvent('markerInteractionStateChange', {
-      detail: {
-        xColumn: this.currentXColumn,
-        yColumn: this.currentYColumn,
-        sortColumn: this.currentSortColumn,
-        sortOrder: this.currentSortOrder,
-        chartType: this.currentChartType,
-        filterColumn: this.currentFilterColumn,
-        filterValue: this.currentFilterValue,
-        availableColumns: this.availableColumns
-      }
+      detail: this.getStateSnapshot()
     }));
   }
 }

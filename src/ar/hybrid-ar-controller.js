@@ -78,6 +78,7 @@ class HybridARController {
 
       // Initialize marker interaction controller
       this.markerInteractionController = new MarkerInteractionController(this.chartManager);
+      window.markerInteractionController = this.markerInteractionController;
       this.setupMarkerListeners();
 
       // Initialize data info display

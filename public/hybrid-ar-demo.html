@@ -217,6 +217,25 @@
       transform: scaleX(-1);
     }
 
+    .dev-state-readout {
+      background: rgba(148, 163, 184, 0.15);
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 8px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .dev-state-readout div:last-child {
+      margin-bottom: 0;
+    }
+
+    .dev-panel-note {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
   </style>
 </head>
 
@@ -375,6 +394,40 @@
     </div>
 
     <div class="stats">
+      <details id="marker-test-panel">
+        <summary style="cursor: pointer;">Marker 0 Test Panel (Dev)</summary>
+        <p class="dev-panel-note">Use these controls to preview marker-driven chart configuration without physical markers.</p>
+        <div class="control-group">
+          <label for="dev-chart-type">Chart Type:</label>
+          <select id="dev-chart-type">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="scatter">Scatter</option>
+            <option value="pie">Pie</option>
+            <option value="histogram">Histogram</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="dev-x-axis">X-Axis Column:</label>
+          <select id="dev-x-axis"></select>
+        </div>
+        <div class="control-group">
+          <label for="dev-y-axis">Y-Axis Column:</label>
+          <select id="dev-y-axis"></select>
+        </div>
+        <div class="control-group" style="display: flex; gap: 8px;">
+          <button id="dev-refresh-columns" style="flex: 1;">Refresh Columns</button>
+          <button id="dev-reset-config" style="flex: 1; background: #475569;">Reset</button>
+        </div>
+        <div class="dev-state-readout">
+          <div>Chart Type: <span id="dev-state-chart">-</span></div>
+          <div>X-Axis: <span id="dev-state-x">-</span></div>
+          <div>Y-Axis: <span id="dev-state-y">-</span></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="stats">
       <h3>Debug Controls</h3>
       <div class="control-group">
         <label>
@@ -448,11 +501,178 @@
     });
   </script>
 
+  <script>
+    (function () {
+      const panel = {
+        initialized: false,
+        waiting: false,
+        init() {
+          if (this.initialized) return;
+          const controller = window.markerInteractionController;
+          if (!controller) {
+            if (!this.waiting) {
+              this.waiting = true;
+              setTimeout(() => {
+                this.waiting = false;
+                this.init();
+              }, 200);
+            }
+            return;
+          }
+
+          this.initialized = true;
+          this.controller = controller;
+          this.typeSelect = document.getElementById('dev-chart-type');
+          this.xSelect = document.getElementById('dev-x-axis');
+          this.ySelect = document.getElementById('dev-y-axis');
+          this.refreshBtn = document.getElementById('dev-refresh-columns');
+          this.resetBtn = document.getElementById('dev-reset-config');
+          this.chartStateEl = document.getElementById('dev-state-chart');
+          this.xStateEl = document.getElementById('dev-state-x');
+          this.yStateEl = document.getElementById('dev-state-y');
+
+          if (this.typeSelect) {
+            this.typeSelect.addEventListener('change', () => {
+              this.controller.setChartType(this.typeSelect.value);
+            });
+          }
+
+          if (this.xSelect) {
+            this.xSelect.addEventListener('change', () => {
+              if (this.xSelect.value) {
+                this.controller.setXAxisColumn(this.xSelect.value);
+              }
+            });
+          }
+
+          if (this.ySelect) {
+            this.ySelect.addEventListener('change', () => {
+              if (this.ySelect.value) {
+                this.controller.setYAxisColumn(this.ySelect.value);
+              }
+            });
+          }
+
+          if (this.refreshBtn) {
+            this.refreshBtn.addEventListener('click', () => {
+              this.controller.refreshAvailableColumns();
+              if (typeof this.controller.getStateSnapshot === 'function') {
+                this.applyState(this.controller.getStateSnapshot());
+              }
+            });
+          }
+
+          if (this.resetBtn) {
+            this.resetBtn.addEventListener('click', () => {
+              if (typeof this.controller.resetConfiguration === 'function') {
+                this.controller.resetConfiguration();
+              }
+            });
+          }
+
+          if (typeof this.controller.getStateSnapshot === 'function') {
+            this.applyState(this.controller.getStateSnapshot());
+          }
+        },
+        populateColumns(columns) {
+          const list = Array.isArray(columns) ? columns : [];
+          const selects = [
+            { element: this.xSelect, fallbackIndex: 0 },
+            { element: this.ySelect, fallbackIndex: 1 }
+          ];
+
+          selects.forEach(({ element, fallbackIndex }) => {
+            if (!element) return;
+            const previous = element.value;
+            element.innerHTML = '';
+
+            if (!list.length) {
+              const opt = document.createElement('option');
+              opt.value = '';
+              opt.textContent = 'No columns available';
+              element.appendChild(opt);
+              element.disabled = true;
+              return;
+            }
+
+            element.disabled = false;
+            list.forEach((column) => {
+              const option = document.createElement('option');
+              option.value = column;
+              option.textContent = column;
+              element.appendChild(option);
+            });
+
+            if (previous && list.includes(previous)) {
+              element.value = previous;
+            } else if (list[fallbackIndex]) {
+              element.value = list[fallbackIndex];
+            } else {
+              element.value = list[0];
+            }
+          });
+        },
+        hasOption(select, value) {
+          if (!select || !value) return false;
+          return Array.from(select.options).some((option) => option.value === value);
+        },
+        applyState(state = {}) {
+          if (!this.initialized) return;
+
+          const columns = Array.isArray(state.availableColumns) ? state.availableColumns : [];
+          this.populateColumns(columns);
+
+          if (this.typeSelect && state.chartType) {
+            if (!this.hasOption(this.typeSelect, state.chartType)) {
+              const option = document.createElement('option');
+              option.value = state.chartType;
+              option.textContent = state.chartType;
+              this.typeSelect.appendChild(option);
+            }
+            this.typeSelect.value = state.chartType;
+          }
+
+          if (this.xSelect && this.hasOption(this.xSelect, state.xColumn)) {
+            this.xSelect.value = state.xColumn;
+          }
+
+          if (this.ySelect && this.hasOption(this.ySelect, state.yColumn)) {
+            this.ySelect.value = state.yColumn;
+          }
+
+          if (this.chartStateEl) {
+            this.chartStateEl.textContent = state.chartType || '-';
+          }
+          if (this.xStateEl) {
+            this.xStateEl.textContent = state.xColumn || '-';
+          }
+          if (this.yStateEl) {
+            this.yStateEl.textContent = state.yColumn || '-';
+          }
+        }
+      };
+
+      window.MarkerTestPanel = panel;
+
+      window.addEventListener('markerInteractionStateChange', (event) => {
+        panel.init();
+        if (panel.initialized) {
+          panel.applyState(event.detail || {});
+        }
+      });
+
+      window.addEventListener('load', () => {
+        setTimeout(() => panel.init(), 300);
+      });
+    })();
+  </script>
+
   <!-- AR JavaScript modules -->
   <script src="../src/ar/coordinate-system.js"></script>
   <script src="../src/ar/gesture-detector.js"></script>
   <script src="../src/ar/chart-manager.js"></script>
   <script src="../src/ar/hand-tracking.js"></script>
+  <script src="../src/ar/marker-interaction-controller.js"></script>
   <script src="../src/ar/hybrid-ar-controller.js"></script>
 </body>
 

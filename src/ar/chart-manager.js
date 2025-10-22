@@ -138,7 +138,7 @@ class ChartManager {
    * @param {string} chartType - Chart.js type ('bar' | 'line' | 'pie' | 'scatter')
    * @param {string} datasetName - One of sample datasets keys ('students'|'weather'|'sales')
    */
-  createOrUpdateMarkerChart(markerId, chartType, datasetName) {
+  createOrUpdateMarkerChart(markerId, chartType, datasetName, chartConfigOverride = null) {
     const marker = document.getElementById(markerId);
     if (!marker) {
       console.warn(`Marker not found: ${markerId}`);
@@ -149,6 +149,11 @@ class ChartManager {
     if (!assets) {
       console.warn('No <a-assets> found for chart textures');
       return;
+    }
+
+    if (!datasetName) {
+      const sampleSelect = document.getElementById('sample-data');
+      datasetName = sampleSelect ? sampleSelect.value : 'students';
     }
 
     const key = markerId;
@@ -170,7 +175,7 @@ class ChartManager {
       try { existing.chart.destroy(); } catch (_) {}
     }
     const currentData = this.getCurrentData(datasetName);
-    const chart = this.generateChart(canvas, chartType, currentData);
+    const chart = this.generateChart(canvas, chartType, currentData, chartConfigOverride);
 
     // Ensure a plane entity exists under the marker and points to our canvas
     let entity = existing?.entity || marker.querySelector('[data-marker-chart]');
@@ -192,6 +197,23 @@ class ChartManager {
 
     // Log for debugging
     console.log(`Marker chart updated on ${markerId}: ${chartType} using ${datasetName}`);
+  }
+
+  updateMarkerChartWithConfig(markerId, config = {}) {
+    const chartType = config.chartType || 'bar';
+    const sampleSelect = document.getElementById('sample-data');
+    const datasetName = this.dataSource === 'custom' ? undefined : (sampleSelect ? sampleSelect.value : 'students');
+
+    const override = {};
+    if (config.xColumn) {
+      override.xColumn = config.xColumn;
+    }
+    if (config.yColumn) {
+      override.yColumn = config.yColumn;
+    }
+
+    const hasOverride = Object.keys(override).length > 0;
+    this.createOrUpdateMarkerChart(markerId, chartType, datasetName, hasOverride ? override : null);
   }
 
   /**

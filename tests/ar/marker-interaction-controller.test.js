@@ -81,9 +81,8 @@ describe('MarkerInteractionController', () => {
   beforeEach(() => {
     // Mock ChartManager
     mockChartManager = {
-      updateChart: jest.fn(),
-      getCurrentData: jest.fn(() => []),
-      updateChartWithAxes: jest.fn(),
+      updateMarkerChartWithConfig: jest.fn(),
+      getCurrentData: jest.fn(() => [{ name: 'Alice', age: 15, score: 92 }]),
       updateMarkerChartFromControls: jest.fn(),
       loadCustomData: jest.fn(),
       regenerateMarkerChart: jest.fn()
@@ -125,7 +124,14 @@ describe('MarkerInteractionController', () => {
 
     test('should handle empty columns gracefully', () => {
       global.window.BlocklyAutofill.getAvailableColumns = jest.fn(() => []);
-      const emptyController = new MarkerInteractionController(mockChartManager);
+      const chartManagerNoData = {
+        updateMarkerChartWithConfig: jest.fn(),
+        getCurrentData: jest.fn(() => []),
+        updateMarkerChartFromControls: jest.fn(),
+        loadCustomData: jest.fn(),
+        regenerateMarkerChart: jest.fn()
+      };
+      const emptyController = new MarkerInteractionController(chartManagerNoData);
       expect(emptyController.availableColumns).toEqual([]);
       expect(emptyController.currentXColumn).toBe(null);
       expect(emptyController.currentYColumn).toBe(null);
@@ -134,7 +140,17 @@ describe('MarkerInteractionController', () => {
     test('should handle missing BlocklyAutofill', () => {
       delete global.window.BlocklyAutofill;
       const noAutofillController = new MarkerInteractionController(mockChartManager);
-      expect(noAutofillController.availableColumns).toEqual([]);
+      expect(noAutofillController.availableColumns).toEqual(['name', 'age', 'score']);
+    });
+
+    test('should fallback to chart data when autofill is empty but data exists', () => {
+      global.window.BlocklyAutofill = {
+        getAvailableColumns: jest.fn(() => [])
+      };
+      const fallbackController = new MarkerInteractionController(mockChartManager);
+      expect(fallbackController.availableColumns).toEqual(['name', 'age', 'score']);
+      expect(fallbackController.currentXColumn).toBe('name');
+      expect(fallbackController.currentYColumn).toBe('age');
     });
   });
 
@@ -144,6 +160,12 @@ describe('MarkerInteractionController', () => {
       controller.refreshAvailableColumns();
 
       expect(controller.availableColumns).toEqual(['a', 'b', 'c', 'd']);
+    });
+
+    test('should fallback to chart data when autofill returns empty', () => {
+      global.window.BlocklyAutofill.getAvailableColumns.mockReturnValue([]);
+      controller.refreshAvailableColumns();
+      expect(controller.availableColumns).toEqual(['name', 'age', 'score']);
     });
 
     test('should update defaults when columns change', () => {
@@ -353,6 +375,7 @@ describe('MarkerInteractionController', () => {
       expect(event.detail.xColumn).toBe('age');
       expect(event.detail.yColumn).toBe('score');
       expect(event.detail.chartType).toBe('line');
+      expect(event.detail.availableColumns).toEqual(['name', 'age', 'score']);
     });
 
     test('should include all state fields in event detail', () => {
@@ -385,9 +408,22 @@ describe('MarkerInteractionController', () => {
 
       expect(refreshSpy).toHaveBeenCalled();
     });
+
+    test('should update state snapshot after csvDataChanged', () => {
+      global.window.BlocklyAutofill.getAvailableColumns.mockReturnValue(['letter', 'number']);
+      const listeners = global.window.addEventListener.mock.calls;
+      const csvListener = listeners.find(call => call[0] === 'csvDataChanged');
+
+      csvListener[1]();
+
+      const snapshot = controller.getStateSnapshot();
+      expect(snapshot.availableColumns).toEqual(['letter', 'number']);
+      expect(snapshot.xColumn).toBe('letter');
+      expect(snapshot.yColumn).toBe('number');
+    });
   });
 
-  describe('Placeholder Handlers (Phase 0)', () => {
+  describe('Base Handlers', () => {
     test('handleXAxisRotation should be defined', () => {
       expect(controller.handleXAxisRotation).toBeDefined();
       expect(() => controller.handleXAxisRotation(90)).not.toThrow();
@@ -418,11 +454,16 @@ describe('MarkerInteractionController', () => {
       expect(() => controller.handleChartTypeRotation(90)).not.toThrow();
     });
 
-    test('updateChart should log placeholder message', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      controller.updateChart();
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('placeholder'));
-      consoleSpy.mockRestore();
+    test('updateChart should delegate to chart manager', async () => {
+      await controller.updateChart();
+      expect(mockChartManager.updateMarkerChartWithConfig).toHaveBeenCalledWith(
+        'marker-0',
+        expect.objectContaining({
+          chartType: expect.any(String),
+          xColumn: expect.any(String),
+          yColumn: expect.any(String)
+        })
+      );
     });
 
     test('applySorting should log placeholder message', () => {
