@@ -351,6 +351,98 @@ describe('MarkerInteractionController', () => {
     });
   });
 
+  describe('handleYAxisRotation (Phase 4)', () => {
+    test('should update Y column and trigger chart refresh when entering new sector', () => {
+      jest.useFakeTimers();
+
+      controller.availableColumns = ['name', 'age', 'score', 'grade'];
+      controller.currentYColumn = 'age';
+
+      const updateSpy = jest.spyOn(controller, 'updateChart').mockResolvedValue();
+
+      try {
+        controller.handleYAxisRotation(225); // Sector 2 (score)
+
+        expect(controller.currentYColumn).toBe('score');
+
+        jest.runAllTimers();
+        expect(updateSpy).toHaveBeenCalled();
+      } finally {
+        updateSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    test('should honor hysteresis at sector boundaries', () => {
+      jest.useFakeTimers();
+
+      controller.availableColumns = ['name', 'age', 'score', 'grade'];
+      controller.currentYColumn = 'age';
+
+      controller.handleYAxisRotation(225); // Move to 'score'
+      jest.runAllTimers();
+
+      const updateSpy = jest.spyOn(controller, 'updateChart').mockResolvedValue();
+
+      try {
+        controller.handleYAxisRotation(272); // 2° inside next sector (within hysteresis)
+
+        expect(controller.currentYColumn).toBe('score');
+
+        jest.runAllTimers();
+        expect(updateSpy).not.toHaveBeenCalled();
+      } finally {
+        updateSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    test('should change to next column after exiting hysteresis window', () => {
+      jest.useFakeTimers();
+
+      controller.availableColumns = ['name', 'age', 'score', 'grade'];
+      controller.currentYColumn = 'age';
+
+      controller.handleYAxisRotation(225); // Move to 'score'
+      jest.runAllTimers();
+
+      const updateSpy = jest.spyOn(controller, 'updateChart').mockResolvedValue();
+
+      try {
+        controller.handleYAxisRotation(340); // Deep into 'grade'
+
+        expect(controller.currentYColumn).toBe('grade');
+
+        jest.runAllTimers();
+        expect(updateSpy).toHaveBeenCalled();
+      } finally {
+        updateSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    test('should handle datasets with two columns', () => {
+      jest.useFakeTimers();
+
+      controller.availableColumns = ['x', 'y'];
+      controller.currentYColumn = 'x';
+
+      const updateSpy = jest.spyOn(controller, 'updateChart').mockResolvedValue();
+
+      try {
+        controller.handleYAxisRotation(270); // Second sector -> 'y'
+
+        expect(controller.currentYColumn).toBe('y');
+
+        jest.runAllTimers();
+        expect(updateSpy).toHaveBeenCalled();
+      } finally {
+        updateSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+  });
+
   describe('handleMarkerRotation', () => {
     test('should route marker 1 to handleXAxisRotation', () => {
       const spy = jest.spyOn(controller, 'handleXAxisRotation');

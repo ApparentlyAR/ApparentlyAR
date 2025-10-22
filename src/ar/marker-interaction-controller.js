@@ -167,7 +167,23 @@ class MarkerInteractionController {
   }
 
   handleYAxisRotation(degrees) {
-    // To be implemented in Phase 4
+    const columns = this.availableColumns;
+    if (!Array.isArray(columns) || columns.length === 0) {
+      console.warn('[Marker 2] No columns available for Y-axis selection');
+      return;
+    }
+
+    const selectedColumn = this.getSectorValueFromRotation(2, degrees, columns);
+    if (!selectedColumn) {
+      return;
+    }
+
+    if (selectedColumn !== this.currentYColumn) {
+      console.log(`[Marker 2] Y-axis changed: ${this.currentYColumn} → ${selectedColumn}`);
+      this.currentYColumn = selectedColumn;
+      this.dispatchStateChange();
+      this.updateChartDebounced();
+    }
   }
 
   handleSortColumnRotation(degrees) {
