@@ -23,6 +23,9 @@ class MarkerInteractionController {
     this.rotationIntervals = {}; // markerNum -> intervalId
     this.rotationSmoothers = {}; // markerNum -> RotationSmoother
 
+    // Sector history for hysteresis handling (per marker)
+    this.lastSectorByMarker = {}; // markerNum -> last stable sector index
+
     // Debounce timers
     this.updateChartDebounced = this.debounce(() => this.updateChart(), 300);
     this.applySortingDebounced = this.debounce(() => this.applySorting(), 300);
@@ -40,6 +43,7 @@ class MarkerInteractionController {
    * Get available columns from Blockly autofill system
    */
   refreshAvailableColumns() {
+    this.lastSectorByMarker = {};
     this.availableColumns = window.BlocklyAutofill?.getAvailableColumns() || [];
     if (this.availableColumns.length === 0) {
       const fallbackData = this.chartManager?.getCurrentData?.();
@@ -143,7 +147,23 @@ class MarkerInteractionController {
    * Placeholder handlers for marker rotations (to be implemented in future phases)
    */
   handleXAxisRotation(degrees) {
-    // To be implemented in Phase 3
+    const columns = this.availableColumns;
+    if (!Array.isArray(columns) || columns.length === 0) {
+      console.warn('[Marker 1] No columns available for X-axis selection');
+      return;
+    }
+
+    const selectedColumn = this.getSectorValueFromRotation(1, degrees, columns);
+    if (!selectedColumn) {
+      return;
+    }
+
+    if (selectedColumn !== this.currentXColumn) {
+      console.log(`[Marker 1] X-axis changed: ${this.currentXColumn} → ${selectedColumn}`);
+      this.currentXColumn = selectedColumn;
+      this.dispatchStateChange();
+      this.updateChartDebounced();
+    }
   }
 
   handleYAxisRotation(degrees) {
@@ -259,9 +279,15 @@ class MarkerInteractionController {
       }
 
       if (!columns.includes(this.currentXColumn)) {
+        if (this.currentXColumn) {
+          console.warn(`[MarkerInteraction] X column '${this.currentXColumn}' not found; resetting to '${columns[0]}'`);
+        }
         this.currentXColumn = columns[0];
       }
       if (!columns.includes(this.currentYColumn)) {
+        if (this.currentYColumn && columns.length > 1) {
+          console.warn(`[MarkerInteraction] Y column '${this.currentYColumn}' not found; resetting to '${columns[1] || columns[0]}'`);
+        }
         this.currentYColumn = columns[1] || columns[0];
       }
 
@@ -333,6 +359,50 @@ class MarkerInteractionController {
     window.dispatchEvent(new CustomEvent('markerInteractionStateChange', {
       detail: this.getStateSnapshot()
     }));
+  }
+
+  /**
+   * Map marker rotation to a value with hysteresis to reduce jitter.
+   * @param {number} markerNum - Marker identifier
+   * @param {number} degrees - Rotation in degrees (0-360)
+   * @param {Array} values - Values to map across sectors
+   * @param {number} hysteresis - Boundary buffer in degrees
+   * @returns {*|null} Selected value or null when unavailable
+   */
+  getSectorValueFromRotation(markerNum, degrees, values, hysteresis = 5) {
+    if (!Array.isArray(values) || values.length === 0) {
+      return null;
+    }
+
+    if (values.length === 1) {
+      this.lastSectorByMarker[markerNum] = 0;
+      return values[0];
+    }
+
+    const normalized = ((degrees % 360) + 360) % 360;
+    const sectorSize = 360 / values.length;
+    const rawIndex = Math.floor(normalized / sectorSize) % values.length;
+    const positionInSector = normalized - rawIndex * sectorSize;
+    const lastIndex = this.lastSectorByMarker[markerNum];
+
+    if (typeof lastIndex === 'number' && lastIndex !== rawIndex) {
+      if (positionInSector < hysteresis) {
+        const prevIndex = (rawIndex - 1 + values.length) % values.length;
+        if (lastIndex === prevIndex) {
+          return values[lastIndex];
+        }
+      }
+
+      if (positionInSector > sectorSize - hysteresis) {
+        const nextIndex = (rawIndex + 1) % values.length;
+        if (lastIndex === nextIndex) {
+          return values[lastIndex];
+        }
+      }
+    }
+
+    this.lastSectorByMarker[markerNum] = rawIndex;
+    return values[rawIndex];
   }
 }
 

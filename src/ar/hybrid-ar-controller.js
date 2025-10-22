@@ -126,9 +126,19 @@ class HybridARController {
   setupMarkerListeners() {
     // Markers 1-6 have interactions (Marker 0 is for chart display)
     for (let i = 1; i <= 6; i++) {
-      const marker = document.querySelector(`#marker-${i}`);
+      let marker = document.querySelector(`#marker-${i}`);
       if (!marker) {
-        console.warn(`[MarkerInteraction] Marker ${i} element not found`);
+        marker = document.querySelector(`a-marker[value="${i}"]`);
+      }
+
+      if (!marker) {
+        if (!this.missingMarkerWarnings) {
+          this.missingMarkerWarnings = new Set();
+        }
+        if (!this.missingMarkerWarnings.has(i)) {
+          this.missingMarkerWarnings.add(i);
+          console.warn(`[MarkerInteraction] Marker ${i} element not found`);
+        }
         continue;
       }
 

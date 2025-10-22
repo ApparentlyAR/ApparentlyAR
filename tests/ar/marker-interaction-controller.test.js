@@ -280,6 +280,77 @@ describe('MarkerInteractionController', () => {
     });
   });
 
+  describe('handleXAxisRotation (Phase 3)', () => {
+    test('should update X column and trigger chart refresh when entering new sector', () => {
+      jest.useFakeTimers();
+
+      controller.availableColumns = ['name', 'age', 'score', 'grade'];
+      controller.currentXColumn = 'name';
+
+      const updateSpy = jest.spyOn(controller, 'updateChart').mockResolvedValue();
+
+      try {
+        controller.handleXAxisRotation(135); // Sector 1 (age)
+
+        expect(controller.currentXColumn).toBe('age');
+
+        jest.runAllTimers();
+        expect(updateSpy).toHaveBeenCalled();
+      } finally {
+        updateSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    test('should apply hysteresis near sector boundaries to prevent jitter', () => {
+      jest.useFakeTimers();
+
+      controller.availableColumns = ['name', 'age', 'score', 'grade'];
+      controller.currentXColumn = 'name';
+
+      controller.handleXAxisRotation(100); // Move to 'age'
+      jest.runAllTimers();
+
+      const updateSpy = jest.spyOn(controller, 'updateChart').mockResolvedValue();
+
+      try {
+        controller.handleXAxisRotation(181); // 1° into next sector
+
+        expect(controller.currentXColumn).toBe('age');
+
+        jest.runAllTimers();
+        expect(updateSpy).not.toHaveBeenCalled();
+      } finally {
+        updateSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    test('should change to next column once past hysteresis window', () => {
+      jest.useFakeTimers();
+
+      controller.availableColumns = ['name', 'age', 'score', 'grade'];
+      controller.currentXColumn = 'name';
+
+      controller.handleXAxisRotation(100); // Set to 'age'
+      jest.runAllTimers();
+
+      const updateSpy = jest.spyOn(controller, 'updateChart').mockResolvedValue();
+
+      try {
+        controller.handleXAxisRotation(205); // Deep into next sector ('score')
+
+        expect(controller.currentXColumn).toBe('score');
+
+        jest.runAllTimers();
+        expect(updateSpy).toHaveBeenCalled();
+      } finally {
+        updateSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+  });
+
   describe('handleMarkerRotation', () => {
     test('should route marker 1 to handleXAxisRotation', () => {
       const spy = jest.spyOn(controller, 'handleXAxisRotation');
