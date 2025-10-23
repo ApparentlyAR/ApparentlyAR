@@ -241,8 +241,21 @@ class MarkerInteractionController {
     // To be implemented in Phase 6
   }
 
+  /**
+   * Handle Marker 6 rotation - Chart Type Selector
+   * Maps rotation to 4 chart types with 90° sectors
+   * @param {number} degrees - Rotation in degrees (0-360)
+   */
   handleChartTypeRotation(degrees) {
-    // To be implemented in Phase 2
+    const chartTypes = ['bar', 'line', 'scatter', 'pie'];
+    const selectedType = this.getSectorValueFromRotation(6, degrees, chartTypes);
+
+    if (selectedType && selectedType !== this.currentChartType) {
+      console.log(`[Marker 6] Chart type changed: ${this.currentChartType} → ${selectedType}`);
+      this.currentChartType = selectedType;
+      this.dispatchStateChange();
+      this.updateChartDebounced();
+    }
   }
 
   handleReservedMarkerRotation(degrees) {
