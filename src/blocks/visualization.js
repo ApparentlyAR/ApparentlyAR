@@ -141,6 +141,74 @@
   // Custom dropdown field with hover tooltips
   // Make it globally accessible by attaching to Blockly
   if (typeof Blockly !== 'undefined') {
+    // Custom label field with hover tooltips
+    Blockly.FieldLabelWithTooltip = class extends Blockly.FieldLabel {
+      constructor(text, chartType, chartTypeInfo) {
+        super(text);
+        this.chartType_ = chartType;
+        this.tooltipDiv_ = null;
+        this.chartTypeInfo_ = chartTypeInfo || CHART_TYPE_INFO;
+      }
+
+      initView() {
+        super.initView();
+
+        // Add hover listeners to the label text element
+        if (this.textElement_) {
+          this.textElement_.style.cursor = 'help';
+          this.textElement_.addEventListener('mouseenter', (e) => this.showTooltip_(e));
+          this.textElement_.addEventListener('mouseleave', () => this.hideTooltip_());
+        }
+      }
+
+      showTooltip_(event) {
+        if (!this.chartType_ || !this.chartTypeInfo_[this.chartType_]) {
+          return;
+        }
+
+        const info = this.chartTypeInfo_[this.chartType_];
+
+        // Remove existing tooltip if any
+        this.hideTooltip_();
+
+        // Create tooltip div
+        this.tooltipDiv_ = document.createElement('div');
+        this.tooltipDiv_.className = 'blockly-chart-tooltip';
+        this.tooltipDiv_.innerHTML = `
+          <div class="blockly-chart-tooltip-header">
+            <h4>${info.label}</h4>
+            <span class="blockly-chart-tooltip-badge">${this.chartType_}</span>
+          </div>
+          <p class="blockly-chart-tooltip-description">${info.description}</p>
+          <div class="blockly-chart-tooltip-footer">
+            <p class="blockly-chart-tooltip-label">Best for:</p>
+            <p class="blockly-chart-tooltip-bestfor">${info.bestFor}</p>
+          </div>
+        `;
+
+        document.body.appendChild(this.tooltipDiv_);
+
+        // Position tooltip near the label
+        const labelRect = this.textElement_.getBoundingClientRect();
+        this.tooltipDiv_.style.position = 'fixed';
+        this.tooltipDiv_.style.left = (labelRect.right + 10) + 'px';
+        this.tooltipDiv_.style.top = labelRect.top + 'px';
+        this.tooltipDiv_.style.zIndex = '10000';
+      }
+
+      hideTooltip_() {
+        if (this.tooltipDiv_) {
+          this.tooltipDiv_.remove();
+          this.tooltipDiv_ = null;
+        }
+      }
+
+      dispose() {
+        this.hideTooltip_();
+        super.dispose();
+      }
+    };
+
     Blockly.FieldDropdownWithTooltip = class extends Blockly.FieldDropdown {
       constructor(options, validator, chartTypeInfo) {
         super(options, validator);
@@ -157,8 +225,19 @@
           menuItems.forEach((item) => {
             item.addEventListener('mouseenter', (e) => this.showTooltip_(e, item));
             item.addEventListener('mouseleave', () => this.hideTooltip_());
+            // Hide tooltip when a menu item is clicked
+            item.addEventListener('click', () => this.hideTooltip_());
+            item.addEventListener('mousedown', () => this.hideTooltip_());
           });
         }, 50);
+      }
+
+      dropdownDispose_() {
+        // Hide tooltip when dropdown closes
+        this.hideTooltip_();
+        if (super.dropdownDispose_) {
+          super.dropdownDispose_();
+        }
       }
 
       showTooltip_(event, menuItem) {
@@ -248,6 +327,86 @@
       }
     };
 
+    // Quick chart type options (same 5 types as original)
+    const quickChartTypeOptions = [
+      ["Bar Chart", "bar"],
+      ["Line Chart", "line"],
+      ["Scatter Plot", "scatter"],
+      ["Pie Chart", "pie"],
+      ["Area Chart", "area"]
+    ];
+
+    // Define quick_chart block programmatically with custom dropdown
+    Blockly.Blocks['quick_chart'] = {
+      init: function() {
+        this.appendDummyInput()
+          .appendField("create")
+          .appendField(new Blockly.FieldDropdownWithTooltip(quickChartTypeOptions, null, CHART_TYPE_INFO), "CHART_TYPE")
+          .appendField("chart with X-axis")
+          .appendField(new Blockly.FieldDropdown([["column", "column"]]), "X_COLUMN")
+          .appendField("Y-axis")
+          .appendField(new Blockly.FieldDropdown([["column", "column"]]), "Y_COLUMN")
+          .appendField("title")
+          .appendField(new Blockly.FieldTextInput("Chart"), "TITLE");
+        this.appendValueInput("DATA")
+          .setCheck("Dataset")
+          .appendField("from");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(330);
+        this.setTooltip("Quick one-step chart creation");
+        this.setHelpUrl("");
+      }
+    };
+
+    // Define histogram_config block programmatically with custom label
+    Blockly.Blocks['histogram_config'] = {
+      init: function() {
+        this.appendDummyInput()
+          .appendField("create")
+          .appendField(new Blockly.FieldLabelWithTooltip("histogram", "histogram", CHART_TYPE_INFO))
+          .appendField("of")
+          .appendField(new Blockly.FieldDropdown([["column", "column"]]), "VALUE_COLUMN")
+          .appendField("with")
+          .appendField(new Blockly.FieldNumber(10, 1, 100), "BINS")
+          .appendField("bins title")
+          .appendField(new Blockly.FieldTextInput("Histogram"), "TITLE");
+        this.appendValueInput("DATA")
+          .setCheck("Dataset")
+          .appendField("from");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(330);
+        this.setTooltip("Create histogram with specified number of bins");
+        this.setHelpUrl("");
+      }
+    };
+
+    // Define heatmap_config block programmatically with custom label
+    Blockly.Blocks['heatmap_config'] = {
+      init: function() {
+        this.appendDummyInput()
+          .appendField("create")
+          .appendField(new Blockly.FieldLabelWithTooltip("heatmap", "heatmap", CHART_TYPE_INFO))
+          .appendField("X-axis")
+          .appendField(new Blockly.FieldDropdown([["column", "column"]]), "X_COLUMN")
+          .appendField("Y-axis")
+          .appendField(new Blockly.FieldDropdown([["column", "column"]]), "Y_COLUMN")
+          .appendField("values")
+          .appendField(new Blockly.FieldDropdown([["column", "column"]]), "VALUE_COLUMN")
+          .appendField("title")
+          .appendField(new Blockly.FieldTextInput("Heatmap"), "TITLE");
+        this.appendValueInput("DATA")
+          .setCheck("Dataset")
+          .appendField("from");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(330);
+        this.setTooltip("Create heatmap visualization");
+        this.setHelpUrl("");
+      }
+    };
+
     // Define other blocks with JSON
     Blockly.defineBlocksWithJsonArray([
 
@@ -326,69 +485,6 @@
         "nextStatement": null,
         "colour": 330,
         "tooltip": "Generate and display chart using configuration and data",
-        "helpUrl": ""
-      },
-
-      // Quick Chart Block
-      {
-        "type": "quick_chart",
-        "message0": "create %1 chart with X-axis %2 Y-axis %3 title %4 from %5",
-        "args0": [
-          {
-            "type": "field_dropdown",
-            "name": "CHART_TYPE",
-            "options": [
-              ["bar", "bar"],
-              ["line", "line"],
-              ["scatter", "scatter"],
-              ["pie", "pie"],
-              ["area", "area"]
-            ]
-          },
-          { "type": "field_dropdown", "name": "X_COLUMN", "options": [["column", "column"]] },
-          { "type": "field_dropdown", "name": "Y_COLUMN", "options": [["column", "column"]] },
-          { "type": "field_input", "name": "TITLE", "text": "Chart" },
-          { "type": "input_value", "name": "DATA", "check": "Dataset" }
-        ],
-        "previousStatement": null,
-        "nextStatement": null,
-        "colour": 330,
-        "tooltip": "Quick one-step chart creation",
-        "helpUrl": ""
-      },
-
-      // Histogram Config Block
-      {
-        "type": "histogram_config",
-        "message0": "create histogram of %1 with %2 bins title %3 from %4",
-        "args0": [
-          { "type": "field_dropdown", "name": "VALUE_COLUMN", "options": [["column", "column"]] },
-          { "type": "field_number", "name": "BINS", "value": 10, "min": 1, "max": 100 },
-          { "type": "field_input", "name": "TITLE", "text": "Histogram" },
-          { "type": "input_value", "name": "DATA", "check": "Dataset" }
-        ],
-        "previousStatement": null,
-        "nextStatement": null,
-        "colour": 330,
-        "tooltip": "Create histogram with specified number of bins",
-        "helpUrl": ""
-      },
-
-      // Heatmap Config Block
-      {
-        "type": "heatmap_config",
-        "message0": "create heatmap X-axis %1 Y-axis %2 values %3 title %4 from %5",
-        "args0": [
-          { "type": "field_dropdown", "name": "X_COLUMN", "options": [["column", "column"]] },
-          { "type": "field_dropdown", "name": "Y_COLUMN", "options": [["column", "column"]] },
-          { "type": "field_dropdown", "name": "VALUE_COLUMN", "options": [["column", "column"]] },
-          { "type": "field_input", "name": "TITLE", "text": "Heatmap" },
-          { "type": "input_value", "name": "DATA", "check": "Dataset" }
-        ],
-        "previousStatement": null,
-        "nextStatement": null,
-        "colour": 330,
-        "tooltip": "Create heatmap visualization",
         "helpUrl": ""
       }
     ]);
