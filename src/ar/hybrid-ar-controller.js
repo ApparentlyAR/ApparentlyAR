@@ -76,15 +76,8 @@ class HybridARController {
       // Force chart manager to use custom data only
       this.chartManager.dataSource = 'custom';
 
-      // Auto-load most recent Blockly data
+      // Auto-load most recent Blockly data (refreshBlocklyFiles now handles loading)
       await this.refreshBlocklyFiles();
-      const fileSelect = document.getElementById('blockly-filename');
-      if (fileSelect && fileSelect.options.length > 0 && fileSelect.options[0].value) {
-        const mostRecentFile = fileSelect.options[0].value;
-        await this.loadBlocklyData(mostRecentFile);
-      } else {
-        this.updateStatus('No Blockly data found. Import CSV in Blockly first.', 'error');
-      }
 
       // Initialize marker-anchored chart (marker 0) based on current controls
       this.chartManager.updateMarkerChartFromControls('marker-0');
@@ -377,7 +370,7 @@ class HybridARController {
   }
 
   /**
-   * Refresh the list of available Blockly files
+   * Refresh the list of available Blockly files (no UI required)
    */
   async refreshBlocklyFiles() {
     try {
@@ -390,20 +383,17 @@ class HybridARController {
       }
       
       const result = await response.json();
-      const fileSelect = document.getElementById('blockly-filename');
+      
+      // Store file list for internal use (no UI dropdown needed)
+      this.availableFiles = result.files || [];
       
       if (result.success && result.files && result.files.length > 0) {
-        fileSelect.innerHTML = result.files.map(file => 
-          `<option value="${file}">${file}</option>`
-        ).join('');
-        
-        // Auto-select first file if none selected
-        if (!fileSelect.value && result.files.length > 0) {
-          fileSelect.value = result.files[0];
-          await this.loadBlocklyData(result.files[0]);
-        }
+        // Auto-load the most recent file (first in list)
+        const mostRecentFile = result.files[0];
+        console.log(`[AR] Found ${result.files.length} files, auto-loading: ${mostRecentFile}`);
+        await this.loadBlocklyData(mostRecentFile);
       } else {
-        fileSelect.innerHTML = '<option value="">No files available</option>';
+        console.warn('[AR] No Blockly files found in uploads directory');
       }
       
       this.updateStatus('Files refreshed', 'ready');
@@ -444,6 +434,8 @@ class HybridARController {
       // Update UI
       if (this.markerInteractionController) {
         this.markerInteractionController.refreshAvailableColumns();
+        // Dispatch state change to update dev panel dropdowns
+        this.markerInteractionController.dispatchStateChange();
       }
       this.updateDataInfo();
       this.updateMarkerChart();
@@ -504,11 +496,13 @@ class HybridARController {
       }
 
       // Build chart from Blockly data only
-      let chartType = document.getElementById('chart-type').value;
+      let chartType = 'bar'; // Default, will be overridden by Blockly config
       const dataForChart = this.chartManager.getCurrentData();
       
       if (!dataForChart || dataForChart.length === 0) {
-        throw new Error('No Blockly data loaded. Please import CSV in Blockly first.');
+        const msg = 'No data available after filtering. Check your Blockly filter conditions.';
+        this.updateStatus(msg, 'error');
+        throw new Error(msg);
       }
 
       // Create (or reuse) canvas
@@ -534,10 +528,9 @@ class HybridARController {
           if (xCol || yCol) {
             overrideCfg = { xColumn: xCol, yColumn: yCol };
           }
-          // If chart type provided, prefer it
+          // Get chart type from Blockly config
           const savedType = parsed?.chartType || parsed?.config?.chartType || parsed?.config?.type || null;
           if (savedType) {
-            try { document.getElementById('chart-type').value = parsed.chartType; } catch (_) {}
             chartType = savedType;
           }
         }
@@ -620,16 +613,20 @@ class HybridARController {
         return;
       }
 
-      // Ensure Blockly data is loaded if selected
+      // Ensure Blockly data is loaded
       await this.ensureBlocklyDataLoaded();
 
-      // Get current chart configuration
-      const chartType = document.getElementById('chart-type').value;
-      const sampleSelect = document.getElementById('sample-data');
-      const dataSourceSel = document.getElementById('data-source');
-      const usingCustom = (dataSourceSel && dataSourceSel.value === 'blockly') || this.chartManager.dataSource === 'custom';
-      const datasetForRender = usingCustom ? undefined : (sampleSelect ? sampleSelect.value : 'students');
-      const currentData = this.chartManager.getRenderableData(datasetForRender);
+      // Get chart type from Blockly config
+      let chartType = 'bar';
+      try {
+        const rawCfg = localStorage.getItem('ar_last_visualization');
+        if (rawCfg) {
+          const parsed = JSON.parse(rawCfg);
+          chartType = parsed?.chartType || parsed?.config?.chartType || parsed?.config?.type || 'bar';
+        }
+      } catch (_) {}
+      
+      const currentData = this.chartManager.getRenderableData();
       
       // Generate chart on the dev canvas
       const chart = this.chartManager.generateChart(canvas, chartType, currentData);
@@ -657,11 +654,23 @@ class HybridARController {
     try {
       const needsLoad = this.chartManager.dataSource !== 'custom' || !this.chartManager.customData;
       if (needsLoad) {
-        const blocklyFileSel = document.getElementById('blockly-filename');
-        let filename = blocklyFileSel ? blocklyFileSel.value : '';
-        if (!filename && window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) {
+        // Try to get filename from Blockly global state
+        let filename = '';
+        if (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) {
           filename = window.Blockly.CsvImportData.filename;
         }
+        
+        // If no filename from Blockly, fetch most recent file from server
+        if (!filename) {
+          const response = await fetch('/api/list-files');
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.files && result.files.length > 0) {
+              filename = result.files[0]; // Most recent file
+            }
+          }
+        }
+        
         if (filename) {
           await this.loadBlocklyData(filename);
         } else {
@@ -738,75 +747,14 @@ class HybridARController {
     // Monitor marker detection periodically
     setInterval(this.monitorMarkers.bind(this), 500);
 
-    // Update marker 0 chart when controls change
-    const typeSel = document.getElementById('chart-type');
-    const blocklyFileSel = document.getElementById('blockly-filename');
-    const refreshBtn = document.getElementById('refresh-files');
-    const uploadBtn = document.getElementById('upload-file-btn');
-    const uploadInput = document.getElementById('upload-file');
+    // Setup event listeners for AR controls
     const loadFromBlocklyBtn = document.getElementById('load-from-blockly');
     const moveToMarkerBtn = document.getElementById('move-to-marker');
     
-    const handler = () => this.chartManager.updateMarkerChartFromControls('marker-0');
-    const dataInfoHandler = () => this.updateDataInfo();
-    
-    if (typeSel) {
-      typeSel.addEventListener('change', () => {
-        handler();
-        this.updateDevChartIfVisible();
-      });
-      typeSel.addEventListener('input', () => {
-        handler();
-        this.updateDevChartIfVisible();
-      });
-    }
-    
-    // Handle Blockly file selection
-    if (blocklyFileSel) {
-      blocklyFileSel.addEventListener('change', async (e) => {
-        if (e.target.value) {
-          await this.loadBlocklyData(e.target.value);
-          this.updateDevChartIfVisible();
-        }
-      });
-    }
-    
-    // Handle refresh button
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', () => {
-        this.refreshBlocklyFiles();
-      });
-    }
-
+    // Listen for marker data sorting events
     window.addEventListener('markerDataSorted', () => {
       this.updateDataInfo();
     });
-
-    // Upload CSV
-    if (uploadBtn && uploadInput) {
-      uploadBtn.addEventListener('click', () => uploadInput.click());
-      uploadInput.addEventListener('change', async (e) => {
-        try {
-          const file = e.target.files && e.target.files[0];
-          if (!file) return;
-          if (!window.AppApi || !window.AppApi.uploadCsv) throw new Error('API not available');
-          this.updateStatus('Uploading CSV...', 'detecting');
-          const result = await window.AppApi.uploadCsv(file);
-          if (!result || !result.success) throw new Error(result?.error || 'Upload failed');
-          await this.refreshBlocklyFiles();
-          const sel = document.getElementById('blockly-filename');
-          if (sel && result.filename) { sel.value = result.filename; }
-          await this.loadBlocklyData(result.filename);
-          this.updateDevChartIfVisible();
-          this.updateStatus('CSV uploaded', 'ready');
-        } catch (err) {
-          console.error('Upload error:', err);
-          this.updateStatus('Upload failed: ' + err.message, 'error');
-        } finally {
-          if (uploadInput) uploadInput.value = '';
-        }
-      });
-    }
 
     // Handle dev mode buttons
     const spawnDevBtn = document.getElementById('spawn-dev-chart');
@@ -857,36 +805,24 @@ class HybridARController {
             return safe.toLowerCase().endsWith('.csv') ? safe : `${safe}.csv`;
           };
           const expectedFile = deriveFilename();
-          // Refresh file list to ensure we have latest
-          await this.refreshBlocklyFiles();
-          const sel = document.getElementById('blockly-filename');
-          if (sel) {
-            // Try exact match, then case-insensitive match
-            let chosen = '';
-            const options = Array.from(sel.options || []);
-            const exact = options.find(o => o.value === expectedFile);
-            if (exact) chosen = exact.value;
-            else {
-              const lower = options.find(o => o.value.toLowerCase() === expectedFile.toLowerCase());
-              if (lower) chosen = lower.value;
-            }
-            if (!chosen && options.length > 0) {
-              // As last resort, use most recent file from list-files (already sorted by mtime)
-              chosen = options[0].value;
-            }
-            if (chosen) sel.value = chosen;
-            if (chosen) await this.loadBlocklyData(chosen);
-          } else if (expectedFile) {
-            await this.loadBlocklyData(expectedFile);
-          }
+          // Load the CSV file directly
+          await this.loadBlocklyData(expectedFile);
           this.updateDataInfo();
-          this.updateMarkerChart();
-          // Apply chart type if provided
-          if (cfg.chartType) {
-            const typeSel = document.getElementById('chart-type');
-            if (typeSel) typeSel.value = cfg.chartType;
-          }
+          // Spawn chart with config from Blockly (includes chart type)
           await this.spawnMockMarkerChart();
+          
+          // Sync marker interaction controller with loaded config
+          if (this.markerInteractionController && cfg.chartType) {
+            this.markerInteractionController.currentChartType = cfg.chartType;
+            // Also update axis columns if specified
+            if (cfg.xColumn) {
+              this.markerInteractionController.currentXColumn = cfg.xColumn;
+            }
+            if (cfg.yColumn) {
+              this.markerInteractionController.currentYColumn = cfg.yColumn;
+            }
+            this.markerInteractionController.dispatchStateChange();
+          }
         } catch (err) {
           console.error('Load from Blockly error:', err);
           this.updateStatus('Load from Blockly failed: ' + err.message, 'error');

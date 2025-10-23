@@ -315,15 +315,21 @@ class ChartManager {
   }
 
   /**
-   * Helper to read control panel selections and update marker 0 chart.
+   * Helper to update marker 0 chart (chart type from Blockly config or marker controller).
    * @param {string} markerId
    */
   updateMarkerChartFromControls(markerId = 'marker-0') {
-    const typeSel = document.getElementById('chart-type');
-    const dataSel = document.getElementById('sample-data');
-    const chartType = typeSel ? typeSel.value : 'bar';
-    const datasetName = dataSel ? dataSel.value : 'students';
-    this.createOrUpdateMarkerChart(markerId, chartType, datasetName);
+    // Get chart type from localStorage (Blockly config) or use default
+    let chartType = 'bar';
+    try {
+      const rawCfg = localStorage.getItem('ar_last_visualization');
+      if (rawCfg) {
+        const parsed = JSON.parse(rawCfg);
+        chartType = parsed?.chartType || parsed?.config?.chartType || parsed?.config?.type || 'bar';
+      }
+    } catch (_) {}
+    
+    this.createOrUpdateMarkerChart(markerId, chartType, null);
   }
 
   /**
@@ -502,7 +508,15 @@ class ChartManager {
    * @param {number} screenY - Screen Y coordinate
    */
   createChart(screenX, screenY) {
-    const chartType = document.getElementById('chart-type').value;
+    // Get chart type from Blockly config or use default
+    let chartType = 'bar';
+    try {
+      const rawCfg = localStorage.getItem('ar_last_visualization');
+      if (rawCfg) {
+        const parsed = JSON.parse(rawCfg);
+        chartType = parsed?.chartType || parsed?.config?.chartType || parsed?.config?.type || 'bar';
+      }
+    } catch (_) {}
     
     // Create unique canvas for this chart
     const canvas = document.createElement('canvas');
@@ -563,6 +577,43 @@ class ChartManager {
    */
   generateChart(canvas, type, data, chartConfigOverride = null) {
     const ctx = canvas.getContext('2d');
+
+    // Add logging to debug data flow
+    console.log('[ChartManager] generateChart called:', {
+      type,
+      dataRows: data?.length || 0,
+      hasOverride: !!chartConfigOverride,
+      override: chartConfigOverride
+    });
+
+    // Handle empty data gracefully
+    if (!data || data.length === 0) {
+      console.warn('[ChartManager] No data available for chart');
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['No Data'],
+          datasets: [{
+            label: 'No data available',
+            data: [0],
+            backgroundColor: '#ef4444'
+          }]
+        },
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'No data available - check Blockly filter',
+              color: '#ef4444',
+              font: { size: 14 }
+            },
+            legend: { display: false }
+          }
+        }
+      });
+    }
 
     let chartConfig = {
       type: type,
@@ -655,12 +706,50 @@ class ChartManager {
     const yCol = cfg.yColumn;
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
 
+    // Add detailed logging to understand data flow
+    console.log('[ChartManager] prepareOverriddenChartData:', {
+      type,
+      xCol,
+      yCol,
+      dataRows: data.length,
+      firstRow: data.length > 0 ? data[0] : null,
+      availableColumns: data.length > 0 ? Object.keys(data[0]) : []
+    });
+
     if (type === 'scatter') {
-      if (!xCol || !yCol) return { labels: [], datasets: [] };
+      if (!xCol || !yCol) {
+        console.warn('[ChartManager] Scatter chart missing columns');
+        return { labels: [], datasets: [] };
+      }
+      
+      // Validate data exists
+      if (data.length === 0) {
+        console.warn('[ChartManager] No data rows available for scatter chart');
+        return { labels: [], datasets: [] };
+      }
+      
+      // Check if columns exist in data
+      const firstRow = data[0];
+      if (!(xCol in firstRow)) {
+        console.error(`[ChartManager] X column "${xCol}" not found. Available:`, Object.keys(firstRow));
+        return { labels: [], datasets: [] };
+      }
+      if (!(yCol in firstRow)) {
+        console.error(`[ChartManager] Y column "${yCol}" not found. Available:`, Object.keys(firstRow));
+        return { labels: [], datasets: [] };
+      }
+      
+      const chartData = data.map(row => ({
+        x: parseFloat(row[xCol]) || 0,
+        y: parseFloat(row[yCol]) || 0
+      }));
+      
+      console.log(`[ChartManager] Scatter data points:`, chartData.slice(0, 5), `(showing first 5 of ${chartData.length})`);
+      
       return {
         datasets: [{
           label: `${xCol} vs ${yCol}`,
-          data: data.map(row => ({ x: parseFloat(row[xCol]) || 0, y: parseFloat(row[yCol]) || 0 })),
+          data: chartData,
           backgroundColor: colors[0]
         }]
       };

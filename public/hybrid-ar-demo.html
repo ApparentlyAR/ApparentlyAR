@@ -359,26 +359,7 @@
       <h3 style="margin: 0 0 10px 0; color: #22C55E; font-size: 14px;">From Blockly</h3>
       <button id="load-from-blockly" style="background: #16A34A; margin-bottom: 6px;">Load Last Visualization</button>
       <button id="move-to-marker" style="background: #059669;">Put On Marker</button>
-    </div>
-
-    <div class="control-group">
-      <label for="chart-type">Chart Type:</label>
-      <select id="chart-type">
-        <option value="bar">Bar Chart</option>
-        <option value="line">Line Chart</option>
-        <option value="pie">Pie Chart</option>
-        <option value="scatter">Scatter Plot</option>
-      </select>
-    </div>
-
-    <div class="control-group" id="blockly-data-group">
-      <label for="blockly-filename">Blockly File:</label>
-      <select id="blockly-filename">
-        <option value="">No files available</option>
-      </select>
-      <button id="refresh-files" style="width: 100%; margin-top: 5px; background: #666;">Refresh Files</button>
-      <input type="file" id="upload-file" accept=".csv" style="display:none" />
-      <button id="upload-file-btn" style="width: 100%; margin-top: 5px; background: #3b82f6;">Upload CSV</button>
+      <p style="font-size: 11px; color: #94a3b8; margin-top: 8px;">Data automatically loaded from most recent Blockly CSV</p>
     </div>
 
     <div class="stats">
@@ -673,7 +654,13 @@
           }
 
           if (typeof this.controller.getStateSnapshot === 'function') {
-            this.applyState(this.controller.getStateSnapshot());
+            // Force immediate refresh if columns already loaded
+            if (this.controller.availableColumns && this.controller.availableColumns.length > 0) {
+              console.log('[MarkerTestPanel] Columns already loaded on init, applying state');
+              this.applyState(this.controller.getStateSnapshot());
+            } else {
+              this.applyState(this.controller.getStateSnapshot());
+            }
           }
         },
         populateColumns(columns) {
