@@ -26,9 +26,12 @@ class MarkerInteractionController {
     // Sector history for hysteresis handling (per marker)
     this.lastSectorByMarker = {}; // markerNum -> last stable sector index
 
+    // Pending debounce handles for cleanup
+    this.pendingTimeouts = new Set();
+
     // Debounce timers
     this.updateChartDebounced = this.debounce(() => this.updateChart(), 300);
-    this.applySortingDebounced = this.debounce(() => this.applySorting(), 300);
+    this.applySortingDebounced = this.debounce(() => this.applySorting(), 500);
     this.applyFilterDebounced = this.debounce(() => this.applyFilter(), 500);
 
     // Subscribe to CSV data changes
@@ -67,10 +70,6 @@ class MarkerInteractionController {
       this.currentXColumn = null;
       this.currentYColumn = null;
       this.currentSortColumn = null;
-    }
-
-    if (typeof this.chartManager?.setSortConfig === 'function') {
-      this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
     }
 
     this.dispatchStateChange();
@@ -142,6 +141,9 @@ class MarkerInteractionController {
       case 6:
         this.handleChartTypeRotation(degrees);
         break;
+      case 7:
+        this.handleReservedMarkerRotation(degrees);
+        break;
       default:
         console.warn(`[MarkerInteraction] Unhandled marker ${markerNum}`);
     }
@@ -211,15 +213,23 @@ class MarkerInteractionController {
   }
 
   handleSortOrderRotation(degrees) {
-    const orders = ['ascending', 'descending'];
-    const selectedOrder = this.getSectorValueFromRotation(4, degrees, orders, 10);
-    if (!selectedOrder) {
+    const BUFFER = 10;
+    const normalized = ((degrees % 360) + 360) % 360;
+
+    let newOrder = null;
+
+    if (normalized >= BUFFER && normalized <= 180 - BUFFER) {
+      newOrder = 'ascending';
+    } else if (normalized >= 180 + BUFFER && normalized <= 360 - BUFFER) {
+      newOrder = 'descending';
+    } else {
+      // Within buffer zone (0-10, 170-190, 350-360) → no toggle
       return;
     }
 
-    if (selectedOrder !== this.currentSortOrder) {
-      console.log(`[Marker 4] Sort order changed: ${this.currentSortOrder} → ${selectedOrder}`);
-      this.currentSortOrder = selectedOrder;
+    if (newOrder !== this.currentSortOrder) {
+      console.log(`[Marker 4] Sort order changed: ${this.currentSortOrder} → ${newOrder}`);
+      this.currentSortOrder = newOrder;
       this.dispatchStateChange();
       this.applySortingDebounced();
     }
@@ -231,6 +241,10 @@ class MarkerInteractionController {
 
   handleChartTypeRotation(degrees) {
     // To be implemented in Phase 2
+  }
+
+  handleReservedMarkerRotation(degrees) {
+    console.log('[MarkerInteraction] Reserved marker rotation detected:', degrees);
   }
 
   setChartType(type) {
@@ -304,9 +318,6 @@ class MarkerInteractionController {
     this.currentSortOrder = 'ascending';
     this.currentChartType = 'bar';
     this.dispatchStateChange();
-    if (typeof this.chartManager?.setSortConfig === 'function') {
-      this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
-    }
     this.updateChartDebounced();
   }
 
@@ -357,15 +368,81 @@ class MarkerInteractionController {
     }
   }
 
+  getDatasetForSorting() {
+    const blockly = window.Blockly?.CsvImportData;
+    const candidates = [
+      blockly?.originalData,
+      blockly?.data,
+      this.chartManager?.getCurrentData?.()
+    ];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate) && candidate.length) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
   /**
-   * Apply sorting to current dataset (placeholder)
+   * Apply sorting to current dataset
    */
   async applySorting() {
     try {
-      if (typeof this.chartManager?.setSortConfig === 'function') {
-        this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
+      if (!this.currentSortColumn) {
+        console.warn('[MarkerInteraction] Cannot apply sorting - no sort column selected');
+        return;
       }
+
+      const dataset = this.getDatasetForSorting();
+      if (!Array.isArray(dataset) || dataset.length === 0) {
+        console.warn('[MarkerInteraction] Cannot apply sorting - no data available');
+        return;
+      }
+
+      if (!window.AppApi || typeof window.AppApi.processData !== 'function') {
+        console.warn('[MarkerInteraction] AppApi.processData unavailable; skipping backend sort');
+        return;
+      }
+
+      console.log(`[MarkerInteraction] Applying sort: ${this.currentSortColumn} ${this.currentSortOrder}`);
+
+      const operations = [
+        {
+          type: 'sort',
+          params: {
+            column: this.currentSortColumn,
+            order: this.currentSortOrder
+          }
+        }
+      ];
+
+      const result = await window.AppApi.processData(dataset, operations);
+
+      if (!result || !Array.isArray(result.data)) {
+        console.warn('[MarkerInteraction] Sort operation returned invalid payload');
+        return;
+      }
+
+      if (typeof this.chartManager?.loadCustomData === 'function') {
+        const generatedName = `sorted_${this.currentSortColumn}_${this.currentSortOrder}.csv`;
+        this.chartManager.loadCustomData(result.data, generatedName);
+      }
+
+      if (typeof this.chartManager?.setSortConfig === 'function') {
+        this.chartManager.setSortConfig(null, this.currentSortOrder);
+      }
+
       await this.updateChart();
+
+      window.dispatchEvent(new CustomEvent('markerDataSorted', {
+        detail: {
+          column: this.currentSortColumn,
+          order: this.currentSortOrder,
+          rowCount: result.data.length
+        }
+      }));
     } catch (error) {
       console.error('[MarkerInteraction] Failed to apply sorting:', error);
     }
@@ -398,14 +475,28 @@ class MarkerInteractionController {
    */
   debounce(func, wait) {
     let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
+    return (...args) => {
+      if (timeout) {
         clearTimeout(timeout);
+        this.pendingTimeouts.delete(timeout);
+      }
+
+      timeout = setTimeout(() => {
+        this.pendingTimeouts.delete(timeout);
         func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
+      }, wait);
+
+      this.pendingTimeouts.add(timeout);
     };
+  }
+
+  clearPendingDebounces() {
+    if (!(this.pendingTimeouts instanceof Set)) {
+      return;
+    }
+
+    this.pendingTimeouts.forEach((handle) => clearTimeout(handle));
+    this.pendingTimeouts.clear();
   }
 
   /**

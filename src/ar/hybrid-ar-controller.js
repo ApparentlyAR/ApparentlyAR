@@ -124,8 +124,8 @@ class HybridARController {
    * Markers 1-6 have rotation-based interactions
    */
   setupMarkerListeners() {
-    // Markers 1-6 have interactions (Marker 0 is for chart display)
-    for (let i = 1; i <= 6; i++) {
+    // Markers 1-7 have interactions (Marker 0 is for chart display)
+    for (let i = 1; i <= 7; i++) {
       let marker = document.querySelector(`#marker-${i}`);
       if (!marker) {
         marker = document.querySelector(`a-marker[value="${i}"]`);
@@ -818,6 +818,10 @@ class HybridARController {
         this.refreshBlocklyFiles();
       });
     }
+
+    window.addEventListener('markerDataSorted', () => {
+      this.updateDataInfo();
+    });
 
     // Upload CSV
     if (uploadBtn && uploadInput) {

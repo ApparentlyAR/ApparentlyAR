@@ -77,8 +77,15 @@ describe('RotationSmoother', () => {
 describe('MarkerInteractionController', () => {
   let controller;
   let mockChartManager;
+  let originalWindow;
 
   beforeEach(() => {
+    const baseData = [
+      { name: 'Charlie', age: 17, score: 88 },
+      { name: 'Alice', age: 15, score: 95 },
+      { name: 'Bob', age: 16, score: 90 }
+    ];
+
     // Mock ChartManager
     mockChartManager = {
       updateMarkerChartWithConfig: jest.fn(),
@@ -89,10 +96,20 @@ describe('MarkerInteractionController', () => {
       setSortConfig: jest.fn()
     };
 
-    // Mock window.BlocklyAutofill
+    // Mock window services
+    originalWindow = global.window;
     global.window = {
       BlocklyAutofill: {
         getAvailableColumns: jest.fn(() => ['name', 'age', 'score'])
+      },
+      AppApi: {
+        processData: jest.fn(() => Promise.resolve({ data: baseData.slice() }))
+      },
+      Blockly: {
+        CsvImportData: {
+          originalData: baseData.slice(),
+          data: baseData.slice()
+        }
       },
       addEventListener: jest.fn(),
       dispatchEvent: jest.fn()
@@ -106,6 +123,20 @@ describe('MarkerInteractionController', () => {
     Object.keys(controller.rotationIntervals).forEach(key => {
       clearInterval(controller.rotationIntervals[key]);
     });
+
+    if (typeof controller.clearPendingDebounces === 'function') {
+      controller.clearPendingDebounces();
+    }
+
+    jest.useFakeTimers();
+    jest.runOnlyPendingTimers();
+    jest.clearAllTimers();
+    jest.useRealTimers();
+
+    if (originalWindow) {
+      global.window = originalWindow;
+      originalWindow = undefined;
+    }
   });
 
   describe('Initialization', () => {
@@ -481,10 +512,16 @@ describe('MarkerInteractionController', () => {
       expect(spy).toHaveBeenCalledWith(200);
     });
 
+    test('should route marker 7 to handleReservedMarkerRotation', () => {
+      const spy = jest.spyOn(controller, 'handleReservedMarkerRotation');
+      controller.handleMarkerRotation(7, 45);
+      expect(spy).toHaveBeenCalledWith(45);
+    });
+
     test('should log warning for unhandled markers', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      controller.handleMarkerRotation(7, 90);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Unhandled marker 7'));
+      controller.handleMarkerRotation(8, 90);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Unhandled marker 8'));
       consoleWarnSpy.mockRestore();
     });
   });
@@ -617,6 +654,55 @@ describe('MarkerInteractionController', () => {
       expect(controller.handleChartTypeRotation).toBeDefined();
       expect(() => controller.handleChartTypeRotation(90)).not.toThrow();
     });
+    test('handleReservedMarkerRotation should be defined', () => {
+      expect(controller.handleReservedMarkerRotation).toBeDefined();
+      expect(() => controller.handleReservedMarkerRotation(90)).not.toThrow();
+    });
+
+    test('handleSortOrderRotation switches to ascending within active range', () => {
+      jest.useFakeTimers();
+      const sortSpy = jest.spyOn(controller, 'applySorting').mockResolvedValue();
+
+      controller.currentSortOrder = 'descending';
+      controller.handleSortOrderRotation(90);
+
+      expect(controller.currentSortOrder).toBe('ascending');
+      jest.advanceTimersByTime(600);
+      expect(sortSpy).toHaveBeenCalled();
+
+      sortSpy.mockRestore();
+      jest.useRealTimers();
+    });
+
+    test('handleSortOrderRotation switches to descending within active range', () => {
+      jest.useFakeTimers();
+      const sortSpy = jest.spyOn(controller, 'applySorting').mockResolvedValue();
+
+      controller.currentSortOrder = 'ascending';
+      controller.handleSortOrderRotation(220);
+
+      expect(controller.currentSortOrder).toBe('descending');
+      jest.advanceTimersByTime(600);
+      expect(sortSpy).toHaveBeenCalled();
+
+      sortSpy.mockRestore();
+      jest.useRealTimers();
+    });
+
+    test('handleSortOrderRotation respects buffer zones', () => {
+      jest.useFakeTimers();
+      const sortSpy = jest.spyOn(controller, 'applySorting').mockResolvedValue();
+
+      controller.currentSortOrder = 'ascending';
+      controller.handleSortOrderRotation(185); // Within 170°-190° buffer
+
+      expect(controller.currentSortOrder).toBe('ascending');
+      jest.advanceTimersByTime(600);
+      expect(sortSpy).not.toHaveBeenCalled();
+
+      sortSpy.mockRestore();
+      jest.useRealTimers();
+    });
 
     test('updateChart should delegate to chart manager', async () => {
       await controller.updateChart();
@@ -630,14 +716,40 @@ describe('MarkerInteractionController', () => {
       );
     });
 
-    test('applySorting should update sort config and refresh chart', async () => {
-      const sortColumnBefore = controller.currentSortColumn;
-      const sortOrderBefore = controller.currentSortOrder;
+    test('applySorting should call backend sort and refresh chart', async () => {
+      const unsorted = [
+        { name: 'Charlie', age: 17, score: 70 },
+        { name: 'Alice', age: 15, score: 95 }
+      ];
+      const sorted = [
+        { name: 'Alice', age: 15, score: 95 },
+        { name: 'Charlie', age: 17, score: 70 }
+      ];
+
+      global.window.Blockly.CsvImportData.originalData = unsorted;
+      global.window.AppApi.processData = jest.fn(() => Promise.resolve({ data: sorted }));
+
+      controller.currentSortColumn = 'name';
+      controller.currentSortOrder = 'ascending';
 
       await controller.applySorting();
 
-      expect(mockChartManager.setSortConfig).toHaveBeenCalledWith(sortColumnBefore, sortOrderBefore);
+      expect(global.window.AppApi.processData).toHaveBeenCalledWith(
+        unsorted,
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'sort',
+            params: expect.objectContaining({ column: 'name', order: 'ascending' })
+          })
+        ])
+      );
+      expect(mockChartManager.loadCustomData).toHaveBeenCalledWith(sorted, expect.stringContaining('sorted_name_ascending'));
+      expect(mockChartManager.setSortConfig).toHaveBeenCalledWith(null, 'ascending');
       expect(mockChartManager.updateMarkerChartWithConfig).toHaveBeenCalled();
+      expect(global.window.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'markerDataSorted',
+        detail: expect.objectContaining({ column: 'name', order: 'ascending', rowCount: sorted.length })
+      }));
     });
 
     test('applyFilter should log placeholder message', () => {

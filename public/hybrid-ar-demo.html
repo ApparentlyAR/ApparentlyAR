@@ -282,6 +282,38 @@
         </a-octahedron>
       </a-marker>
 
+      <!-- Marker 4: Orange rotating cone -->
+      <a-marker id="marker-4" type="barcode" value="4">
+        <a-cone position="0 0 0" material="color: orange; opacity: 0.85"
+          animation="property: rotation; to: 0 360 0; loop: true; dur: 2500" radius-bottom="0.5" radius-top="0.1"
+          height="1.2">
+        </a-cone>
+      </a-marker>
+
+      <!-- Marker 5: Purple pulsing torus -->
+      <a-marker id="marker-5" type="barcode" value="5">
+        <a-torus position="0 0 0" material="color: #8b5cf6; opacity: 0.85"
+          animation="property: scale; to: 1.3 1.3 1.3; loop: true; dur: 1800; dir: alternate" radius="0.6"
+          radius-tubular="0.18">
+        </a-torus>
+      </a-marker>
+
+      <!-- Marker 6: Teal oscillating ring -->
+      <a-marker id="marker-6" type="barcode" value="6">
+        <a-ring position="0 0 0" material="color: #14b8a6; opacity: 0.8"
+          animation="property: position; to: 0 0.4 0; loop: true; dur: 1600; dir: alternate" radius-inner="0.25"
+          radius-outer="0.55">
+        </a-ring>
+      </a-marker>
+
+      <!-- Marker 7: Crimson twisting torus knot -->
+      <a-marker id="marker-7" type="barcode" value="7">
+        <a-torus-knot position="0 0 0" material="color: #dc2626; opacity: 0.85"
+          animation="property: rotation; to: 360 360 0; loop: true; dur: 3000" radius="0.45"
+          radius-tubular="0.12" p="2" q="3">
+        </a-torus-knot>
+      </a-marker>
+
       <!-- Hand-placed charts removed in pointer-tooltip mode -->
     </a-entity>
 
@@ -383,6 +415,31 @@
         <strong>Hands:</strong> Point your index finger at the marker chart to show tooltips
         <!-- legacy gesture terms for test compatibility: pinch, fist -->
       </p>
+    </div>
+    <div class="stats">
+      <h3>Marker State</h3>
+      <div style="display: grid; grid-template-columns: 150px 1fr; gap: 6px; font-size: 11px;">
+        <strong>X-Axis (M1):</strong>
+        <span id="state-x-axis">-</span>
+
+        <strong>Y-Axis (M2):</strong>
+        <span id="state-y-axis">-</span>
+
+        <strong>Sort Column (M3):</strong>
+        <span id="state-sort-column">-</span>
+
+        <strong>Sort Order (M4):</strong>
+        <span id="state-sort-order">-</span>
+
+        <strong>Filter (M5):</strong>
+        <span id="state-filter">-</span>
+
+        <strong>Chart Type (M6):</strong>
+        <span id="state-chart-type">-</span>
+
+        <strong>Available Columns:</strong>
+        <span id="state-columns">-</span>
+      </div>
     </div>
 
     <div class="stats">
@@ -715,6 +772,55 @@
       window.addEventListener('load', () => {
         setTimeout(() => panel.init(), 300);
       });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const refs = {
+        x: document.getElementById('state-x-axis'),
+        y: document.getElementById('state-y-axis'),
+        sortColumn: document.getElementById('state-sort-column'),
+        sortOrder: document.getElementById('state-sort-order'),
+        filter: document.getElementById('state-filter'),
+        chartType: document.getElementById('state-chart-type'),
+        columns: document.getElementById('state-columns')
+      };
+
+      if (!refs.x) {
+        return;
+      }
+
+      const capitalize = (value) => {
+        if (!value || typeof value !== 'string') return '-';
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      };
+
+      const update = (detail = {}) => {
+        refs.x.textContent = detail.xColumn || '-';
+        refs.y.textContent = detail.yColumn || '-';
+        refs.sortColumn.textContent = detail.sortColumn || '-';
+        refs.sortOrder.textContent = detail.sortOrder ? capitalize(detail.sortOrder) : '-';
+
+        if (detail.filterColumn && detail.filterValue != null) {
+          refs.filter.textContent = `${detail.filterColumn} = ${detail.filterValue}`;
+        } else if (detail.filterColumn) {
+          refs.filter.textContent = detail.filterColumn;
+        } else {
+          refs.filter.textContent = '-';
+        }
+
+        refs.chartType.textContent = detail.chartType ? capitalize(detail.chartType) : '-';
+        refs.columns.textContent = Array.isArray(detail.availableColumns) && detail.availableColumns.length
+          ? detail.availableColumns.join(', ')
+          : 'None';
+      };
+
+      window.addEventListener('markerInteractionStateChange', (event) => {
+        update(event?.detail || {});
+      });
+
+      update({});
     })();
   </script>
 
