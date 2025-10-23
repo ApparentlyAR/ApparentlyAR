@@ -415,6 +415,17 @@
           <label for="dev-y-axis">Y-Axis Column:</label>
           <select id="dev-y-axis"></select>
         </div>
+        <div class="control-group">
+          <label for="dev-sort-column">Sort Column:</label>
+          <select id="dev-sort-column"></select>
+        </div>
+        <div class="control-group">
+          <label for="dev-sort-order">Sort Order:</label>
+          <select id="dev-sort-order">
+            <option value="ascending">Ascending</option>
+            <option value="descending">Descending</option>
+          </select>
+        </div>
         <div class="control-group" style="display: flex; gap: 8px;">
           <button id="dev-refresh-columns" style="flex: 1;">Refresh Columns</button>
           <button id="dev-reset-config" style="flex: 1; background: #475569;">Reset</button>
@@ -423,6 +434,8 @@
           <div>Chart Type: <span id="dev-state-chart">-</span></div>
           <div>X-Axis: <span id="dev-state-x">-</span></div>
           <div>Y-Axis: <span id="dev-state-y">-</span></div>
+          <div>Sort Column: <span id="dev-state-sort">-</span></div>
+          <div>Sort Order: <span id="dev-state-order">-</span></div>
         </div>
       </details>
     </div>
@@ -525,11 +538,15 @@
           this.typeSelect = document.getElementById('dev-chart-type');
           this.xSelect = document.getElementById('dev-x-axis');
           this.ySelect = document.getElementById('dev-y-axis');
+          this.sortColumnSelect = document.getElementById('dev-sort-column');
+          this.sortOrderSelect = document.getElementById('dev-sort-order');
           this.refreshBtn = document.getElementById('dev-refresh-columns');
           this.resetBtn = document.getElementById('dev-reset-config');
           this.chartStateEl = document.getElementById('dev-state-chart');
           this.xStateEl = document.getElementById('dev-state-x');
           this.yStateEl = document.getElementById('dev-state-y');
+          this.sortStateEl = document.getElementById('dev-state-sort');
+          this.sortOrderStateEl = document.getElementById('dev-state-order');
 
           if (this.typeSelect) {
             this.typeSelect.addEventListener('change', () => {
@@ -550,6 +567,20 @@
               if (this.ySelect.value) {
                 this.controller.setYAxisColumn(this.ySelect.value);
               }
+            });
+          }
+
+          if (this.sortColumnSelect) {
+            this.sortColumnSelect.addEventListener('change', () => {
+              if (this.sortColumnSelect.value) {
+                this.controller.setSortColumn(this.sortColumnSelect.value);
+              }
+            });
+          }
+
+          if (this.sortOrderSelect) {
+            this.sortOrderSelect.addEventListener('change', () => {
+              this.controller.setSortOrder(this.sortOrderSelect.value || 'ascending');
             });
           }
 
@@ -578,7 +609,8 @@
           const list = Array.isArray(columns) ? columns : [];
           const selects = [
             { element: this.xSelect, fallbackIndex: 0 },
-            { element: this.ySelect, fallbackIndex: 1 }
+            { element: this.ySelect, fallbackIndex: 1 },
+            { element: this.sortColumnSelect, fallbackIndex: 0 }
           ];
 
           selects.forEach(({ element, fallbackIndex }) => {
@@ -640,6 +672,18 @@
             this.ySelect.value = state.yColumn;
           }
 
+          if (this.sortColumnSelect) {
+            if (this.hasOption(this.sortColumnSelect, state.sortColumn)) {
+              this.sortColumnSelect.value = state.sortColumn;
+            } else if (!this.sortColumnSelect.value && this.sortColumnSelect.options.length) {
+              this.sortColumnSelect.value = this.sortColumnSelect.options[0].value;
+            }
+          }
+
+          if (this.sortOrderSelect) {
+            this.sortOrderSelect.value = state.sortOrder || 'ascending';
+          }
+
           if (this.chartStateEl) {
             this.chartStateEl.textContent = state.chartType || '-';
           }
@@ -648,6 +692,13 @@
           }
           if (this.yStateEl) {
             this.yStateEl.textContent = state.yColumn || '-';
+          }
+          if (this.sortStateEl) {
+            this.sortStateEl.textContent = state.sortColumn || '-';
+          }
+          if (this.sortOrderStateEl) {
+            const label = state.sortOrder || 'ascending';
+            this.sortOrderStateEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
           }
         }
       };

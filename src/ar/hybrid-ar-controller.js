@@ -429,6 +429,9 @@ class HybridARController {
       }
       
       // Update UI
+      if (this.markerInteractionController) {
+        this.markerInteractionController.refreshAvailableColumns();
+      }
       this.updateDataInfo();
       this.updateMarkerChart();
       
@@ -452,13 +455,15 @@ class HybridARController {
     if (info.source === 'custom') {
       sourceEl.textContent = 'Blockly Data';
       datasetEl.textContent = info.filename;
-      rowsEl.textContent = info.rowCount;
+      const currentData = this.chartManager.getRenderableData();
+      rowsEl.textContent = currentData.length;
       columnsEl.textContent = info.columns.length;
     } else {
       sourceEl.textContent = 'Sample Data';
       const sampleSelect = document.getElementById('sample-data');
       datasetEl.textContent = sampleSelect.options[sampleSelect.selectedIndex].text;
-      const currentData = this.chartManager.getCurrentData();
+      const datasetName = sampleSelect ? sampleSelect.value : 'students';
+      const currentData = this.chartManager.getRenderableData(datasetName);
       rowsEl.textContent = currentData.length;
       columnsEl.textContent = Object.keys(currentData[0] || {}).length;
     }
@@ -493,7 +498,11 @@ class HybridARController {
 
       // Build chart from the CURRENT DATA SOURCE explicitly (custom or sample)
       let chartType = document.getElementById('chart-type').value;
-      const dataForChart = this.chartManager.getCurrentData();
+      const sampleSelect = document.getElementById('sample-data');
+      const dataSourceSel = document.getElementById('data-source');
+      const usingCustom = (dataSourceSel && dataSourceSel.value === 'blockly') || this.chartManager.dataSource === 'custom';
+      const datasetForRender = usingCustom ? undefined : (sampleSelect ? sampleSelect.value : 'students');
+      const dataForChart = this.chartManager.getRenderableData(datasetForRender);
 
       // Create (or reuse) canvas
       let canvas = devContainer.querySelector('canvas#dev-marker-canvas');
@@ -609,7 +618,11 @@ class HybridARController {
 
       // Get current chart configuration
       const chartType = document.getElementById('chart-type').value;
-      const currentData = this.chartManager.getCurrentData();
+      const sampleSelect = document.getElementById('sample-data');
+      const dataSourceSel = document.getElementById('data-source');
+      const usingCustom = (dataSourceSel && dataSourceSel.value === 'blockly') || this.chartManager.dataSource === 'custom';
+      const datasetForRender = usingCustom ? undefined : (sampleSelect ? sampleSelect.value : 'students');
+      const currentData = this.chartManager.getRenderableData(datasetForRender);
       
       // Generate chart on the dev canvas
       const chart = this.chartManager.generateChart(canvas, chartType, currentData);
@@ -744,10 +757,16 @@ class HybridARController {
       dataSel.addEventListener('change', () => {
         handler();
         dataInfoHandler();
+        if (this.markerInteractionController) {
+          this.markerInteractionController.refreshAvailableColumns();
+        }
       });
       dataSel.addEventListener('input', () => {
         handler();
         dataInfoHandler();
+        if (this.markerInteractionController) {
+          this.markerInteractionController.refreshAvailableColumns();
+        }
       });
     }
     
@@ -777,6 +796,9 @@ class HybridARController {
         this.updateDataInfo();
         this.updateMarkerChart();
         this.updateDevChartIfVisible();
+        if (this.markerInteractionController) {
+          this.markerInteractionController.refreshAvailableColumns();
+        }
       });
     }
     

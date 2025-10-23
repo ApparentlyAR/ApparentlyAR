@@ -69,6 +69,10 @@ class MarkerInteractionController {
       this.currentSortColumn = null;
     }
 
+    if (typeof this.chartManager?.setSortConfig === 'function') {
+      this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
+    }
+
     this.dispatchStateChange();
   }
 
@@ -187,11 +191,38 @@ class MarkerInteractionController {
   }
 
   handleSortColumnRotation(degrees) {
-    // To be implemented in Phase 5
+    const columns = this.availableColumns;
+    if (!Array.isArray(columns) || columns.length === 0) {
+      console.warn('[Marker 3] No columns available for sort selection');
+      return;
+    }
+
+    const selectedColumn = this.getSectorValueFromRotation(3, degrees, columns);
+    if (!selectedColumn) {
+      return;
+    }
+
+    if (selectedColumn !== this.currentSortColumn) {
+      console.log(`[Marker 3] Sort column changed: ${this.currentSortColumn} → ${selectedColumn}`);
+      this.currentSortColumn = selectedColumn;
+      this.dispatchStateChange();
+      this.applySortingDebounced();
+    }
   }
 
   handleSortOrderRotation(degrees) {
-    // To be implemented in Phase 1
+    const orders = ['ascending', 'descending'];
+    const selectedOrder = this.getSectorValueFromRotation(4, degrees, orders, 10);
+    if (!selectedOrder) {
+      return;
+    }
+
+    if (selectedOrder !== this.currentSortOrder) {
+      console.log(`[Marker 4] Sort order changed: ${this.currentSortOrder} → ${selectedOrder}`);
+      this.currentSortOrder = selectedOrder;
+      this.dispatchStateChange();
+      this.applySortingDebounced();
+    }
   }
 
   handleFilterCategoryRotation(degrees) {
@@ -273,6 +304,9 @@ class MarkerInteractionController {
     this.currentSortOrder = 'ascending';
     this.currentChartType = 'bar';
     this.dispatchStateChange();
+    if (typeof this.chartManager?.setSortConfig === 'function') {
+      this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
+    }
     this.updateChartDebounced();
   }
 
@@ -327,8 +361,14 @@ class MarkerInteractionController {
    * Apply sorting to current dataset (placeholder)
    */
   async applySorting() {
-    // To be implemented in Phase 1
-    console.log('[MarkerInteraction] applySorting called (placeholder)');
+    try {
+      if (typeof this.chartManager?.setSortConfig === 'function') {
+        this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
+      }
+      await this.updateChart();
+    } catch (error) {
+      console.error('[MarkerInteraction] Failed to apply sorting:', error);
+    }
   }
 
   /**

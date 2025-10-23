@@ -85,7 +85,8 @@ describe('MarkerInteractionController', () => {
       getCurrentData: jest.fn(() => [{ name: 'Alice', age: 15, score: 92 }]),
       updateMarkerChartFromControls: jest.fn(),
       loadCustomData: jest.fn(),
-      regenerateMarkerChart: jest.fn()
+      regenerateMarkerChart: jest.fn(),
+      setSortConfig: jest.fn()
     };
 
     // Mock window.BlocklyAutofill
@@ -629,11 +630,14 @@ describe('MarkerInteractionController', () => {
       );
     });
 
-    test('applySorting should log placeholder message', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      controller.applySorting();
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('placeholder'));
-      consoleSpy.mockRestore();
+    test('applySorting should update sort config and refresh chart', async () => {
+      const sortColumnBefore = controller.currentSortColumn;
+      const sortOrderBefore = controller.currentSortOrder;
+
+      await controller.applySorting();
+
+      expect(mockChartManager.setSortConfig).toHaveBeenCalledWith(sortColumnBefore, sortOrderBefore);
+      expect(mockChartManager.updateMarkerChartWithConfig).toHaveBeenCalled();
     });
 
     test('applyFilter should log placeholder message', () => {

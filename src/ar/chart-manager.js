@@ -38,6 +38,9 @@ class ChartManager {
     /** @type {string} Current data source: 'sample' or 'custom' */
     this.dataSource = 'sample';
 
+    /** @type {{column: string|null, order: 'ascending'|'descending'}} Sorting configuration */
+    this.sortConfig = { column: null, order: 'ascending' };
+
     /**
      * Sample datasets for chart generation
      */
@@ -111,6 +114,83 @@ class ChartManager {
   }
 
   /**
+   * Get data prepared for rendering, respecting active sort configuration
+   * @param {string} datasetName
+   * @returns {Array<Object>} Renderable data copy
+   */
+  getRenderableData(datasetName = 'students') {
+    const baseData = this.getCurrentData(datasetName);
+    if (!Array.isArray(baseData)) {
+      return [];
+    }
+
+    const workingCopy = baseData.slice();
+    const { column, order } = this.sortConfig || {};
+    if (!column) {
+      return workingCopy;
+    }
+
+    const columnExists = workingCopy.some((row) => row && Object.prototype.hasOwnProperty.call(row, column));
+    if (!columnExists) {
+      return workingCopy;
+    }
+
+    const direction = order === 'descending' ? -1 : 1;
+    const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: false });
+
+    const extractValue = (row) => {
+      if (!row || !(column in row)) {
+        return null;
+      }
+      return row[column];
+    };
+
+    const toNumber = (value) => {
+      if (value == null || value === '') return NaN;
+      const num = Number(value);
+      return Number.isFinite(num) ? num : NaN;
+    };
+
+    workingCopy.sort((a, b) => {
+      const aVal = extractValue(a);
+      const bVal = extractValue(b);
+
+      const aNum = toNumber(aVal);
+      const bNum = toNumber(bVal);
+      const aIsNum = !Number.isNaN(aNum);
+      const bIsNum = !Number.isNaN(bNum);
+
+      if (aIsNum && bIsNum) {
+        if (aNum === bNum) return 0;
+        return aNum > bNum ? direction : -direction;
+      }
+
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+
+      const result = collator.compare(String(aVal), String(bVal));
+      if (result === 0) return 0;
+      return result * direction;
+    });
+
+    return workingCopy;
+  }
+
+  /**
+   * Update current sort configuration
+   * @param {string|null} column
+   * @param {'ascending'|'descending'} order
+   */
+  setSortConfig(column, order = 'ascending') {
+    const normalizedColumn = column && typeof column === 'string' ? column : null;
+    const normalizedOrder = order === 'descending' ? 'descending' : 'ascending';
+
+    this.sortConfig = { column: normalizedColumn, order: normalizedOrder };
+    console.log('[ChartManager] Sort config updated:', this.sortConfig);
+  }
+
+  /**
    * Get current data source info
    * @returns {Object} Data source information
    */
@@ -174,7 +254,7 @@ class ChartManager {
     if (existing?.chart) {
       try { existing.chart.destroy(); } catch (_) {}
     }
-    const currentData = this.getCurrentData(datasetName);
+    const currentData = this.getRenderableData(datasetName);
     const chart = this.generateChart(canvas, chartType, currentData, chartConfigOverride);
 
     // Ensure a plane entity exists under the marker and points to our canvas
@@ -431,7 +511,10 @@ class ChartManager {
    */
   createChart(screenX, screenY) {
     const chartType = document.getElementById('chart-type').value;
-    const datasetName = document.getElementById('sample-data').value;
+    const sampleSelect = document.getElementById('sample-data');
+    const dataSourceSelect = document.getElementById('data-source');
+    const usingCustom = (dataSourceSelect && dataSourceSelect.value === 'blockly') || this.dataSource === 'custom';
+    const datasetName = usingCustom ? undefined : (sampleSelect ? sampleSelect.value : 'students');
     
     // Create unique canvas for this chart
     const canvas = document.createElement('canvas');
@@ -441,7 +524,7 @@ class ChartManager {
     canvas.id = chartId + '-canvas';
     
     // Generate chart texture
-    const currentData = this.getCurrentData(datasetName);
+    const currentData = this.getRenderableData(datasetName);
     const chart = this.generateChart(canvas, chartType, currentData);
     
     // Add canvas to assets
@@ -470,7 +553,7 @@ class ChartManager {
       chart: chart,
       canvas: canvas,
       type: chartType,
-      dataset: datasetName,
+      dataset: usingCustom ? (this.customData?.filename || 'custom') : datasetName,
       screenX: screenX,
       screenY: screenY
     };
