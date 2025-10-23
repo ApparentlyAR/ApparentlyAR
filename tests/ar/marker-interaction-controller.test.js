@@ -744,7 +744,7 @@ describe('MarkerInteractionController', () => {
         ])
       );
       expect(mockChartManager.loadCustomData).toHaveBeenCalledWith(sorted, expect.stringContaining('sorted_name_ascending'));
-      expect(mockChartManager.setSortConfig).toHaveBeenCalledWith(null, 'ascending');
+      expect(mockChartManager.setSortConfig).toHaveBeenCalledWith('name', 'ascending');
       expect(mockChartManager.updateMarkerChartWithConfig).toHaveBeenCalled();
       expect(global.window.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
         type: 'markerDataSorted',
@@ -752,11 +752,47 @@ describe('MarkerInteractionController', () => {
       }));
     });
 
-    test('applyFilter should log placeholder message', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      controller.applyFilter();
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('placeholder'));
-      consoleSpy.mockRestore();
+    test('applyFilter should filter dataset and update chart manager', async () => {
+      const dataset = [
+        { category: 'A', value: 1 },
+        { category: 'B', value: 2 },
+        { category: 'A', value: 3 }
+      ];
+
+      global.window.Blockly.CsvImportData.originalData = dataset.slice();
+      mockChartManager.getCurrentData.mockReturnValue(dataset.slice());
+
+      const filtered = dataset.filter((row) => row.category === 'A');
+      global.window.AppApi.processData = jest.fn(() => Promise.resolve({ success: true, data: filtered }));
+
+      controller.availableColumns = ['category', 'value'];
+      controller.currentSortColumn = 'category';
+      controller.currentFilterColumn = 'category';
+      controller.currentFilterValue = 'A';
+
+      await controller.applyFilter();
+
+      expect(global.window.AppApi.processData).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'filter',
+            params: expect.objectContaining({ column: 'category', value: 'A' })
+          })
+        ])
+      );
+
+      expect(mockChartManager.loadCustomData).toHaveBeenCalledWith(
+        expect.arrayContaining(filtered),
+        expect.stringContaining('filtered_category_A')
+      );
+
+      expect(mockChartManager.setSortConfig).toHaveBeenCalledWith('category', 'ascending');
+      expect(mockChartManager.updateMarkerChartWithConfig).toHaveBeenCalled();
+      expect(global.window.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'markerDataFiltered',
+        detail: expect.objectContaining({ active: true, column: 'category', value: 'A', rowCount: filtered.length })
+      }));
     });
   });
 });

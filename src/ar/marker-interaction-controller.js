@@ -18,6 +18,8 @@ class MarkerInteractionController {
     this.currentChartType = 'bar';
     this.currentFilterColumn = null;
     this.currentFilterValue = null;
+    this.filterBaseDataset = null;
+    this.filterBaseFilename = null;
 
     // Rotation tracking
     this.rotationIntervals = {}; // markerNum -> intervalId
@@ -305,6 +307,83 @@ class MarkerInteractionController {
     this.applySortingDebounced();
   }
 
+  setFilterColumn(column) {
+    if (!column) {
+      if (this.currentFilterColumn !== null || this.currentFilterValue !== null) {
+        this.currentFilterColumn = null;
+        this.currentFilterValue = null;
+        this.dispatchStateChange();
+        this.applyFilterDebounced();
+      }
+      return;
+    }
+
+    if (!this.availableColumns.includes(column)) {
+      console.warn(`[MarkerInteraction] Invalid filter column: ${column}`);
+      return;
+    }
+
+    if (this.currentFilterColumn !== column) {
+      this.currentFilterColumn = column;
+      this.currentFilterValue = null;
+      this.dispatchStateChange();
+      this.applyFilterDebounced();
+    }
+  }
+
+  setFilterValue(value) {
+    const normalized = value === undefined || value === null || value === '' ? null : value;
+    if (this.currentFilterValue === normalized) {
+      return;
+    }
+
+    this.currentFilterValue = normalized;
+    this.dispatchStateChange();
+    this.applyFilterDebounced();
+  }
+
+  getFilterValuesForColumn(column) {
+    if (!column) {
+      return [];
+    }
+
+    const baseDataset = this.filterBaseDataset;
+    const dataset = baseDataset && Array.isArray(baseDataset) && baseDataset.length
+      ? baseDataset
+      : this.getDatasetForSorting();
+
+    if (!Array.isArray(dataset) || dataset.length === 0) {
+      return [];
+    }
+
+    const values = new Set();
+    dataset.forEach((row) => {
+      if (row && Object.prototype.hasOwnProperty.call(row, column)) {
+        const raw = row[column];
+        if (raw !== undefined && raw !== null && raw !== '') {
+          values.add(String(raw));
+        }
+      }
+    });
+
+    return Array.from(values).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true }));
+  }
+
+  cloneDataset(data) {
+    if (!Array.isArray(data)) {
+      return [];
+    }
+    return data.map((row) => (row && typeof row === 'object' ? { ...row } : row));
+  }
+
+  buildFilteredFilename() {
+    const column = String(this.currentFilterColumn || 'column');
+    const value = this.currentFilterValue === null ? 'all' : String(this.currentFilterValue);
+    const safeColumn = column.replace(/[^\w\-.]/g, '_');
+    const safeValue = value.replace(/[^\w\-.]/g, '_');
+    return `filtered_${safeColumn}_${safeValue}.csv`;
+  }
+
   resetConfiguration() {
     if (this.availableColumns.length > 0) {
       this.currentXColumn = this.availableColumns[0];
@@ -317,6 +396,7 @@ class MarkerInteractionController {
     }
     this.currentSortOrder = 'ascending';
     this.currentChartType = 'bar';
+    this.setFilterColumn(null);
     this.dispatchStateChange();
     this.updateChartDebounced();
   }
@@ -431,7 +511,7 @@ class MarkerInteractionController {
       }
 
       if (typeof this.chartManager?.setSortConfig === 'function') {
-        this.chartManager.setSortConfig(null, this.currentSortOrder);
+        this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
       }
 
       await this.updateChart();
@@ -452,8 +532,103 @@ class MarkerInteractionController {
    * Apply filter to current dataset (placeholder)
    */
   async applyFilter() {
-    // To be implemented in Phase 6
-    console.log('[MarkerInteraction] applyFilter called (placeholder)');
+    try {
+      const hasActiveFilter = Boolean(this.currentFilterColumn) && this.currentFilterValue !== null;
+      const sourceDataset = this.filterBaseDataset && Array.isArray(this.filterBaseDataset) && this.filterBaseDataset.length
+        ? this.filterBaseDataset
+        : this.getDatasetForSorting();
+
+      if (!Array.isArray(sourceDataset) || sourceDataset.length === 0) {
+        console.warn('[MarkerInteraction] Cannot apply filter - no data available');
+        return;
+      }
+
+      if (!hasActiveFilter) {
+        if (this.filterBaseDataset && typeof this.chartManager?.loadCustomData === 'function') {
+          const restored = this.cloneDataset(this.filterBaseDataset);
+          const filename = this.filterBaseFilename || 'unfiltered_dataset.csv';
+          this.chartManager.loadCustomData(restored, filename);
+        }
+
+        if (typeof this.chartManager?.setSortConfig === 'function') {
+          this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
+        }
+
+        await this.updateChart();
+
+        this.filterBaseDataset = null;
+        this.filterBaseFilename = null;
+
+        window.dispatchEvent(new CustomEvent('markerDataFiltered', {
+          detail: {
+            active: false,
+            column: null,
+            value: null,
+            rowCount: Array.isArray(sourceDataset) ? sourceDataset.length : 0
+          }
+        }));
+        return;
+      }
+
+      if (!window.AppApi || typeof window.AppApi.processData !== 'function') {
+        console.warn('[MarkerInteraction] AppApi.processData unavailable; cannot apply filter');
+        return;
+      }
+
+      if (!this.filterBaseDataset) {
+        this.filterBaseDataset = this.cloneDataset(sourceDataset);
+        const info = this.chartManager?.getDataSourceInfo?.();
+        if (info && info.source === 'sample') {
+          const sampleSelect = document.getElementById('sample-data');
+          this.filterBaseFilename = sampleSelect && sampleSelect.value
+            ? `${sampleSelect.value}.csv`
+            : 'sample_dataset.csv';
+        } else {
+          this.filterBaseFilename = (info && info.filename) || 'dataset.csv';
+        }
+      }
+
+      const operations = [
+        {
+          type: 'filter',
+          params: {
+            column: this.currentFilterColumn,
+            operator: 'equals',
+            value: this.currentFilterValue
+          }
+        }
+      ];
+
+      const result = await window.AppApi.processData(this.cloneDataset(this.filterBaseDataset), operations);
+
+      if (!result || result.success === false || !Array.isArray(result.data)) {
+        console.warn('[MarkerInteraction] Filter operation returned invalid payload');
+        return;
+      }
+
+      const filteredData = this.cloneDataset(result.data);
+
+      if (typeof this.chartManager?.loadCustomData === 'function') {
+        this.chartManager.loadCustomData(filteredData, this.buildFilteredFilename());
+      }
+
+      if (typeof this.chartManager?.setSortConfig === 'function') {
+        this.chartManager.setSortConfig(this.currentSortColumn, this.currentSortOrder);
+      }
+
+      await this.updateChart();
+
+      window.dispatchEvent(new CustomEvent('markerDataFiltered', {
+        detail: {
+          active: true,
+          column: this.currentFilterColumn,
+          value: this.currentFilterValue,
+          rowCount: filteredData.length
+        }
+      }));
+    } catch (error) {
+      console.error('[MarkerInteraction] Failed to apply filter:', error);
+    }
   }
 
   getStateSnapshot() {

@@ -483,6 +483,16 @@
             <option value="descending">Descending</option>
           </select>
         </div>
+        <div class="control-group">
+          <label for="dev-filter-column">Filter Column:</label>
+          <select id="dev-filter-column"></select>
+        </div>
+        <div class="control-group">
+          <label for="dev-filter-value">Filter Value:</label>
+          <select id="dev-filter-value" disabled>
+            <option value="">Select a column first</option>
+          </select>
+        </div>
         <div class="control-group" style="display: flex; gap: 8px;">
           <button id="dev-refresh-columns" style="flex: 1;">Refresh Columns</button>
           <button id="dev-reset-config" style="flex: 1; background: #475569;">Reset</button>
@@ -493,6 +503,8 @@
           <div>Y-Axis: <span id="dev-state-y">-</span></div>
           <div>Sort Column: <span id="dev-state-sort">-</span></div>
           <div>Sort Order: <span id="dev-state-order">-</span></div>
+          <div>Filter Column: <span id="dev-state-filter-column">-</span></div>
+          <div>Filter Value: <span id="dev-state-filter-value">-</span></div>
         </div>
       </details>
     </div>
@@ -597,6 +609,8 @@
           this.ySelect = document.getElementById('dev-y-axis');
           this.sortColumnSelect = document.getElementById('dev-sort-column');
           this.sortOrderSelect = document.getElementById('dev-sort-order');
+          this.filterColumnSelect = document.getElementById('dev-filter-column');
+          this.filterValueSelect = document.getElementById('dev-filter-value');
           this.refreshBtn = document.getElementById('dev-refresh-columns');
           this.resetBtn = document.getElementById('dev-reset-config');
           this.chartStateEl = document.getElementById('dev-state-chart');
@@ -604,6 +618,8 @@
           this.yStateEl = document.getElementById('dev-state-y');
           this.sortStateEl = document.getElementById('dev-state-sort');
           this.sortOrderStateEl = document.getElementById('dev-state-order');
+          this.filterColumnStateEl = document.getElementById('dev-state-filter-column');
+          this.filterValueStateEl = document.getElementById('dev-state-filter-value');
 
           if (this.typeSelect) {
             this.typeSelect.addEventListener('change', () => {
@@ -638,6 +654,20 @@
           if (this.sortOrderSelect) {
             this.sortOrderSelect.addEventListener('change', () => {
               this.controller.setSortOrder(this.sortOrderSelect.value || 'ascending');
+            });
+          }
+
+          if (this.filterColumnSelect) {
+            this.filterColumnSelect.addEventListener('change', () => {
+              const selected = this.filterColumnSelect.value;
+              this.controller.setFilterColumn(selected || null);
+              this.populateFilterValues(selected || null, null);
+            });
+          }
+
+          if (this.filterValueSelect) {
+            this.filterValueSelect.addEventListener('change', () => {
+              this.controller.setFilterValue(this.filterValueSelect.value);
             });
           }
 
@@ -700,10 +730,99 @@
               element.value = list[0];
             }
           });
+
+          if (this.filterColumnSelect) {
+            const previous = this.filterColumnSelect.value;
+            this.filterColumnSelect.innerHTML = '';
+
+            const noneOption = document.createElement('option');
+            noneOption.value = '';
+            noneOption.textContent = 'No filter';
+            this.filterColumnSelect.appendChild(noneOption);
+
+            if (!list.length) {
+              const placeholder = document.createElement('option');
+              placeholder.value = '';
+              placeholder.textContent = 'No columns available';
+              placeholder.disabled = true;
+              this.filterColumnSelect.appendChild(placeholder);
+              this.filterColumnSelect.disabled = true;
+              this.filterColumnSelect.value = '';
+              return;
+            }
+
+            this.filterColumnSelect.disabled = false;
+            list.forEach((column) => {
+              const option = document.createElement('option');
+              option.value = column;
+              option.textContent = column;
+              this.filterColumnSelect.appendChild(option);
+            });
+
+            if (previous && list.includes(previous)) {
+              this.filterColumnSelect.value = previous;
+            } else {
+              this.filterColumnSelect.value = '';
+            }
+          }
         },
         hasOption(select, value) {
-          if (!select || !value) return false;
-          return Array.from(select.options).some((option) => option.value === value);
+          if (!select) return false;
+          const normalized = value === undefined || value === null ? '' : String(value);
+          return Array.from(select.options).some((option) => option.value === normalized);
+        },
+        populateFilterValues(column, selectedValue) {
+          if (!this.filterValueSelect) {
+            return;
+          }
+
+          const select = this.filterValueSelect;
+          select.innerHTML = '';
+
+          if (!column) {
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select a column first';
+            select.appendChild(placeholder);
+            select.disabled = true;
+            select.value = '';
+            return;
+          }
+
+          const values = typeof this.controller?.getFilterValuesForColumn === 'function'
+            ? this.controller.getFilterValuesForColumn(column)
+            : [];
+
+          select.disabled = false;
+
+          const allOption = document.createElement('option');
+          allOption.value = '';
+          allOption.textContent = 'All values';
+          select.appendChild(allOption);
+
+          if (!values.length) {
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'No values found';
+            placeholder.disabled = true;
+            select.appendChild(placeholder);
+            select.value = '';
+            return;
+          }
+
+          values.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.appendChild(option);
+          });
+
+          const normalized = selectedValue === undefined || selectedValue === null ? '' : String(selectedValue);
+          if (this.hasOption(select, normalized)) {
+            select.value = normalized;
+          } else {
+            select.value = '';
+          }
         },
         applyState(state = {}) {
           if (!this.initialized) return;
@@ -741,6 +860,17 @@
             this.sortOrderSelect.value = state.sortOrder || 'ascending';
           }
 
+          if (this.filterColumnSelect) {
+            const targetColumn = state.filterColumn || '';
+            if (this.hasOption(this.filterColumnSelect, targetColumn)) {
+              this.filterColumnSelect.value = targetColumn;
+            } else {
+              this.filterColumnSelect.value = '';
+            }
+          }
+
+          this.populateFilterValues(state.filterColumn || null, state.filterValue ?? null);
+
           if (this.chartStateEl) {
             this.chartStateEl.textContent = state.chartType || '-';
           }
@@ -756,6 +886,15 @@
           if (this.sortOrderStateEl) {
             const label = state.sortOrder || 'ascending';
             this.sortOrderStateEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+          }
+          if (this.filterColumnStateEl) {
+            this.filterColumnStateEl.textContent = state.filterColumn || '-';
+          }
+          if (this.filterValueStateEl) {
+            const display = state.filterValue === undefined || state.filterValue === null || state.filterValue === ''
+              ? 'All values'
+              : state.filterValue;
+            this.filterValueStateEl.textContent = display;
           }
         }
       };
@@ -802,10 +941,10 @@
         refs.sortColumn.textContent = detail.sortColumn || '-';
         refs.sortOrder.textContent = detail.sortOrder ? capitalize(detail.sortOrder) : '-';
 
-        if (detail.filterColumn && detail.filterValue != null) {
+        if (detail.filterColumn && detail.filterValue !== null && detail.filterValue !== undefined && detail.filterValue !== '') {
           refs.filter.textContent = `${detail.filterColumn} = ${detail.filterValue}`;
         } else if (detail.filterColumn) {
-          refs.filter.textContent = detail.filterColumn;
+          refs.filter.textContent = `${detail.filterColumn} (All values)`;
         } else {
           refs.filter.textContent = '-';
         }
