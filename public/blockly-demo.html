@@ -239,6 +239,69 @@
       background-color: #F9FAFB;
       /* Added background to fix the "hole" */
     }
+
+    /* Blockly Chart Tooltip Styles */
+    .blockly-chart-tooltip {
+      background: #1a1f35;
+      border: 2px solid #4F46E5;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      width: 380px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #F8F9FA;
+      pointer-events: none;
+    }
+
+    .blockly-chart-tooltip-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .blockly-chart-tooltip-header h4 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      color: #F8F9FA;
+    }
+
+    .blockly-chart-tooltip-badge {
+      background: rgba(79, 70, 229, 0.2);
+      color: #A5B4FC;
+      border: 1px solid rgba(79, 70, 229, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .blockly-chart-tooltip-description {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #D1D5DB;
+      margin: 0 0 16px 0;
+    }
+
+    .blockly-chart-tooltip-footer {
+      border-top: 1px solid rgba(229, 231, 235, 0.1);
+      padding-top: 12px;
+    }
+
+    .blockly-chart-tooltip-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #F8F9FA;
+      margin: 0 0 8px 0;
+    }
+
+    .blockly-chart-tooltip-bestfor {
+      font-size: 14px;
+      color: #A5B4FC;
+      margin: 0;
+      font-weight: 500;
+    }
   </style>
 </head>
 
@@ -1002,10 +1065,20 @@
             await handleAdvancedVisualization(result);
           }
         } else {
-          console.log('📊 Taking standard data rendering path');
-          // Standard data rendering for basic blocks
-          renderDataPanel(result);
-          renderDataVisualization(result);
+          // If a chart was requested or just generated, skip fallback to avoid double render
+          const hasVizBlocks = /\[generate_visualization\]|\[quick_chart\]|histogram_config|heatmap_config/.test(code);
+          const justCharted = (Date.now() - (window.__lastChartGeneratedAt || 0)) < 3000;
+          if (!justCharted) {
+            if (!hasVizBlocks) {
+              console.log('📊 Taking standard data rendering path');
+              renderDataPanel(result);
+              renderDataVisualization(result);
+            } else {
+              console.log('⏭️ Skipping fallback render (visualization blocks present)');
+            }
+          } else {
+            console.log('⏭️ Skipping fallback render (chartGenerated just fired)');
+          }
         }
 
         // Dispatch event for backward compatibility with React components
@@ -1151,47 +1224,51 @@
     }
 
     function renderDataVisualization(data, chartConfig = null) {
-      console.log('🖼️ renderDataVisualization called with:', { data: !!data, chartConfig });
-      const container = document.getElementById('react-chart-container');
-      const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
-      if (chartInstance) {
-        console.log('🖼️ Destroying existing chart instance');
-        chartInstance.destroy();
-      }
-      if (!dataToRender || dataToRender.length === 0) {
-        container.innerHTML = 'Run blocks with data to generate a visualization.';
-        return;
-      }
-
-      container.innerHTML = '<canvas id="chart-canvas"></canvas>';
-      const ctx = document.getElementById('chart-canvas').getContext('2d');
-
-      // Use chart configuration from advanced blocks if provided
-      if (chartConfig && chartConfig.chartType) {
-        console.log('📊 Using advanced chart configuration:', chartConfig);
-
-        const { labels, datasets } = prepareChartData(dataToRender, chartConfig);
-        const options = {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true } },
-          ...chartConfig.options
-        };
-
-        chartInstance = new Chart(ctx, {
-          type: chartConfig.chartType,
-          data: { labels, datasets },
-          options: options
-        });
-      } else {
-        // Fallback: basic bar chart when no advanced configuration is provided
-        const { labels, datasets } = prepareChartData(dataToRender);
-        chartInstance = new Chart(ctx, {
-          type: 'bar', // Default to bar chart
-          data: { labels, datasets },
-          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-        });
-      }
+        console.log('🖼️ renderDataVisualization called with:', { data: !!data, chartConfig });
+        const container = document.getElementById('react-chart-container');
+        if (!container) {
+            console.warn('renderDataVisualization: container not found; aborting to avoid Chart.js errors');
+            return;
+        }
+        const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
+        if (chartInstance) {
+            console.log('🖼️ Destroying existing chart instance');
+            chartInstance.destroy();
+        }
+        if (!dataToRender || dataToRender.length === 0) {
+            container.innerHTML = 'Run blocks with data to generate a visualization.';
+            return;
+        }
+        
+        container.innerHTML = '<canvas id="chart-canvas"></canvas>';
+        const ctx = document.getElementById('chart-canvas').getContext('2d');
+        
+        // Use chart configuration from advanced blocks if provided
+        if (chartConfig && chartConfig.chartType) {
+            console.log('📊 Using advanced chart configuration:', chartConfig);
+            
+            const { labels, datasets } = prepareChartData(dataToRender, chartConfig);
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                ...chartConfig.options
+            };
+            
+            chartInstance = new Chart(ctx, {
+                type: chartConfig.chartType,
+                data: { labels, datasets },
+                options: options
+            });
+        } else {
+            // Fallback: basic bar chart when no advanced configuration is provided
+            const { labels, datasets } = prepareChartData(dataToRender);
+            chartInstance = new Chart(ctx, {
+                type: 'bar', // Default to bar chart
+                data: { labels, datasets },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
     }
 
     function prepareChartData(data, chartConfig = null) {
@@ -1287,20 +1364,111 @@
 
     // --- App Initialization ---
     function initializeApp() {
-      // Set up breadcrumb navigation
-      const urlParams = new URLSearchParams(window.location.search);
-      const projectId = urlParams.get('id');
-      const role = urlParams.get('role');
+        if (window.__apparentlyAR_init_done) {
+          return; // prevent double init and duplicate listeners
+        }
+        window.__apparentlyAR_init_done = true;
+        // Set up breadcrumb navigation
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+        const role = urlParams.get('role');
+        
+        // Set dashboard link based on role
+        const breadcrumbDashboardLink = document.getElementById('breadcrumb-dashboard-link');
+        const breadcrumbProjectLink = document.getElementById('breadcrumb-project-link');
+        const headerLink = document.getElementById('header-dashboard-link');
+        
+        if (breadcrumbDashboardLink) {
+            const dashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
+            breadcrumbDashboardLink.href = dashboardUrl;
+        }
+        
+        if (breadcrumbProjectLink && projectId) {
+            // Navigate to the view-project page for this specific project
+            breadcrumbProjectLink.href = `view-project.html?id=${projectId}${role ? '&role=' + role : ''}`;
+        }
+        
+        if (headerLink) {
+            const headerDashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
+            headerLink.href = headerDashboardUrl;
+        }
 
       // Set dashboard link based on role
       const breadcrumbDashboardLink = document.getElementById('breadcrumb-dashboard-link');
       const breadcrumbProjectLink = document.getElementById('breadcrumb-project-link');
       const headerLink = document.getElementById('header-dashboard-link');
 
-      if (breadcrumbDashboardLink) {
-        const dashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
-        breadcrumbDashboardLink.href = dashboardUrl;
-      }
+        window.addEventListener('csvDataChanged', (e) => {
+            document.getElementById('csv-filename').textContent = e.detail.filename || 'No file loaded';
+            renderDataPanel();
+            if (window.BlocklyAutofill) window.BlocklyAutofill.updateAllBlocksWithAutofill();
+        });
+        
+        // Listen for chart generation from visualization blocks and persist for AR handoff
+        if (!window.__chartGeneratedHandlerInstalled) {
+        window.addEventListener('chartGenerated', async (e) => {
+          console.log('🎨 Chart generated event received:', e?.detail);
+          const d = e?.detail ?? {};
+        
+          // Keep previous behavior: only proceed when we have a valid config
+          if (d && d.config) {
+            try {
+              const cfg  = d.config || {};
+              // Prefer event payload first, then fall back to cfg
+              const opts = d.options || cfg.options || {};
+
+              // Persist the exact dataset used so AR can pick up the latest CSV
+              try {
+                const dataToPersist = (Array.isArray(d?.data) ? d.data :
+                  (window.Blockly?.CsvImportData?.data && Array.isArray(window.Blockly.CsvImportData.data)
+                    ? window.Blockly.CsvImportData.data : null));
+                if (dataToPersist && dataToPersist.length) {
+                  if (window.Blockly && window.Blockly.CsvImportData) {
+                    window.Blockly.CsvImportData.data = dataToPersist;
+                  }
+                  if (window.BlocklyPersistCsv) {
+                    const res = await window.BlocklyPersistCsv(dataToPersist);
+                    if (res?.path && window.Blockly?.CsvImportData) {
+                      window.Blockly.CsvImportData.savedPath = res.path;
+                    }
+                  } else if (window.AppApi?.saveCsv) {
+                    const fallback = (window.Blockly?.CsvImportData?.filename) || 'transformed.csv';
+                    const res = await window.AppApi.saveCsv(dataToPersist, fallback, true);
+                    if (res?.path && window.Blockly?.CsvImportData) {
+                      window.Blockly.CsvImportData.savedPath = res.path;
+                    }
+                  }
+                }
+              } catch (persistErr) {
+                console.warn('Failed to persist dataset for AR (non-fatal):', persistErr);
+              }
+
+              const json = {
+                chartType: d.chartType || cfg.type || cfg.chartType || null,
+                options:   opts,
+                xColumn:   d.xColumn || opts.xColumn || cfg.xColumn || null,
+                yColumn:   d.yColumn || opts.yColumn || cfg.yColumn || null,
+                filename:
+                  (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || null,
+                savedPath:
+                  (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null,
+                savedAt:   Date.now(),
+              };
+
+              localStorage.setItem('ar_last_visualization', JSON.stringify(json));
+              // Mark the moment a chart was just generated to suppress fallback rendering
+              window.__lastChartGeneratedAt = Date.now();
+            } catch (err) {
+              console.warn('Failed to store last visualization for AR:', err);
+            }
+
+            // Only render when payload is complete
+            renderAdvancedChart(d);
+          }
+        });
+        window.__chartGeneratedHandlerInstalled = true;
+        }
+
 
       if (breadcrumbProjectLink && projectId) {
         // Navigate to the view-project page for this specific project
@@ -1367,8 +1535,8 @@
         setTimeout(() => openHelpModal(), 300);
       }
     }
-
-    document.addEventListener('DOMContentLoaded', initializeApp);
+    
+    // initializeApp is triggered after header.html is loaded above
   </script>
 </body>
 

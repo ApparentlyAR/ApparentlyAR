@@ -380,6 +380,9 @@
           if (!window.AppApi || !window.AppApi.processData) { throw new Error('API not available'); }
           const __res = await window.AppApi.processData(__input, [{ type: 'filter', params: { column: '${safeColumn}', operator: '${operator}', value: '${safeValue}' } }]);
           const __data = (__res && __res.data) ? __res.data : __input;
+          // Update global CSV state and persist so AR picks up filtered data
+          if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+          if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
           return __data;
         } catch (error) {
           console.error('Filter data error:', error);
@@ -541,7 +544,9 @@
             { type: 'filter', params: { column: '${column}', operator: 'between', min: '${min}', max: '${max}' } }
           ]);
           const __data = (__res && __res.data) ? __res.data : __input;
-          // DO NOT modify global data state - return filtered data directly
+          // Update global CSV state and persist so AR picks up filtered data
+          if (window.Blockly && window.Blockly.CsvImportData) { window.Blockly.CsvImportData.data = __data; }
+          if (window.BlocklyPersistCsv) { try { await window.BlocklyPersistCsv(__data); } catch (_) {} }
           return __data;
         } catch (error) {
           console.error('Filter range error:', error);
