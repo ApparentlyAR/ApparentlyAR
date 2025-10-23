@@ -79,7 +79,8 @@
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: #F8F9FA;
-      user-select: none; /* Prevent text selection during drag */
+      user-select: none;
+      /* Prevent text selection during drag */
     }
 
     /* Allow text selection in code output */
@@ -102,23 +103,23 @@
       cursor: pointer;
       transition: background-color 0.2s;
     }
-    
+
     .copy-button:hover {
       background: #3730A3;
     }
-    
+
     .copy-button.copied {
       background: #10B981;
     }
 
     /* Panels and resizers */
     #main-content-grid {
-        display: grid;
-        grid-template-columns: 320px 8px 1fr 8px 360px; 
+      display: grid;
+      grid-template-columns: 320px 8px 1fr 8px 360px;
     }
-    
+
     .grid-transition {
-        transition: grid-template-columns 0.3s ease-in-out;
+      transition: grid-template-columns 0.3s ease-in-out;
     }
 
     /* Resizer handle styles */
@@ -128,42 +129,46 @@
       z-index: 10;
       position: relative;
     }
-    .resizer:hover::after, .resizer.is-dragging::after {
+
+    .resizer:hover::after,
+    .resizer.is-dragging::after {
       content: '';
       position: absolute;
       top: 0;
       left: 3px;
       width: 2px;
       height: 100%;
-      background: #4F46E5; /* secondary color */
+      background: #4F46E5;
+      /* secondary color */
     }
-    
+
     /* Allow panels to shrink to zero */
-    #blocks-panel, #data-panel {
-        min-width: 0;
+    #blocks-panel,
+    #data-panel {
+      min-width: 0;
     }
-    
+
     /* Enable horizontal scrolling for Blockly panel */
     #blocks-panel {
-        overflow-x: auto;
-        overflow-y: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
-    
+
     #blocklyDiv {
-        min-width: 100%;
-        overflow-x: auto;
+      min-width: 100%;
+      overflow-x: auto;
     }
 
     #toggle-data-panel-btn {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 20;
-        transition: right 0.3s ease-in-out;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 20;
+      transition: right 0.3s ease-in-out;
     }
 
     #main-content-grid.data-closed #data-panel {
-        overflow: hidden;
+      overflow: hidden;
     }
 
     /* Code panel toggle transition */
@@ -173,28 +178,31 @@
       opacity: 1;
       overflow: hidden;
     }
+
     #code-panel.hidden {
       height: 0;
       opacity: 0;
       padding: 0;
     }
+
     #code-panel pre {
-        background-color: #F3F4F6;
-        border: 1px solid #E5E7EB;
-        color: #111827;
+      background-color: #F3F4F6;
+      border: 1px solid #E5E7EB;
+      color: #111827;
     }
 
     /* Tweak Blockly's appearance */
     .blocklyToolboxDiv {
-        background-color: #F3F4F6;
-        border-right: 1px solid #E5E7EB;
-        overflow-y: hidden !important; /* Remove toolbox category scrollbar */
+      background-color: #F3F4F6;
+      border-right: 1px solid #E5E7EB;
+      overflow-y: hidden !important;
+      /* Remove toolbox category scrollbar */
     }
-    
+
     .blocklyFlyout {
       overflow: hidden !important;
     }
-    
+
     .blocklyFlyoutScrollbar {
       display: none !important;
     }
@@ -208,25 +216,28 @@
     .blocklyToolboxDiv::-webkit-scrollbar {
       display: none;
     }
-    
+
     .blocklyToolboxDiv {
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
 
     .blocklyTreeRow.blocklyTreeSelected {
-        background-color: #E0E7FF !important;
+      background-color: #E0E7FF !important;
     }
-     .blocklyTreeRow:not(.blocklyTreeSelected):hover {
-        background-color: #EFF6FF !important;
+
+    .blocklyTreeRow:not(.blocklyTreeSelected):hover {
+      background-color: #EFF6FF !important;
     }
-    
+
     /* Fix for data panel header */
     #data-panel-content th {
-        position: sticky;
-        top: 0;
-        z-index: 1; /* Ensures header is above scrolling content */
-        background-color: #F9FAFB; /* Added background to fix the "hole" */
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      /* Ensures header is above scrolling content */
+      background-color: #F9FAFB;
+      /* Added background to fix the "hole" */
     }
 
     /* Blockly Chart Tooltip Styles */
@@ -313,17 +324,24 @@
             </nav>
           </div>
           <div class="flex items-center gap-3">
-             <button onclick="executeBlocklyCode()"
+            <button onclick="executeBlocklyCode()"
               class="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
             </button>
             <button onclick="window.location.href='hybrid-ar-demo.html'"
               class="bg-panel border border-border text-white text-text hover:bg-yellow-500 bg-yellow-400 font-medium py-2 px-4 rounded-lg transition-colors">
               Enter AR
             </button>
-             <button id="show-code-btn" onclick="toggleCodePanel()"
+            <button id="show-code-btn" onclick="toggleCodePanel()"
               class="bg-panel border border-border text-white text-text hover:bg-red-300 bg-red-400 font-medium py-2 px-4 rounded-lg transition-colors">
               Show code
+            </button>
+            <button id="open-help-btn" onclick="openHelpModal()"
+              class="bg-panel border border-border text-text hover:bg-secondary hover:text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2">
+              ⓘ
             </button>
           </div>
         </div>
@@ -336,61 +354,69 @@
         <!-- Blocks Panel -->
         <aside id="blocks-panel" class="flex flex-col bg-panel overflow-x-auto overflow-y-hidden">
           <div class="p-2 border-b border-border">
-            <input class="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-text placeholder-muted focus:outline-none focus:ring-2 focus:ring-secondary"
+            <input
+              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-text placeholder-muted focus:outline-none focus:ring-2 focus:ring-secondary"
               placeholder="Search blocks..." />
           </div>
           <div id="blocklyDiv" class="w-full h-full flex-1 overflow-x-auto"></div>
         </aside>
-  
+
         <!-- Left Resizer -->
         <div class="resizer" id="resizer-left"></div>
 
         <!-- Middle Panel: Visualization -->
         <section id="viz-panel" class="flex flex-col bg-background overflow-hidden">
           <div class="flex items-center justify-between gap-2 p-2.5 border-b border-border bg-panel flex-shrink-0">
-              <span id="csv-filename" class="text-sm font-medium text-text">No file loaded</span>
-              <div class="flex items-center gap-2">
-                  <span class="text-sm text-muted">Use visualization blocks to generate charts</span>
-              </div>
+            <span id="csv-filename" class="text-sm font-medium text-text">No file loaded</span>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-muted">Use visualization blocks to generate charts</span>
+            </div>
           </div>
           <div class="flex-1 p-4 min-h-0">
-               <div id="react-chart-container" class="w-full h-full bg-panel rounded-lg border border-border flex items-center justify-center text-muted p-4 relative">
-                  Visualization will appear here when blocks are executed
-              </div>
+            <div id="react-chart-container"
+              class="w-full h-full bg-panel rounded-lg border border-border flex items-center justify-center text-muted p-4 relative">
+              Visualization will appear here when blocks are executed
+            </div>
           </div>
         </section>
 
         <!-- Right Resizer -->
         <div class="resizer" id="resizer-right"></div>
-  
+
         <!-- Right Panel: Data -->
         <aside id="data-panel" class="bg-panel flex flex-col overflow-hidden">
-            <div class="flex items-center justify-between p-2.5 border-b border-border">
-              <strong class="text-sm font-medium">Data Panel</strong>
-              <button id="download-csv-btn"
+          <div class="flex items-center justify-between p-2.5 border-b border-border">
+            <strong class="text-sm font-medium">Data Panel</strong>
+            <button id="download-csv-btn"
               class="bg-sky-400 hover:bg-sky-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
               title="Open latest saved CSV in a new tab">
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
             </button>
-            </div>
+          </div>
           <div id="data-panel-content" class="overflow-auto flex-1 p-2">
-              <div class="text-sm text-muted text-center py-8">
+            <div class="text-sm text-muted text-center py-8">
               Data will appear here when imported.
-              </div>
+            </div>
           </div>
         </aside>
       </main>
 
       <!-- Toggle button -->
-      <button id="toggle-data-panel-btn" onclick="toggleDataPanel()" class="bg-panel hover:bg-gray-100 text-muted hover:text-text rounded-full shadow-md w-6 h-10 flex items-center justify-center border border-border">
-        <svg id="toggle-icon" class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      <button id="toggle-data-panel-btn" onclick="toggleDataPanel()"
+        class="bg-panel hover:bg-gray-100 text-muted hover:text-text rounded-full shadow-md w-6 h-10 flex items-center justify-center border border-border">
+        <svg id="toggle-icon" class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
       </button>
 
     </div>
 
-     <!-- Bottom Panel: Code Output -->
+    <!-- Bottom Panel: Code Output -->
     <footer id="code-panel" class="bg-panel border-t border-border p-2 hidden flex-shrink-0">
       <div class="relative h-full">
         <button id="copy-code-btn" class="copy-button" onclick="copyGeneratedCode()" title="Copy code to clipboard">
@@ -400,6 +426,47 @@
       </div>
     </footer>
 
+  </div>
+
+  <!-- Help Modal -->
+  <div id="help-overlay"
+    class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] flex items-center justify-center px-8 md:px-12"
+    role="dialog" aria-modal="true" aria-labelledby="help-slide-title">
+    <div class="w-full max-w-5xl max-h-[92vh] bg-white rounded-3xl shadow-2xl p-10 flex flex-col gap-6 overflow-hidden">
+      <div id="help-step-picker" class="flex flex-wrap items-center gap-2 mt-2" aria-label="Jump to step">
+      </div>
+      <div
+        class="w-full h-[28rem] bg-gradient-to-br from-blue-100 to-slate-200 rounded-2xl flex items-center justify-center text-slate-500 font-semibold tracking-wide relative overflow-hidden"
+        id="help-slide-image-wrapper">
+        <img id="help-slide-image" src="" alt="" class="max-h-full max-w-full object-contain hidden md:max-h-[26rem]" />
+        <span id="help-slide-image-label">Slide Image</span>
+      </div>
+      <div class="space-y-3">
+        <h2 class="text-3xl font-semibold text-slate-800" id="help-slide-title">Welcome to ApparentlyAR Blockly</h2>
+        <p class="text-lg leading-relaxed text-slate-600 whitespace-pre-line" id="help-slide-text">
+          Learn how to combine blocks to fetch data, transform it, and generate visualizations.
+        </p>
+      </div>
+      <div class="flex items-center justify-between gap-4">
+        <button type="button" id="help-prev-btn" aria-label="Previous slide"
+          class="min-w-[3.25rem] h-12 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center text-lg font-semibold transition-colors duration-200 hover:bg-indigo-100 hover:border-indigo-200 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed">
+          &#8592;
+        </button>
+        <div class="flex-1 h-1.5 bg-slate-200 rounded-full relative overflow-hidden" aria-hidden="true">
+          <div class="absolute inset-y-0 left-0 bg-indigo-500 rounded-full transition-all duration-200"
+            id="help-progress-bar" style="width: 0%;"></div>
+        </div>
+        <button type="button" id="help-next-btn" aria-label="Next slide"
+          class="min-w-[3.25rem] h-12 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center text-lg font-semibold transition-colors duration-200 hover:bg-indigo-100 hover:border-indigo-200 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed">
+          &#8594;
+        </button>
+      </div>
+      <button type="button"
+        class="self-end mt-2 inline-flex items-center gap-2 rounded-full bg-rose-400 hover:bg-rose-500 text-white font-semibold px-7 py-3 transition-colors duration-200"
+        id="help-skip-btn">
+        Skip tutorial
+      </button>
+    </div>
   </div>
 
   <!-- Blockly Toolbox Definition -->
@@ -479,34 +546,54 @@
     </category>
     <category name="Data Transformation" colour="200">
       <block type="tf_rename_column">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_drop_column">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_fill_missing">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_replace_values">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_split_column">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_concat_columns">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_drop_duplicates">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_round_number">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_cast_type">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
       <block type="tf_string_transform">
-        <value name="DATA"><block type="csv_import"></block></value>
+        <value name="DATA">
+          <block type="csv_import"></block>
+        </value>
       </block>
     </category>
     <category name="Statistical Analysis" colour="40">
@@ -621,21 +708,21 @@
     // --- Page Header Logic ---
     document.addEventListener('DOMContentLoaded', () => {
       fetch('header.html')
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById('header-container').innerHTML = data;
-        // Once header is loaded, run the main page logic
-        initializeApp();
-      });
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('header-container').innerHTML = data;
+          // Once header is loaded, run the main page logic
+          initializeApp();
+        });
     });
-    
-    // Block definitions are loaded from external files to avoid conflicts
-  
 
-  <!-- MAIN APPLICATION SCRIPT -->
+    // Block definitions are loaded from external files to avoid conflicts
+
+
+    <!-- MAIN APPLICATION SCRIPT -->
     let workspace;
     let chartInstance;
-    
+
     // Blockly theme
     const lightTheme = Blockly.Theme.defineTheme('lightTheme', {
       'base': Blockly.Themes.Classic,
@@ -656,50 +743,304 @@
       theme: lightTheme,
       renderer: 'geras'
     });
-    
+
     // --- UI Interaction Functions ---
     const mainGrid = document.getElementById('main-content-grid');
     const toggleBtn = document.getElementById('toggle-data-panel-btn');
 
-    function updateToggleButtonPosition() {
-        const dataPanel = document.getElementById('data-panel');
-        const resizerRight = document.getElementById('resizer-right');
-        const isClosed = mainGrid.classList.contains('data-closed');
-        if (isClosed) {
-            toggleBtn.style.right = '0px';
+    const helpSlides = [
+      {
+        id: 'welcome',
+        label: 'Welcome',
+        title: 'Welcome to ApparentlyAR Simulation!',
+        text: 'Learn how to combine blocks to fetch data, transform it, and generate visualizations.\nWe’ll show you how to use the interface.',
+        hideImage: true
+      },
+      {
+        id: 'interface',
+        label: 'Interface',
+        title: 'Interface',
+        text: 'Here is how everything is laid out',
+        imageSrc: '/src/assets/Interface_Hints.svg'
+      },
+      {
+        id: 'csv-import',
+        label: 'CSV Import',
+        title: 'Start with CSV Import',
+        text: 'Use the CSV Import block to load data from a CSV. Click the "+" button to choose a CSV file from the project page or any CSV on your computer.',
+        imageSrc: '/src/assets/Import_CSV.svg',
+        imageAlt: 'Illustration of the CSV import block',
+        imageLabel: 'CSV IMPORT BLOCK'
+      },
+      {
+        id: 'transform',
+        label: 'Transform',
+        title: 'Transform Your Dataset',
+        text: 'Chain Data and Data Transformation blocks to filter, sort, group, or clean your dataset before creating visuals.',
+        imageSrc: '/src/assets/Data_Transformation.svg',
+        imageLabel: 'DATA TRANSFORMATION'
+      },
+      {
+        id: 'visualise',
+        label: 'Visualise',
+        title: 'Generate Visualisations',
+        text: 'Drop a Visualization block to pick a chart type, connect your data, then press the play button to render the chart.',
+        imageSrc: '/src/assets/Data_Visualisation.svg',
+        imageLabel: 'VISUALIZATION PREVIEW'
+      },
+      {
+        id: 'download',
+        label: 'Download',
+        title: 'Download Data',
+        text: 'Preview your data on the right side of the page, then download it using the button.',
+        imageSrc: '/src/assets/Download.svg',
+        imageLabel: 'DATA DOWNLOAD'
+      }
+    ];
+
+    let helpSlideIndex = 0;
+    const helpOverlay = document.getElementById('help-overlay');
+    const helpSlideImageWrapper = document.getElementById('help-slide-image-wrapper');
+    const helpSlideImage = document.getElementById('help-slide-image');
+    const helpSlideImageLabel = document.getElementById('help-slide-image-label');
+    const helpSlideTitle = document.getElementById('help-slide-title');
+    const helpSlideText = document.getElementById('help-slide-text');
+    const helpProgressBar = document.getElementById('help-progress-bar');
+    const helpPrevBtn = document.getElementById('help-prev-btn');
+    const helpNextBtn = document.getElementById('help-next-btn');
+    const helpSkipBtn = document.getElementById('help-skip-btn');
+    let helpPreviousOverflow = '';
+
+    function renderHelpSlide() {
+      if (!helpSlides.length) return;
+      const slide = helpSlides[Math.min(Math.max(helpSlideIndex, 0), helpSlides.length - 1)];
+      if (helpSlideImageWrapper) {
+        if (slide.hideImage) {
+          helpSlideImageWrapper.classList.add('hidden');
         } else {
-            toggleBtn.style.right = `${dataPanel.offsetWidth + resizerRight.offsetWidth}px`;
+          helpSlideImageWrapper.classList.remove('hidden');
+          if (helpSlideImage) {
+            if (slide.imageSrc) {
+              helpSlideImage.src = slide.imageSrc;
+              helpSlideImage.alt = slide.imageAlt || slide.title;
+              helpSlideImage.classList.remove('hidden');
+              if (helpSlideImageLabel) helpSlideImageLabel.classList.add('hidden');
+            } else {
+              helpSlideImage.src = '';
+              helpSlideImage.alt = '';
+              helpSlideImage.classList.add('hidden');
+              if (helpSlideImageLabel) {
+                helpSlideImageLabel.classList.remove('hidden');
+                helpSlideImageLabel.textContent = slide.imageLabel || 'Slide Image';
+              }
+            }
+          }
         }
+      }
+      if ((!slide.imageSrc || slide.hideImage) && helpSlideImageLabel && !helpSlideImageLabel.textContent) {
+        helpSlideImageLabel.textContent = slide.imageLabel || 'Slide Image';
+      }
+      if (helpSlideTitle) helpSlideTitle.textContent = slide.title;
+      if (helpSlideText) helpSlideText.textContent = slide.text;
+
+      const progress = ((helpSlideIndex + 1) / helpSlides.length) * 100;
+      if (helpProgressBar) helpProgressBar.style.width = `${progress}%`;
+
+      if (helpPrevBtn) {
+        helpPrevBtn.disabled = helpSlideIndex === 0;
+        helpPrevBtn.setAttribute('aria-disabled', helpPrevBtn.disabled ? 'true' : 'false');
+      }
+      if (helpNextBtn) {
+        helpNextBtn.disabled = helpSlideIndex === helpSlides.length - 1;
+        helpNextBtn.setAttribute('aria-disabled', helpNextBtn.disabled ? 'true' : 'false');
+      }
+      if (helpSkipBtn) {
+        helpSkipBtn.textContent = helpSlideIndex === helpSlides.length - 1 ? 'Finish tour' : 'Skip tutorial';
+      }
+      renderStepPicker();
+
     }
-    
-    function toggleDataPanel() {
-        const isClosing = !mainGrid.classList.contains('data-closed');
-        if (isClosing) {
-            // Store the current width before closing
-            dataPanelWidth = document.getElementById('data-panel').offsetWidth;
+
+    function changeHelpSlide(delta) {
+      const targetIndex = helpSlideIndex + delta;
+      if (targetIndex < 0 || targetIndex >= helpSlides.length) return;
+      helpSlideIndex = targetIndex;
+      renderHelpSlide();
+    }
+
+    function openHelpModal(startAt = null) {
+      if (!helpOverlay) return;
+      if (startAt !== null) {
+        helpSlideIndex = typeof startAt === 'number' ? startAt : indexById(startAt);
+      } else if (typeof helpSlideIndex !== 'number') {
+        helpSlideIndex = 0;
+      }
+      renderHelpSlide();
+      helpOverlay.classList.remove('hidden');
+      helpPreviousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => { if (helpSkipBtn) helpSkipBtn.focus(); }, 0);
+    }
+
+
+    function closeHelpModal() {
+      if (!helpOverlay) return;
+      helpOverlay.classList.add('hidden');
+      document.body.style.overflow = helpPreviousOverflow || '';
+    }
+
+    if (helpPrevBtn) {
+      helpPrevBtn.addEventListener('click', () => changeHelpSlide(-1));
+    }
+    if (helpNextBtn) {
+      helpNextBtn.addEventListener('click', () => changeHelpSlide(1));
+    }
+    if (helpSkipBtn) {
+      helpSkipBtn.addEventListener('click', closeHelpModal);
+    }
+    if (helpOverlay) {
+      helpOverlay.addEventListener('click', (event) => {
+        if (event.target === helpOverlay) {
+          closeHelpModal();
         }
+      });
+    }
+    function indexById(id) {
+      const i = helpSlides.findIndex(s => s.id === id);
+      return i >= 0 ? i : 0;
+    }
 
-        mainGrid.classList.add('grid-transition');
-        mainGrid.classList.toggle('data-closed');
-        
-        const blocksPanelWidth = document.getElementById('blocks-panel').offsetWidth;
-        const currentDataWidth = isClosing ? 0 : dataPanelWidth;
-        mainGrid.style.gridTemplateColumns = `${blocksPanelWidth}px 8px 1fr 8px ${currentDataWidth}px`;
+    function jumpToSlide(idOrIndex) {
+      helpSlideIndex = typeof idOrIndex === 'number' ? idOrIndex : indexById(idOrIndex);
+      renderHelpSlide();
+    }
 
-        document.getElementById('toggle-icon').innerHTML = isClosing 
-            ? '<polyline points="15 18 9 12 15 6"></polyline>' // Left arrow
-            : '<polyline points="9 18 15 12 9 6"></polyline>';  // Right arrow
-        
-        mainGrid.addEventListener('transitionend', () => {
-            window.dispatchEvent(new Event('resize')); 
-            mainGrid.classList.remove('grid-transition');
-        }, { once: true });
+    function renderStepPicker() {
+      const holder = document.getElementById('help-step-picker');
+      if (!holder) return;
+      holder.innerHTML = '';
+
+      helpSlides.forEach((s, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = [
+          'inline-flex items-center px-3 py-1.5 rounded-full border text-sm font-semibold focus:outline-none',
+          'border-slate-200 text-slate-700 bg-white',
+          'hover:bg-indigo-50 hover:border-indigo-200',
+          'focus:ring-2 focus:ring-indigo-500'
+        ].join(' ');
+        if (i === helpSlideIndex) {
+          btn.className = btn.className
+            .replace('border-slate-200 text-slate-700 bg-white', 'bg-indigo-600 text-white border-indigo-600')
+            .replace('hover:bg-indigo-50 hover:border-indigo-200', 'hover:bg-indigo-600');
+          btn.setAttribute('aria-current', 'step');
+        } else {
+          btn.setAttribute('aria-current', 'false');
+        }
+        btn.setAttribute('aria-label', `Go to ${s.label || s.title}`);
+        btn.textContent = s.label || s.title;
+        btn.addEventListener('click', () => jumpToSlide(s.id));
+        holder.appendChild(btn);
+      });
+    }
+    function getTourParam() {
+      try {
+        const url = new URL(window.location.href);
+        const q = url.searchParams.get('tour');
+        if (q) return q;
+        if (location.hash && location.hash.startsWith('#tour=')) {
+          return location.hash.slice(6);
+        }
+      } catch (_) { /* noop */ }
+      return null;
+    }
+
+    function openTourAtParamIfAny() {
+      const tid = getTourParam();
+      if (!tid) return false;
+      openHelpModal(tid); // this will render specific slide
+      return true;
+    }
+
+
+
+    document.addEventListener('keydown', (event) => {
+      if (!helpOverlay || helpOverlay.classList.contains('hidden')) return;
+      if (event.key === 'Escape') {
+        closeHelpModal();
+      } else if (event.key === 'ArrowRight') {
+        changeHelpSlide(1);
+      } else if (event.key === 'ArrowLeft') {
+        changeHelpSlide(-1);
+      }
+    });
+
+    // Make it so that it is only a one time view (initial help)
+    const HELP_SEEN_KEY = 'apparentlyar:blocklyHelpSeen';
+    function shouldShowHelpOnLoad() {
+      if (typeof window === 'undefined' || !window.localStorage) return false;
+      try {
+        return window.localStorage.getItem(HELP_SEEN_KEY) !== 'true';
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function markHelpSeen() {
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      try {
+        window.localStorage.setItem(HELP_SEEN_KEY, 'true');
+      } catch (_) {
+        /* ignore storage errors */
+      }
+    }
+
+    const originalOpenHelpModal = openHelpModal;
+    openHelpModal = function (startAt = null) {
+      originalOpenHelpModal(startAt);
+      markHelpSeen();
+    };
+
+
+    function updateToggleButtonPosition() {
+      const dataPanel = document.getElementById('data-panel');
+      const resizerRight = document.getElementById('resizer-right');
+      const isClosed = mainGrid.classList.contains('data-closed');
+      if (isClosed) {
+        toggleBtn.style.right = '0px';
+      } else {
+        toggleBtn.style.right = `${dataPanel.offsetWidth + resizerRight.offsetWidth}px`;
+      }
+    }
+
+    function toggleDataPanel() {
+      const isClosing = !mainGrid.classList.contains('data-closed');
+      if (isClosing) {
+        // Store the current width before closing
+        dataPanelWidth = document.getElementById('data-panel').offsetWidth;
+      }
+
+      mainGrid.classList.add('grid-transition');
+      mainGrid.classList.toggle('data-closed');
+
+      const blocksPanelWidth = document.getElementById('blocks-panel').offsetWidth;
+      const currentDataWidth = isClosing ? 0 : dataPanelWidth;
+      mainGrid.style.gridTemplateColumns = `${blocksPanelWidth}px 8px 1fr 8px ${currentDataWidth}px`;
+
+      document.getElementById('toggle-icon').innerHTML = isClosing
+        ? '<polyline points="15 18 9 12 15 6"></polyline>' // Left arrow
+        : '<polyline points="9 18 15 12 9 6"></polyline>';  // Right arrow
+
+      mainGrid.addEventListener('transitionend', () => {
+        window.dispatchEvent(new Event('resize'));
+        mainGrid.classList.remove('grid-transition');
+      }, { once: true });
     }
 
     function toggleCodePanel() {
-        document.getElementById('code-panel').classList.toggle('hidden');
+      document.getElementById('code-panel').classList.toggle('hidden');
     }
-    
+
     // --- Blockly Code Execution ---
     async function executeBlocklyCode() {
       try {
@@ -709,12 +1050,12 @@
 
         const asyncWrapper = `(async () => { return ${code} })();`;
         let result = await eval(asyncWrapper);
-        
+
         // Handle different types of results
         if (result === undefined && Blockly.CsvImportData) {
-            result = Blockly.CsvImportData.data;
+          result = Blockly.CsvImportData.data;
         }
-        
+
         // Check if result is a chart configuration or handled by visualization blocks
         console.log('🔍 Checking result type:', typeof result, 'has chartType:', !!(result && result.chartType), 'has handled:', !!(result && result.handled));
         if (result && typeof result === 'object' && (result.chartType || result.handled === 'chartGenerated')) {
@@ -739,21 +1080,21 @@
             console.log('⏭️ Skipping fallback render (chartGenerated just fired)');
           }
         }
-        
+
         // Dispatch event for backward compatibility with React components
         window.dispatchEvent(new CustomEvent('blocklyExecuted', { detail: { result } }));
-        
+
       } catch (e) {
         console.error('Error executing Blockly code:', e);
         updateCodeOutput(`Error: ${e.message}`);
       }
     }
-    
+
     // Handle advanced visualization blocks that output chart configurations
     async function handleAdvancedVisualization(chartConfig) {
       try {
         console.log('🔧 Processing advanced visualization with config:', chartConfig);
-        
+
         // If we have backend API available, use it for advanced charts
         if (window.AppApi && window.AppApi.generateChart) {
           const chartResult = await window.AppApi.generateChart(
@@ -761,100 +1102,100 @@
             chartConfig.chartType,
             chartConfig.options || {}
           );
-          
+
           if (chartResult && chartResult.success) {
             renderAdvancedChart(chartResult);
             return;
           }
         }
-        
+
         // Fallback to client-side rendering for supported chart types
         const data = chartConfig.data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : []);
         renderDataPanel(data);
         renderDataVisualization(data, chartConfig);
-        
+
       } catch (error) {
         console.error('Error handling advanced visualization:', error);
         updateCodeOutput(`Visualization Error: ${error.message}`);
       }
     }
-    
-    
+
+
     function updateCodeOutput(content) {
-        document.getElementById('output-root').textContent = content || "Workspace is empty.";
+      document.getElementById('output-root').textContent = content || "Workspace is empty.";
     }
-    
+
     // Copy generated code to clipboard
     function copyGeneratedCode() {
-        const codeContent = document.getElementById('output-root').textContent;
-        if (!codeContent || codeContent === "Workspace is empty.") {
-            alert('No code to copy. Generate some code first!');
-            return;
+      const codeContent = document.getElementById('output-root').textContent;
+      if (!codeContent || codeContent === "Workspace is empty.") {
+        alert('No code to copy. Generate some code first!');
+        return;
+      }
+
+      navigator.clipboard.writeText(codeContent).then(() => {
+        const copyBtn = document.getElementById('copy-code-btn');
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.classList.add('copied');
+
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy code:', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = codeContent;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          alert('Code copied to clipboard!');
+        } catch (err) {
+          console.error('Fallback copy failed:', err);
+          alert('Unable to copy code automatically. Please select and copy manually.');
         }
-        
-        navigator.clipboard.writeText(codeContent).then(() => {
-            const copyBtn = document.getElementById('copy-code-btn');
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            copyBtn.classList.add('copied');
-            
-            setTimeout(() => {
-                copyBtn.textContent = originalText;
-                copyBtn.classList.remove('copied');
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy code:', err);
-            // Fallback for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = codeContent;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                alert('Code copied to clipboard!');
-            } catch (err) {
-                console.error('Fallback copy failed:', err);
-                alert('Unable to copy code automatically. Please select and copy manually.');
-            }
-            document.body.removeChild(textArea);
-        });
+        document.body.removeChild(textArea);
+      });
     }
-    
+
     // Render advanced charts from backend API or visualization blocks
     function renderAdvancedChart(chartResult) {
       console.log('🎨 renderAdvancedChart called with:', chartResult);
       const container = document.getElementById('react-chart-container');
-      
+
       // Destroy existing chart
       if (chartInstance) {
         chartInstance.destroy();
         chartInstance = null;
       }
-      
+
       if (!chartResult || !chartResult.config) {
         console.error('Invalid chart result:', chartResult);
         container.innerHTML = '<div class="text-center text-muted p-8">Failed to generate chart - invalid configuration</div>';
         return;
       }
-      
+
       try {
         container.innerHTML = '<canvas id="chart-canvas" class="w-full h-full"></canvas>';
         const canvas = document.getElementById('chart-canvas');
         const ctx = canvas.getContext('2d');
-        
+
         console.log('📊 Creating chart with full result:', chartResult);
         console.log('📊 Chart config type:', chartResult.config.type);
         console.log('📊 Chart config data:', chartResult.config.data);
         console.log('📊 Chart config options:', chartResult.config.options);
-        
+
         chartInstance = new Chart(ctx, chartResult.config);
         console.log('📊 Chart instance created, type:', chartInstance.config.type);
-        
+
         // Update data panel with the chart data if available
         if (chartResult.data) {
           renderDataPanel(chartResult.data);
         }
-        
+
       } catch (error) {
         console.error('Error creating chart:', error);
         container.innerHTML = '<div class="text-center text-muted p-8">Error creating chart: ' + error.message + '</div>';
@@ -863,23 +1204,23 @@
 
     // --- Data & Visualization Rendering ---
     function renderDataPanel(data) {
-        const container = document.getElementById('data-panel-content');
-        const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
-        if (!dataToRender || dataToRender.length === 0) {
-            container.innerHTML = `<div class="text-sm text-muted text-center p-4">No data to display.</div>`;
-            return;
-        }
-        const headers = Object.keys(dataToRender[0]);
-        let tableHtml = `<table class="min-w-full text-sm"><thead><tr>`;
-        headers.forEach(h => { tableHtml += `<th class="px-2 py-2 text-left font-medium text-muted">${h}</th>`; });
-        tableHtml += `</tr></thead><tbody class="divide-y divide-border">`;
-        dataToRender.slice(0, 100).forEach(row => {
-            tableHtml += `<tr>`;
-            headers.forEach(h => { tableHtml += `<td class="px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis">${row[h] || ''}</td>`; });
-            tableHtml += `</tr>`;
-        });
-        tableHtml += `</tbody></table>`;
-        container.innerHTML = tableHtml;
+      const container = document.getElementById('data-panel-content');
+      const dataToRender = data || (Blockly.CsvImportData ? Blockly.CsvImportData.data : null);
+      if (!dataToRender || dataToRender.length === 0) {
+        container.innerHTML = `<div class="text-sm text-muted text-center p-4">No data to display.</div>`;
+        return;
+      }
+      const headers = Object.keys(dataToRender[0]);
+      let tableHtml = `<table class="min-w-full text-sm"><thead><tr>`;
+      headers.forEach(h => { tableHtml += `<th class="px-2 py-2 text-left font-medium text-muted">${h}</th>`; });
+      tableHtml += `</tr></thead><tbody class="divide-y divide-border">`;
+      dataToRender.slice(0, 100).forEach(row => {
+        tableHtml += `<tr>`;
+        headers.forEach(h => { tableHtml += `<td class="px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis">${row[h] || ''}</td>`; });
+        tableHtml += `</tr>`;
+      });
+      tableHtml += `</tbody></table>`;
+      container.innerHTML = tableHtml;
     }
 
     function renderDataVisualization(data, chartConfig = null) {
@@ -931,94 +1272,94 @@
     }
 
     function prepareChartData(data, chartConfig = null) {
-        if (!data || data.length === 0) return { labels: [], datasets: [] };
-        const headers = Object.keys(data[0]);
-        
-        // Use configuration from advanced blocks if provided
-        if (chartConfig && (chartConfig.xColumn || chartConfig.yColumn)) {
-            const labelColumn = chartConfig.xColumn || headers[0];
-            const dataColumns = chartConfig.yColumn ? [chartConfig.yColumn] : 
-                                headers.filter(h => h !== labelColumn && !isNaN(parseFloat(data[0][h])));
-            
-            const labels = data.map(row => row[labelColumn]);
-            const datasets = dataColumns.map((col, index) => {
-                const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
-                return {
-                    label: col,
-                    data: data.map(row => parseFloat(row[col]) || 0),
-                    backgroundColor: colors[index % colors.length] + '80',
-                    borderColor: colors[index % colors.length],
-                    borderWidth: 1
-                };
-            });
-            return { labels, datasets };
-        }
-        
-        // Standard auto-detection for basic blocks
-        let labelColumn = headers.find(h => isNaN(parseFloat(data[0][h]))) || headers[0];
-        let dataColumns = headers.filter(h => h !== labelColumn && !isNaN(parseFloat(data[0][h])));
-        if(dataColumns.length === 0 && headers.length > 1) dataColumns.push(headers[1]);
+      if (!data || data.length === 0) return { labels: [], datasets: [] };
+      const headers = Object.keys(data[0]);
+
+      // Use configuration from advanced blocks if provided
+      if (chartConfig && (chartConfig.xColumn || chartConfig.yColumn)) {
+        const labelColumn = chartConfig.xColumn || headers[0];
+        const dataColumns = chartConfig.yColumn ? [chartConfig.yColumn] :
+          headers.filter(h => h !== labelColumn && !isNaN(parseFloat(data[0][h])));
 
         const labels = data.map(row => row[labelColumn]);
         const datasets = dataColumns.map((col, index) => {
-             const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
-            return {
-                label: col,
-                data: data.map(row => parseFloat(row[col]) || 0),
-                backgroundColor: colors[index % colors.length] + '80',
-                borderColor: colors[index % colors.length],
-                borderWidth: 1
-            }
+          const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
+          return {
+            label: col,
+            data: data.map(row => parseFloat(row[col]) || 0),
+            backgroundColor: colors[index % colors.length] + '80',
+            borderColor: colors[index % colors.length],
+            borderWidth: 1
+          };
         });
         return { labels, datasets };
+      }
+
+      // Standard auto-detection for basic blocks
+      let labelColumn = headers.find(h => isNaN(parseFloat(data[0][h]))) || headers[0];
+      let dataColumns = headers.filter(h => h !== labelColumn && !isNaN(parseFloat(data[0][h])));
+      if (dataColumns.length === 0 && headers.length > 1) dataColumns.push(headers[1]);
+
+      const labels = data.map(row => row[labelColumn]);
+      const datasets = dataColumns.map((col, index) => {
+        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
+        return {
+          label: col,
+          data: data.map(row => parseFloat(row[col]) || 0),
+          backgroundColor: colors[index % colors.length] + '80',
+          borderColor: colors[index % colors.length],
+          borderWidth: 1
+        }
+      });
+      return { labels, datasets };
     }
-    
+
     // --- Panel Resizing Logic ---
     let blocksPanelWidth = 320;
     let dataPanelWidth = 360;
 
     function initializeResizing() {
-        const resizerLeft = document.getElementById('resizer-left');
-        const resizerRight = document.getElementById('resizer-right');
+      const resizerLeft = document.getElementById('resizer-left');
+      const resizerRight = document.getElementById('resizer-right');
 
-        function makeResizable(resizer) {
-            resizer.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                let isDragging = true;
-                resizer.classList.add('is-dragging');
-                document.body.style.cursor = 'col-resize';
-                
-                const onMouseMove = (moveEvent) => {
-                    if (!isDragging) return;
-                    
-                    const rect = mainGrid.getBoundingClientRect();
-                    const isDataPanelClosed = mainGrid.classList.contains('data-closed');
+      function makeResizable(resizer) {
+        resizer.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          let isDragging = true;
+          resizer.classList.add('is-dragging');
+          document.body.style.cursor = 'col-resize';
 
-                    if (resizer === resizerLeft) {
-                        blocksPanelWidth = Math.max(250, moveEvent.clientX - rect.left);
-                    } else if (!isDataPanelClosed) {
-                        dataPanelWidth = Math.max(250, rect.right - moveEvent.clientX);
-                    }
-                    
-                    const currentDataWidth = isDataPanelClosed ? 0 : dataPanelWidth;
-                    mainGrid.style.gridTemplateColumns = `${blocksPanelWidth}px 8px 1fr 8px ${currentDataWidth}px`;
-                    
-                    window.dispatchEvent(new Event('resize'));
-                };
+          const onMouseMove = (moveEvent) => {
+            if (!isDragging) return;
 
-                const onMouseUp = () => {
-                    isDragging = false;
-                    resizer.classList.remove('is-dragging');
-                    document.body.style.cursor = '';
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.removeEventListener('mouseup', onMouseUp);
-                };
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            });
-        }
-        makeResizable(resizerLeft);
-        makeResizable(resizerRight);
+            const rect = mainGrid.getBoundingClientRect();
+            const isDataPanelClosed = mainGrid.classList.contains('data-closed');
+
+            if (resizer === resizerLeft) {
+              blocksPanelWidth = Math.max(250, moveEvent.clientX - rect.left);
+            } else if (!isDataPanelClosed) {
+              dataPanelWidth = Math.max(250, rect.right - moveEvent.clientX);
+            }
+
+            const currentDataWidth = isDataPanelClosed ? 0 : dataPanelWidth;
+            mainGrid.style.gridTemplateColumns = `${blocksPanelWidth}px 8px 1fr 8px ${currentDataWidth}px`;
+
+            window.dispatchEvent(new Event('resize'));
+          };
+
+          const onMouseUp = () => {
+            isDragging = false;
+            resizer.classList.remove('is-dragging');
+            document.body.style.cursor = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          };
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        });
+      }
+      makeResizable(resizerLeft);
+      makeResizable(resizerRight);
     }
 
     // --- App Initialization ---
@@ -1052,7 +1393,10 @@
             headerLink.href = headerDashboardUrl;
         }
 
-        // Chart generation is now handled solely by Blockly visualization blocks
+      // Set dashboard link based on role
+      const breadcrumbDashboardLink = document.getElementById('breadcrumb-dashboard-link');
+      const breadcrumbProjectLink = document.getElementById('breadcrumb-project-link');
+      const headerLink = document.getElementById('header-dashboard-link');
 
         window.addEventListener('csvDataChanged', (e) => {
             document.getElementById('csv-filename').textContent = e.detail.filename || 'No file loaded';
@@ -1126,43 +1470,74 @@
         }
 
 
-        workspace.addChangeListener((event) => {
-          // Fix for toolbox not closing
-          if (event.type === Blockly.Events.BLOCK_DRAG && !event.isStart || event.type === Blockly.Events.SELECTED) {
-             if (workspace.getToolbox() && workspace.getToolbox().getFlyout()) {
-               workspace.getToolbox().getFlyout().hide();
-             }
+      if (breadcrumbProjectLink && projectId) {
+        // Navigate to the view-project page for this specific project
+        breadcrumbProjectLink.href = `view-project.html?id=${projectId}${role ? '&role=' + role : ''}`;
+      }
+
+      if (headerLink) {
+        const headerDashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
+        headerLink.href = headerDashboardUrl;
+      }
+
+      // Chart generation is now handled solely by Blockly visualization blocks
+
+      window.addEventListener('csvDataChanged', (e) => {
+        document.getElementById('csv-filename').textContent = e.detail.filename || 'No file loaded';
+        renderDataPanel();
+        if (window.BlocklyAutofill) window.BlocklyAutofill.updateAllBlocksWithAutofill();
+      });
+
+      // Listen for chart generation from visualization blocks
+      window.addEventListener('chartGenerated', (e) => {
+        console.log('📊 Chart generated event received:', e.detail);
+        if (e.detail && e.detail.config) {
+          renderAdvancedChart(e.detail);
+        }
+      });
+
+      workspace.addChangeListener((event) => {
+        // Fix for toolbox not closing
+        if (event.type === Blockly.Events.BLOCK_DRAG && !event.isStart || event.type === Blockly.Events.SELECTED) {
+          if (workspace.getToolbox() && workspace.getToolbox().getFlyout()) {
+            workspace.getToolbox().getFlyout().hide();
+          }
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        if (workspace) Blockly.svgResize(workspace);
+        if (chartInstance) chartInstance.resize();
+        updateToggleButtonPosition();
+      });
+
+      // Open latest saved CSV in a new tab
+      const downloadBtn = document.getElementById('download-csv-btn');
+      if (downloadBtn) {
+        downloadBtn.addEventListener('click', async () => {
+          try {
+            const savedPath = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null;
+            const fallbackName = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || 'transformed.csv';
+            const sanitized = fallbackName.replace(/[^\w\-.]/g, '_').toLowerCase();
+            const expectedPath = `/uploads/${sanitized.endsWith('.csv') ? sanitized : sanitized + '.csv'}`;
+            const url = savedPath || expectedPath;
+            window.open(url, '_blank');
+          } catch (_e) {
+            // Ignore
           }
         });
+      }
 
-        window.addEventListener('resize', () => {
-          if(workspace) Blockly.svgResize(workspace);
-          if(chartInstance) chartInstance.resize();
-          updateToggleButtonPosition();
-        });
+      initializeResizing();
+      updateToggleButtonPosition();
 
-        // Open latest saved CSV in a new tab
-        const downloadBtn = document.getElementById('download-csv-btn');
-        if (downloadBtn) {
-          downloadBtn.addEventListener('click', async () => {
-            try {
-              const savedPath = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.savedPath) || null;
-              const fallbackName = (window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) || 'transformed.csv';
-              const sanitized = fallbackName.replace(/[^\w\-.]/g, '_').toLowerCase();
-              const expectedPath = `/uploads/${sanitized.endsWith('.csv') ? sanitized : sanitized + '.csv'}`;
-              const url = savedPath || expectedPath;
-              window.open(url, '_blank');
-            } catch (_e) {
-              // Ignore
-            }
-          });
-        }
-
-        initializeResizing();
-        updateToggleButtonPosition();
+      if (!openTourAtParamIfAny() && shouldShowHelpOnLoad()) {
+        setTimeout(() => openHelpModal(), 300);
+      }
     }
     
     // initializeApp is triggered after header.html is loaded above
   </script>
 </body>
+
 </html>

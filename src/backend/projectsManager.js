@@ -6,7 +6,6 @@
  * 
  * @author ApparentlyAR Team
  * @version 1.0.0
- * @author Najla - Added persistent project storage using JSON file
  */
 
 const fs = require('fs');
@@ -17,7 +16,6 @@ const PROJECTS_FILE = path.join(__dirname, '../../projects.json');
 
 /**
  * Initialize projects file with empty array if it doesn't exist
- * @author Najla - Added initialization for projects.json file
  */
 function initializeProjectsFile() {
   if (!fs.existsSync(PROJECTS_FILE)) {
@@ -27,7 +25,6 @@ function initializeProjectsFile() {
 
 /**
  * Read projects from JSON file
- * @author Najla - Added persistent reading of projects from JSON
  * @returns {Array} Array of project objects
  */
 function readProjects() {
@@ -44,7 +41,6 @@ function readProjects() {
 
 /**
  * Write projects to JSON file
- * @author Najla - Added persistent writing of projects to JSON
  * @param {Array} projects - Array of project objects
  */
 function writeProjects(projects) {
@@ -57,7 +53,6 @@ function writeProjects(projects) {
 
 /**
  * Get all projects
- * @author Najla - Added function to get all projects from JSON
  * @returns {Array} Array of project objects
  */
 function getAllProjects() {
@@ -66,7 +61,6 @@ function getAllProjects() {
 
 /**
  * Get project by ID
- * @author Najla - Added function to get a specific project by ID
  * @param {number} id - Project ID
  * @returns {Object|null} Project object or null if not found
  */
@@ -77,7 +71,6 @@ function getProjectById(id) {
 
 /**
  * Create a new project
- * @author Najla - Added function to create a new project in JSON
  * @param {Object} projectData - Project data (name, description)
  * @returns {Object} Created project object
  */
@@ -103,7 +96,6 @@ function createProject(projectData) {
 
 /**
  * Update project by ID
- * @author Najla - Added function to update an existing project in JSON
  * @param {number} id - Project ID
  * @param {Object} projectData - Updated project data
  * @returns {Object|null} Updated project object or null if not found
@@ -128,7 +120,6 @@ function updateProject(id, projectData) {
 
 /**
  * Delete project by ID
- * @author Najla - Added function to delete a project from JSON
  * @param {number} id - Project ID
  * @returns {boolean} True if project was deleted, false if not found
  */

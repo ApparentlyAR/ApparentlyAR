@@ -22,14 +22,18 @@ const chartGenerator = require('./src/backend/chartGenerator');
 const { parseCSV } = require('./src/backend/csvHandler');
 const { sampleData, weatherData, salesData } = require('./src/backend/testData');
 
-// Import projects manager for persistent storage -Najla
+// Import projects manager for persistent storage 
 const {
   getAllProjects,
   getProjectById,
   createProject,
   updateProject,
   deleteProject
-} = require('./src/backend/projectsManager'); // -Najla
+} = require('./src/backend/projectsManager');
+const {
+  verifyFacilitatorPassword,
+  updateFacilitatorPassword
+} = require('./src/backend/authManager');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -79,6 +83,52 @@ app.get('/view-project', (req, res) => {
  */
 app.get('/student-dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'student-dashboard.html'));
+});
+
+/**
+ * POST /api/facilitator/login
+ * Validate facilitator password.
+ */
+app.post('/api/facilitator/login', (req, res) => {
+  const { password } = req.body || {};
+  if (typeof password !== 'string') {
+    return res.status(400).json({ error: 'Password is required.' });
+  }
+
+  const isValid = verifyFacilitatorPassword(password);
+  if (!isValid) {
+    return res.status(401).json({ error: 'Invalid password.' });
+  }
+
+  return res.json({ success: true });
+});
+
+/**
+ * PUT /api/facilitator/password
+ * Update facilitator password after verifying current password.
+ */
+app.put('/api/facilitator/password', (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+    return res.status(400).json({ error: 'Current and new passwords are required.' });
+  }
+
+  if (!verifyFacilitatorPassword(currentPassword)) {
+    return res.status(401).json({ error: 'Current password is incorrect.' });
+  }
+
+  if (!newPassword.trim()) {
+    return res.status(400).json({ error: 'New password must not be empty.' });
+  }
+
+  try {
+    updateFacilitatorPassword(newPassword);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to update facilitator password:', error);
+    return res.status(500).json({ error: 'Failed to update password. Please try again later.' });
+  }
 });
 
 /**
@@ -389,7 +439,6 @@ app.post('/api/ar-visualization', async (req, res) => {
 
 /**
  * Endpoint to fetch all projects
- * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.get('/api/projects', (req, res) => {
   try {
@@ -403,7 +452,6 @@ app.get('/api/projects', (req, res) => {
 
 /**
  * Endpoint to fetch a single project by ID
- * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.get('/api/projects/:id', (req, res) => {
   try {
@@ -423,7 +471,6 @@ app.get('/api/projects/:id', (req, res) => {
 
 /**
  * Endpoint to save a new project with optional CSV file upload
- * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.post('/api/projects', upload.single('csvFile'), (req, res) => {
   try {
@@ -465,7 +512,6 @@ app.post('/api/projects', upload.single('csvFile'), (req, res) => {
 
 /**
  * Endpoint to update a project by ID
- * @author Najla - Replaced in-memory storage with persistent JSON storage
  */
 app.put('/api/projects/:id', upload.single('csvFile'), async (req, res) => {
   try {
@@ -513,7 +559,6 @@ app.put('/api/projects/:id', upload.single('csvFile'), async (req, res) => {
 
 /**
  * Endpoint to delete a project by ID
- * @author Najla - Added endpoint for deleting projects from JSON storage
  */
 app.delete('/api/projects/:id', (req, res) => {
   try {
