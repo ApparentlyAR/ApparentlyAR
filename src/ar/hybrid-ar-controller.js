@@ -73,6 +73,19 @@ class HybridARController {
       // Initialize MediaPipe
       await this.handTracking.initialize();
 
+      // Force chart manager to use custom data only
+      this.chartManager.dataSource = 'custom';
+
+      // Auto-load most recent Blockly data
+      await this.refreshBlocklyFiles();
+      const fileSelect = document.getElementById('blockly-filename');
+      if (fileSelect && fileSelect.options.length > 0 && fileSelect.options[0].value) {
+        const mostRecentFile = fileSelect.options[0].value;
+        await this.loadBlocklyData(mostRecentFile);
+      } else {
+        this.updateStatus('No Blockly data found. Import CSV in Blockly first.', 'error');
+      }
+
       // Initialize marker-anchored chart (marker 0) based on current controls
       this.chartManager.updateMarkerChartFromControls('marker-0');
 
@@ -447,25 +460,19 @@ class HybridARController {
    */
   updateDataInfo() {
     const info = this.chartManager.getDataSourceInfo();
-    const sourceEl = document.getElementById('current-source');
     const datasetEl = document.getElementById('current-dataset');
     const rowsEl = document.getElementById('current-rows');
     const columnsEl = document.getElementById('current-columns');
     
-    if (info.source === 'custom') {
-      sourceEl.textContent = 'Blockly Data';
+    if (info.source === 'custom' && info.filename) {
       datasetEl.textContent = info.filename;
-      const currentData = this.chartManager.getRenderableData();
+      const currentData = this.chartManager.getCurrentData();
       rowsEl.textContent = currentData.length;
-      columnsEl.textContent = info.columns.length;
+      columnsEl.textContent = info.columns?.length || 0;
     } else {
-      sourceEl.textContent = 'Sample Data';
-      const sampleSelect = document.getElementById('sample-data');
-      datasetEl.textContent = sampleSelect.options[sampleSelect.selectedIndex].text;
-      const datasetName = sampleSelect ? sampleSelect.value : 'students';
-      const currentData = this.chartManager.getRenderableData(datasetName);
-      rowsEl.textContent = currentData.length;
-      columnsEl.textContent = Object.keys(currentData[0] || {}).length;
+      datasetEl.textContent = 'No data loaded';
+      rowsEl.textContent = '-';
+      columnsEl.textContent = '-';
     }
   }
 
@@ -496,13 +503,13 @@ class HybridARController {
         try { camera.appendChild(devContainer); } catch (_) {}
       }
 
-      // Build chart from the CURRENT DATA SOURCE explicitly (custom or sample)
+      // Build chart from Blockly data only
       let chartType = document.getElementById('chart-type').value;
-      const sampleSelect = document.getElementById('sample-data');
-      const dataSourceSel = document.getElementById('data-source');
-      const usingCustom = (dataSourceSel && dataSourceSel.value === 'blockly') || this.chartManager.dataSource === 'custom';
-      const datasetForRender = usingCustom ? undefined : (sampleSelect ? sampleSelect.value : 'students');
-      const dataForChart = this.chartManager.getRenderableData(datasetForRender);
+      const dataForChart = this.chartManager.getCurrentData();
+      
+      if (!dataForChart || dataForChart.length === 0) {
+        throw new Error('No Blockly data loaded. Please import CSV in Blockly first.');
+      }
 
       // Create (or reuse) canvas
       let canvas = devContainer.querySelector('canvas#dev-marker-canvas');
@@ -644,14 +651,12 @@ class HybridARController {
   }
 
   /**
-   * Ensure Blockly data is loaded when data source is 'blockly'.
+   * Ensure Blockly data is loaded (now always required).
    */
   async ensureBlocklyDataLoaded() {
     try {
-      const dataSourceSel = document.getElementById('data-source');
-      const isBlockly = dataSourceSel && dataSourceSel.value === 'blockly';
       const needsLoad = this.chartManager.dataSource !== 'custom' || !this.chartManager.customData;
-      if (isBlockly && needsLoad) {
+      if (needsLoad) {
         const blocklyFileSel = document.getElementById('blockly-filename');
         let filename = blocklyFileSel ? blocklyFileSel.value : '';
         if (!filename && window.Blockly && window.Blockly.CsvImportData && window.Blockly.CsvImportData.filename) {
@@ -659,9 +664,13 @@ class HybridARController {
         }
         if (filename) {
           await this.loadBlocklyData(filename);
+        } else {
+          throw new Error('No Blockly data available');
         }
       }
-    } catch (_) { /* non-fatal */ }
+    } catch (err) {
+      throw new Error('Failed to load Blockly data: ' + err.message);
+    }
   }
 
   /**
@@ -731,8 +740,6 @@ class HybridARController {
 
     // Update marker 0 chart when controls change
     const typeSel = document.getElementById('chart-type');
-    const dataSel = document.getElementById('sample-data');
-    const dataSourceSel = document.getElementById('data-source');
     const blocklyFileSel = document.getElementById('blockly-filename');
     const refreshBtn = document.getElementById('refresh-files');
     const uploadBtn = document.getElementById('upload-file-btn');
@@ -751,54 +758,6 @@ class HybridARController {
       typeSel.addEventListener('input', () => {
         handler();
         this.updateDevChartIfVisible();
-      });
-    }
-    if (dataSel) {
-      dataSel.addEventListener('change', () => {
-        handler();
-        dataInfoHandler();
-        if (this.markerInteractionController) {
-          this.markerInteractionController.refreshAvailableColumns();
-        }
-      });
-      dataSel.addEventListener('input', () => {
-        handler();
-        dataInfoHandler();
-        if (this.markerInteractionController) {
-          this.markerInteractionController.refreshAvailableColumns();
-        }
-      });
-    }
-    
-    // Handle data source switching
-    if (dataSourceSel) {
-      dataSourceSel.addEventListener('change', async (e) => {
-        const source = e.target.value;
-        const sampleGroup = document.getElementById('sample-data-group');
-        const blocklyGroup = document.getElementById('blockly-data-group');
-        
-        if (source === 'sample') {
-          sampleGroup.style.display = 'block';
-          blocklyGroup.style.display = 'none';
-          this.chartManager.useSampleData();
-        } else if (source === 'blockly') {
-          sampleGroup.style.display = 'none';
-          blocklyGroup.style.display = 'block';
-          await this.refreshBlocklyFiles();
-          // Auto-load selected file if any
-          const sel = document.getElementById('blockly-filename');
-          const selected = sel && sel.value ? sel.value : (window.Blockly && window.Blockly.CsvImportData ? window.Blockly.CsvImportData.filename : '');
-          if (selected) {
-            await this.loadBlocklyData(selected);
-          }
-        }
-        
-        this.updateDataInfo();
-        this.updateMarkerChart();
-        this.updateDevChartIfVisible();
-        if (this.markerInteractionController) {
-          this.markerInteractionController.refreshAvailableColumns();
-        }
       });
     }
     
@@ -898,12 +857,7 @@ class HybridARController {
             return safe.toLowerCase().endsWith('.csv') ? safe : `${safe}.csv`;
           };
           const expectedFile = deriveFilename();
-          // Switch to Blockly Data source
-          const dataSourceSel = document.getElementById('data-source');
-          if (dataSourceSel) dataSourceSel.value = 'blockly';
-          const blocklyGroup = document.getElementById('blockly-data-group');
-          const sampleGroup = document.getElementById('sample-data-group');
-          if (blocklyGroup && sampleGroup) { blocklyGroup.style.display = 'block'; sampleGroup.style.display = 'none'; }
+          // Refresh file list to ensure we have latest
           await this.refreshBlocklyFiles();
           const sel = document.getElementById('blockly-filename');
           if (sel) {

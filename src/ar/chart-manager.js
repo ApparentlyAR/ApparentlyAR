@@ -93,33 +93,31 @@ class ChartManager {
   }
 
   /**
-   * Set data source to sample data
+   * Set data source to sample data (deprecated, no-op for backwards compatibility)
    */
   useSampleData() {
-    this.dataSource = 'sample';
-    this.customData = null;
-    console.log('Switched to sample data');
+    console.warn('useSampleData() is deprecated - AR now uses Blockly data exclusively');
+    // No-op for backwards compatibility
   }
 
   /**
-   * Get current data based on data source
-   * @param {string} datasetName - Dataset name (for sample data)
+   * Get current data (always returns custom/Blockly data)
    * @returns {Array<Object>} Current data array
    */
-  getCurrentData(datasetName = 'students') {
-    if (this.dataSource === 'custom' && this.customData) {
+  getCurrentData() {
+    if (this.dataSource === 'custom' && this.customData && Array.isArray(this.customData.data)) {
       return this.customData.data;
     }
-    return this.sampleData[datasetName] || this.sampleData.students;
+    console.warn('No Blockly data loaded. Please import CSV in Blockly first.');
+    return [];
   }
 
   /**
    * Get data prepared for rendering, respecting active sort configuration
-   * @param {string} datasetName
    * @returns {Array<Object>} Renderable data copy
    */
-  getRenderableData(datasetName = 'students') {
-    const baseData = this.getCurrentData(datasetName);
+  getRenderableData() {
+    const baseData = this.getCurrentData();
     if (!Array.isArray(baseData)) {
       return [];
     }
@@ -231,11 +229,6 @@ class ChartManager {
       return;
     }
 
-    if (!datasetName) {
-      const sampleSelect = document.getElementById('sample-data');
-      datasetName = sampleSelect ? sampleSelect.value : 'students';
-    }
-
     const key = markerId;
     const existing = this.markerCharts[key];
     const canvasId = `marker-chart-${markerId}`;
@@ -254,7 +247,7 @@ class ChartManager {
     if (existing?.chart) {
       try { existing.chart.destroy(); } catch (_) {}
     }
-    const currentData = this.getRenderableData(datasetName);
+    const currentData = this.getRenderableData();
     const chart = this.generateChart(canvas, chartType, currentData, chartConfigOverride);
 
     // Ensure a plane entity exists under the marker and points to our canvas
@@ -276,13 +269,12 @@ class ChartManager {
     this.markerCharts[key] = { canvas, chart, entity };
 
     // Log for debugging
-    console.log(`Marker chart updated on ${markerId}: ${chartType} using ${datasetName}`);
+    const dataInfo = this.customData?.filename || 'Blockly data';
+    console.log(`Marker chart updated on ${markerId}: ${chartType} using ${dataInfo}`);
   }
 
   updateMarkerChartWithConfig(markerId, config = {}) {
     const chartType = config.chartType || 'bar';
-    const sampleSelect = document.getElementById('sample-data');
-    const datasetName = this.dataSource === 'custom' ? undefined : (sampleSelect ? sampleSelect.value : 'students');
 
     const override = {};
     if (config.xColumn) {
@@ -293,7 +285,7 @@ class ChartManager {
     }
 
     const hasOverride = Object.keys(override).length > 0;
-    this.createOrUpdateMarkerChart(markerId, chartType, datasetName, hasOverride ? override : null);
+    this.createOrUpdateMarkerChart(markerId, chartType, null, hasOverride ? override : null);
   }
 
   /**
@@ -511,10 +503,6 @@ class ChartManager {
    */
   createChart(screenX, screenY) {
     const chartType = document.getElementById('chart-type').value;
-    const sampleSelect = document.getElementById('sample-data');
-    const dataSourceSelect = document.getElementById('data-source');
-    const usingCustom = (dataSourceSelect && dataSourceSelect.value === 'blockly') || this.dataSource === 'custom';
-    const datasetName = usingCustom ? undefined : (sampleSelect ? sampleSelect.value : 'students');
     
     // Create unique canvas for this chart
     const canvas = document.createElement('canvas');
@@ -523,8 +511,8 @@ class ChartManager {
     canvas.height = 300;
     canvas.id = chartId + '-canvas';
     
-    // Generate chart texture
-    const currentData = this.getRenderableData(datasetName);
+    // Generate chart texture (always uses Blockly data)
+    const currentData = this.getRenderableData();
     const chart = this.generateChart(canvas, chartType, currentData);
     
     // Add canvas to assets
@@ -553,7 +541,7 @@ class ChartManager {
       chart: chart,
       canvas: canvas,
       type: chartType,
-      dataset: usingCustom ? (this.customData?.filename || 'custom') : datasetName,
+      dataset: this.customData?.filename || 'Blockly data',
       screenX: screenX,
       screenY: screenY
     };
@@ -561,7 +549,8 @@ class ChartManager {
     this.handCharts.push(chartObj);
     this.updateChartList();
     
-    console.log(`Chart placed: ${chartType} with ${datasetName} data at world position ${worldPos}`);
+    const dataInfo = this.customData?.filename || 'Blockly data';
+    console.log(`Chart placed: ${chartType} with ${dataInfo} at world position ${worldPos}`);
   }
 
   /**

@@ -362,7 +362,7 @@
     </div>
 
     <div class="control-group">
-      <label for="chart-type">Chart Type (Hand Controls):</label>
+      <label for="chart-type">Chart Type:</label>
       <select id="chart-type">
         <option value="bar">Bar Chart</option>
         <option value="line">Line Chart</option>
@@ -371,24 +371,7 @@
       </select>
     </div>
 
-    <div class="control-group">
-      <label for="data-source">Data Source:</label>
-      <select id="data-source">
-        <option value="sample">Sample Data</option>
-        <option value="blockly">Blockly Data</option>
-      </select>
-    </div>
-
-    <div class="control-group" id="sample-data-group">
-      <label for="sample-data">Sample Data:</label>
-      <select id="sample-data">
-        <option value="students">Student Grades</option>
-        <option value="weather">Weather Data</option>
-        <option value="sales">Sales Data</option>
-      </select>
-    </div>
-
-    <div class="control-group" id="blockly-data-group" style="display: none;">
+    <div class="control-group" id="blockly-data-group">
       <label for="blockly-filename">Blockly File:</label>
       <select id="blockly-filename">
         <option value="">No files available</option>
@@ -401,8 +384,7 @@
     <div class="stats">
       <h3>Data Info</h3>
       <div id="data-info" style="font-size: 11px;">
-        <div>Source: <span id="current-source">Sample Data</span></div>
-        <div>Dataset: <span id="current-dataset">Student Grades</span></div>
+        <div>Dataset: <span id="current-dataset">No data loaded</span></div>
         <div>Rows: <span id="current-rows">-</span></div>
         <div>Columns: <span id="current-columns">-</span></div>
       </div>

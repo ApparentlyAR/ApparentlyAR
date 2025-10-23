@@ -226,11 +226,15 @@ describe('Hybrid AR System Tests', () => {
       });
     });
 
-    test('should include sample datasets', () => {
+    test('should support Blockly data integration', () => {
       const content = fs.readFileSync(hybridArPath, 'utf8');
       
-      // Check for sample data references
-      expect(content).toMatch(/(students|weather|sales)/i);
+      // Check for Blockly data references
+      expect(content).toMatch(/blockly-filename/i);
+      expect(content).toMatch(/Blockly File/i);
+      // Should NOT have sample data selector
+      expect(content).not.toContain('Data Source');
+      expect(content).not.toContain('sample-data-group');
     });
     
   });
