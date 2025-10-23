@@ -138,13 +138,13 @@ class MarkerInteractionController {
         this.handleSortOrderRotation(degrees);
         break;
       case 5:
-        this.handleFilterCategoryRotation(degrees);
+        this.handleFilterColumnRotation(degrees);
         break;
       case 6:
-        this.handleChartTypeRotation(degrees);
+        this.handleFilterValueRotation(degrees);
         break;
       case 7:
-        this.handleReservedMarkerRotation(degrees);
+        this.handleChartTypeRotation(degrees);
         break;
       default:
         console.warn(`[MarkerInteraction] Unhandled marker ${markerNum}`);
@@ -237,21 +237,74 @@ class MarkerInteractionController {
     }
   }
 
-  handleFilterCategoryRotation(degrees) {
-    // To be implemented in Phase 6
+  /**
+   * Handle Marker 5 rotation - Filter Column Selector
+   * Cycles through available columns to select which column to filter by
+   * @param {number} degrees - Rotation in degrees (0-360)
+   */
+  handleFilterColumnRotation(degrees) {
+    const columns = this.availableColumns;
+    if (!Array.isArray(columns) || columns.length === 0) {
+      console.warn('[Marker 5] No columns available for filter selection');
+      return;
+    }
+
+    // Add "No filter" option at the beginning (null = disable filtering)
+    const columnsWithNone = [null, ...columns];
+    const selectedColumn = this.getSectorValueFromRotation(5, degrees, columnsWithNone);
+
+    if (selectedColumn !== this.currentFilterColumn) {
+      const displayColumn = selectedColumn === null ? 'No filter' : selectedColumn;
+      console.log(`[Marker 5] Filter column changed: ${this.currentFilterColumn} → ${displayColumn}`);
+      this.currentFilterColumn = selectedColumn;
+      this.currentFilterValue = null; // Reset value when column changes
+      this.dispatchStateChange();
+      this.applyFilterDebounced();
+    }
   }
 
   /**
-   * Handle Marker 6 rotation - Chart Type Selector
+   * Handle Marker 6 rotation - Filter Value Selector
+   * Cycles through distinct values of currentFilterColumn
+   * @param {number} degrees - Rotation in degrees (0-360)
+   */
+  handleFilterValueRotation(degrees) {
+    if (!this.currentFilterColumn) {
+      console.warn('[Marker 6] No filter column selected (use Marker 5 to select column first)');
+      return;
+    }
+
+    const availableValues = this.getFilterValuesForColumn(this.currentFilterColumn);
+    
+    if (!availableValues || availableValues.length === 0) {
+      console.warn('[Marker 6] No values available for column:', this.currentFilterColumn);
+      return;
+    }
+
+    // Add "All values" option at the beginning (null value = no filter)
+    const valuesWithAll = [null, ...availableValues];
+    const selectedValue = this.getSectorValueFromRotation(6, degrees, valuesWithAll);
+
+    if (selectedValue !== this.currentFilterValue) {
+      const displayValue = selectedValue === null ? 'All values' : selectedValue;
+      console.log(`[Marker 6] Filter value changed: ${this.currentFilterValue} → ${displayValue}`);
+      this.currentFilterValue = selectedValue;
+      this.dispatchStateChange();
+      this.applyFilterDebounced();
+    }
+  }
+
+  /**
+   * Handle Marker 7 rotation - Chart Type Selector
    * Maps rotation to 4 chart types with 90° sectors
    * @param {number} degrees - Rotation in degrees (0-360)
    */
   handleChartTypeRotation(degrees) {
     const chartTypes = ['bar', 'line', 'scatter', 'pie'];
-    const selectedType = this.getSectorValueFromRotation(6, degrees, chartTypes);
+    const selectedType = this.getSectorValueFromRotation(7, degrees, chartTypes);
 
     if (selectedType && selectedType !== this.currentChartType) {
-      console.log(`[Marker 6] Chart type changed: ${this.currentChartType} → ${selectedType}`);
+      console.log(`[Marker 7] Chart type changed: ${this.currentChartType} → ${selectedType}`);
       this.currentChartType = selectedType;
       this.dispatchStateChange();
       this.updateChartDebounced();

@@ -431,10 +431,13 @@
         <strong>Sort Order (M4):</strong>
         <span id="state-sort-order">-</span>
 
-        <strong>Filter (M5):</strong>
-        <span id="state-filter">-</span>
+        <strong>Filter Column (M5):</strong>
+        <span id="state-filter-column">-</span>
 
-        <strong>Chart Type (M6):</strong>
+        <strong>Filter Value (M6):</strong>
+        <span id="state-filter-value">-</span>
+
+        <strong>Chart Type (M7):</strong>
         <span id="state-chart-type">-</span>
 
         <strong>Available Columns:</strong>
@@ -920,7 +923,8 @@
         y: document.getElementById('state-y-axis'),
         sortColumn: document.getElementById('state-sort-column'),
         sortOrder: document.getElementById('state-sort-order'),
-        filter: document.getElementById('state-filter'),
+        filterColumn: document.getElementById('state-filter-column'),
+        filterValue: document.getElementById('state-filter-value'),
         chartType: document.getElementById('state-chart-type'),
         columns: document.getElementById('state-columns')
       };
@@ -940,13 +944,9 @@
         refs.sortColumn.textContent = detail.sortColumn || '-';
         refs.sortOrder.textContent = detail.sortOrder ? capitalize(detail.sortOrder) : '-';
 
-        if (detail.filterColumn && detail.filterValue !== null && detail.filterValue !== undefined && detail.filterValue !== '') {
-          refs.filter.textContent = `${detail.filterColumn} = ${detail.filterValue}`;
-        } else if (detail.filterColumn) {
-          refs.filter.textContent = `${detail.filterColumn} (All values)`;
-        } else {
-          refs.filter.textContent = '-';
-        }
+        // Split filter into column and value
+        refs.filterColumn.textContent = detail.filterColumn || 'None';
+        refs.filterValue.textContent = detail.filterValue || 'All values';
 
         refs.chartType.textContent = detail.chartType ? capitalize(detail.chartType) : '-';
         refs.columns.textContent = Array.isArray(detail.availableColumns) && detail.availableColumns.length

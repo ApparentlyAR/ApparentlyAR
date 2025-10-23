@@ -500,20 +500,20 @@ describe('MarkerInteractionController', () => {
       expect(spy).toHaveBeenCalledWith(270);
     });
 
-    test('should route marker 5 to handleFilterCategoryRotation', () => {
-      const spy = jest.spyOn(controller, 'handleFilterCategoryRotation');
+    test('should route marker 5 to handleFilterColumnRotation', () => {
+      const spy = jest.spyOn(controller, 'handleFilterColumnRotation');
       controller.handleMarkerRotation(5, 120);
       expect(spy).toHaveBeenCalledWith(120);
     });
 
-    test('should route marker 6 to handleChartTypeRotation', () => {
-      const spy = jest.spyOn(controller, 'handleChartTypeRotation');
+    test('should route marker 6 to handleFilterValueRotation', () => {
+      const spy = jest.spyOn(controller, 'handleFilterValueRotation');
       controller.handleMarkerRotation(6, 200);
       expect(spy).toHaveBeenCalledWith(200);
     });
 
-    test('should route marker 7 to handleReservedMarkerRotation', () => {
-      const spy = jest.spyOn(controller, 'handleReservedMarkerRotation');
+    test('should route marker 7 to handleChartTypeRotation', () => {
+      const spy = jest.spyOn(controller, 'handleChartTypeRotation');
       controller.handleMarkerRotation(7, 45);
       expect(spy).toHaveBeenCalledWith(45);
     });
@@ -645,9 +645,14 @@ describe('MarkerInteractionController', () => {
       expect(() => controller.handleSortOrderRotation(90)).not.toThrow();
     });
 
-    test('handleFilterCategoryRotation should be defined', () => {
-      expect(controller.handleFilterCategoryRotation).toBeDefined();
-      expect(() => controller.handleFilterCategoryRotation(90)).not.toThrow();
+    test('handleFilterColumnRotation should be defined', () => {
+      expect(controller.handleFilterColumnRotation).toBeDefined();
+      expect(() => controller.handleFilterColumnRotation(90)).not.toThrow();
+    });
+
+    test('handleFilterValueRotation should be defined', () => {
+      expect(controller.handleFilterValueRotation).toBeDefined();
+      expect(() => controller.handleFilterValueRotation(90)).not.toThrow();
     });
 
     test('handleChartTypeRotation should be defined', () => {
