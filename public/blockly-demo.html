@@ -733,9 +733,10 @@
       },
     });
 
-    // Initialize Blockly Workspace
-    workspace = Blockly.inject('blocklyDiv', {
-      toolbox: document.getElementById('toolbox'),
+    // Initialize Blockly Workspace (expose globally for runtime updates)
+    const __toolboxEl = document.getElementById('toolbox');
+    workspace = window.workspace = Blockly.inject('blocklyDiv', {
+      toolbox: __toolboxEl,
       grid: { spacing: 25, length: 2, colour: '#F1F5F9', snap: true },
       zoom: { controls: true, wheel: true, startScale: 0.8, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
       move: { scrollbars: true, drag: true, wheel: true },
@@ -1393,11 +1394,6 @@
             headerLink.href = headerDashboardUrl;
         }
 
-      // Set dashboard link based on role
-      const breadcrumbDashboardLink = document.getElementById('breadcrumb-dashboard-link');
-      const breadcrumbProjectLink = document.getElementById('breadcrumb-project-link');
-      const headerLink = document.getElementById('header-dashboard-link');
-
         window.addEventListener('csvDataChanged', (e) => {
             document.getElementById('csv-filename').textContent = e.detail.filename || 'No file loaded';
             renderDataPanel();
@@ -1470,15 +1466,7 @@
         }
 
 
-      if (breadcrumbProjectLink && projectId) {
-        // Navigate to the view-project page for this specific project
-        breadcrumbProjectLink.href = `view-project.html?id=${projectId}${role ? '&role=' + role : ''}`;
-      }
-
-      if (headerLink) {
-        const headerDashboardUrl = role === 'student' ? 'student-dashboard.html' : 'teacher-dashboard.html';
-        headerLink.href = headerDashboardUrl;
-      }
+      // (Duplicate variable declarations removed)
 
       // Chart generation is now handled solely by Blockly visualization blocks
 
