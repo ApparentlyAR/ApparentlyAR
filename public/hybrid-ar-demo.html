@@ -5,6 +5,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>ApparentlyAR - Hybrid AR Demo (Markers + Hand Tracking)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 
   <!-- AR.js + A-Frame for marker detection -->
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
@@ -52,11 +55,9 @@
       z-index: 2;
     }
 
-    /* Controls panel */
-    .controls-panel {
+    /* Panels */
+    .panel {
       position: fixed;
-      top: 20px;
-      right: 20px;
       width: 300px;
       background: rgba(42, 42, 42, 0.95);
       padding: 20px;
@@ -67,10 +68,30 @@
       overflow-y: auto;
     }
 
-    .controls-panel h2 {
+    .panel h2 {
       margin-top: 0;
       color: #4CAF50;
       font-size: 18px;
+    }
+
+    .panel--left {
+      top: 20px;
+      left: 20px;
+    }
+
+    .panel--right {
+      top: 20px;
+      right: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .panel {
+        width: calc(100vw - 40px);
+        left: 20px;
+        right: 20px;
+      }
+      .panel--left { top: 20px; }
+      .panel--right { top: auto; bottom: 20px; }
     }
 
     .control-group {
@@ -217,6 +238,80 @@
       transform: scaleX(-1);
     }
 
+    .dev-state-readout {
+      background: rgba(148, 163, 184, 0.15);
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 8px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .dev-state-readout div:last-child {
+      margin-bottom: 0;
+    }
+
+    .dev-panel-note {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    /* Light theme overrides to align with Blockly palette for AR overlay */
+    :root {
+      --background: #F8F9FA;
+      --panel: rgba(255, 255, 255, 0.92);
+      --border: #E5E7EB;
+      --text: #1F2937;
+      --muted: #6B7280;
+      --primary: #22C55E;
+      --primary-hover: #16A34A;
+      --secondary: #4F46E5;
+    }
+    body { font-family: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif; color: var(--text); }
+    .panel { background: var(--panel); border: 1px solid var(--border); color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,0.18); backdrop-filter: blur(6px); }
+    .panel h2 { color: var(--text); }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .panel-toggle { width: 28px; height: 28px; border: 1px solid var(--border); background: #fff; color: var(--text); border-radius: 6px; cursor: pointer; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .panel.collapsed .panel-body { display: none; }
+    .stats { background: #F9FAFB; border: 1px solid var(--border); }
+    .stats h3 { color: var(--primary); }
+    .control-group select, .control-group input, .control-group button { border: 1px solid var(--border); background: #FFFFFF; color: var(--text); }
+    /* Fix checkbox alignment so it sits inline with its label text */
+    .control-group input[type="checkbox"] { width: auto; display: inline-block; vertical-align: middle; margin-right: 8px; border: none; background: transparent; }
+    .control-group button { background: var(--primary); color: #fff; }
+    .control-group button:hover { background: var(--primary-hover); }
+    .control-group button:disabled { background: #A3A3A3; }
+    .status { border: 1px solid var(--border); background: #FFFFFF; color: var(--text); }
+    .status.ready { background: rgba(34, 197, 94, 0.15); color: #065f46; border-color: rgba(34, 197, 94, 0.3); }
+    .status.detecting { background: rgba(79, 70, 229, 0.15); color: #3730a3; border-color: rgba(79, 70, 229, 0.3); }
+    .status.error { background: rgba(239, 68, 68, 0.15); color: #991b1b; border-color: rgba(239, 68, 68, 0.3); }
+    .chart-item { background: #F3F4F6; }
+    .chart-item:hover { background: #E5E7EB; }
+    .chart-item.selected { background: rgba(34, 197, 94, 0.2); }
+    .back-button { 
+      background: #FBBF24 !important; /* Tailwind yellow-400 */
+      color: #FFFFFF !important;
+      border: none !important; 
+      border-radius: 4px; 
+      padding: 8px; 
+      width: 100%; 
+      margin-bottom: 15px; 
+      font-size: 14px; 
+      font-weight: 600; 
+      cursor: pointer;
+    }
+    .back-button:hover { background: #F59E0B !important; /* Tailwind yellow-500 */ }
+    input[type="range"] { background: var(--border); }
+    input[type="range"]::-webkit-slider-thumb { background: var(--primary); }
+    input[type="range"]::-moz-range-thumb { background: var(--primary); }
+    .dev-panel-note { color: var(--muted); }
+
+    /* Marker Controls & State prominence */
+    .marker-mapping-grid { display: grid; grid-template-columns: 185px 1fr; gap: 8px; font-size: 14px; line-height: 1.6; }
+    .marker-label { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+    .marker-dot { font-size: 16px; line-height: 1; }
+
   </style>
 </head>
 
@@ -242,24 +337,52 @@
         <a-box position="0 0 0" material="opacity: 0; transparent: true" scale="0 0 0"></a-box>
       </a-marker>
 
-      <!-- Marker 1: Blue spinning sphere -->
-      <a-marker type="barcode" value="1">
-        <a-sphere position="0 0 0" material="color: blue; opacity: 0.9"
-          animation="property: rotation; to: 360 0 360; loop: true; dur: 3000" radius="0.6">
-        </a-sphere>
+      <!-- Marker 1: Blue diamond (X-axis selector) -->
+      <a-marker id="marker-1" type="barcode" value="1">
+        <a-octahedron position="0 0 0" material="color: #2563eb; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
       </a-marker>
 
-      <!-- Marker 2: Green oscillating cylinder -->
-      <a-marker type="barcode" value="2">
-        <a-cylinder position="0 0 0" material="color: green; opacity: 0.7"
-          animation="property: position; to: 0 -0.5 0; loop: true; dur: 2000; dir: alternate" radius="0.4" height="1.2">
-        </a-cylinder>
+      <!-- Marker 2: Green diamond (Y-axis selector) -->
+      <a-marker id="marker-2" type="barcode" value="2">
+        <a-octahedron position="0 0 0" material="color: #16a34a; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
       </a-marker>
 
-      <!-- Marker 3: Yellow pulsing octahedron -->
-      <a-marker type="barcode" value="3">
-        <a-octahedron position="0 0 0" material="color: yellow; opacity: 0.8"
-          animation="property: scale; to: 1.2 1.2 1.2; loop: true; dur: 1500; dir: alternate" radius="0.5">
+      <!-- Marker 3: Yellow diamond (Sort column selector) -->
+      <a-marker id="marker-3" type="barcode" value="3">
+        <a-octahedron position="0 0 0" material="color: #eab308; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
+      </a-marker>
+
+      <!-- Marker 4: Orange diamond (Sort order selector) -->
+      <a-marker id="marker-4" type="barcode" value="4">
+        <a-octahedron position="0 0 0" material="color: #f97316; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
+      </a-marker>
+
+      <!-- Marker 5: Purple diamond (Filter column selector) -->
+      <a-marker id="marker-5" type="barcode" value="5">
+        <a-octahedron position="0 0 0" material="color: #8b5cf6; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
+      </a-marker>
+
+      <!-- Marker 6: Teal diamond (Filter value selector) -->
+      <a-marker id="marker-6" type="barcode" value="6">
+        <a-octahedron position="0 0 0" material="color: #14b8a6; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
+      </a-marker>
+
+      <!-- Marker 7: Red diamond (Chart type selector) -->
+      <a-marker id="marker-7" type="barcode" value="7">
+        <a-octahedron position="0 0 0" material="color: #dc2626; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
         </a-octahedron>
       </a-marker>
 
@@ -275,141 +398,211 @@
 
   <!-- Dev mode chart overlay removed -->
 
-  <!-- Controls Panel -->
-  <div class="controls-panel">
+  <!-- Left Panel: Status & Markers -->
+  <div class="panel panel--left">
     <button class="back-button" onclick="window.location.href='/blockly'">
       ← Back to Blockly
     </button>
-
-    <h2>Hybrid AR Controls</h2>
+    <h2>Status & Markers</h2>
 
     <div class="control-group">
       <div id="status" class="status">Initializing...</div>
     </div>
 
     <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Marker Detection</h3>
+      <h3 style="margin: 0 0 10px 0; color: var(--primary); font-size: 14px;">Marker Detection</h3>
       <div id="marker-status" class="status ready">Ready for markers</div>
-    </div>
-
-    <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Hand Tracking</h3>
-      <button id="start-hands">Start Hand Tracking</button>
-      <button id="stop-hands" disabled>Stop Hand Tracking</button>
-    </div>
-
-    <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: #FF6B35; font-size: 14px;">Dev Mode</h3>
-      <button id="spawn-mock-marker-chart" style="background: #ef4444; margin-bottom: 5px;">Spawn Marker Chart (No Paper)</button>
-      <button id="remove-mock-marker-chart" style="background: #666;">Remove Marker Chart</button>
-    </div>
-
-    <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: #22C55E; font-size: 14px;">From Blockly</h3>
-      <button id="load-from-blockly" style="background: #16A34A; margin-bottom: 6px;">Load Last Visualization</button>
-      <button id="move-to-marker" style="background: #059669;">Put On Marker</button>
-    </div>
-
-    <div class="control-group">
-      <label for="chart-type">Chart Type (Hand Controls):</label>
-      <select id="chart-type">
-        <option value="bar">Bar Chart</option>
-        <option value="line">Line Chart</option>
-        <option value="pie">Pie Chart</option>
-        <option value="scatter">Scatter Plot</option>
-      </select>
-    </div>
-
-    <div class="control-group">
-      <label for="data-source">Data Source:</label>
-      <select id="data-source">
-        <option value="sample">Sample Data</option>
-        <option value="blockly">Blockly Data</option>
-      </select>
-    </div>
-
-    <div class="control-group" id="sample-data-group">
-      <label for="sample-data">Sample Data:</label>
-      <select id="sample-data">
-        <option value="students">Student Grades</option>
-        <option value="weather">Weather Data</option>
-        <option value="sales">Sales Data</option>
-      </select>
-    </div>
-
-    <div class="control-group" id="blockly-data-group" style="display: none;">
-      <label for="blockly-filename">Blockly File:</label>
-      <select id="blockly-filename">
-        <option value="">No files available</option>
-      </select>
-      <button id="refresh-files" style="width: 100%; margin-top: 5px; background: #666;">Refresh Files</button>
-      <input type="file" id="upload-file" accept=".csv" style="display:none" />
-      <button id="upload-file-btn" style="width: 100%; margin-top: 5px; background: #3b82f6;">Upload CSV</button>
     </div>
 
     <div class="stats">
       <h3>Data Info</h3>
       <div id="data-info" style="font-size: 11px;">
-        <div>Source: <span id="current-source">Sample Data</span></div>
-        <div>Dataset: <span id="current-dataset">Student Grades</span></div>
+        <div>Dataset: <span id="current-dataset">No data loaded</span></div>
         <div>Rows: <span id="current-rows">-</span></div>
         <div>Columns: <span id="current-columns">-</span></div>
       </div>
     </div>
 
     <div class="stats">
-      <h3>Instructions</h3>
-      <p style="font-size: 11px; margin: 5px 0;">
-        <strong>Markers:</strong> Show barcode markers 0-3 for 3D objects<br>
-        <strong>Hands:</strong> Point your index finger at the marker chart to show tooltips
-        <!-- legacy gesture terms for test compatibility: pinch, fist -->
+      <h3>Marker Controls & State</h3>
+      <p style="font-size: 10px; margin: 5px 0 10px 0; line-height: 1.4;">
+        <strong>Marker 0:</strong> Displays your data visualization<br>
+        <strong>Markers 1-7:</strong> Rotate diamond dials to control chart<br>
+        <strong>Hand Tracking:</strong> Point at marker 0 to show tooltips
       </p>
-    </div>
+      <div class="marker-mapping-grid">
+        <strong class="marker-label"><span class="marker-dot" style="color: #2563eb;">●</span> X-Axis (M1):</strong>
+        <span id="state-x-axis">-</span>
 
-    <div class="stats">
-      <h3>Performance</h3>
-      <div id="performance-stats" style="font-size: 11px;">
-        <div>Process time: <span id="process-time">-</span>ms</div>
-        <div>Video resolution: <span id="video-resolution">-</span></div>
+        <strong class="marker-label"><span class="marker-dot" style="color: #16a34a;">●</span> Y-Axis (M2):</strong>
+        <span id="state-y-axis">-</span>
+
+        <strong class="marker-label"><span class="marker-dot" style="color: #eab308;">●</span> Sort Column (M3):</strong>
+        <span id="state-sort-column">-</span>
+
+        <strong class="marker-label"><span class="marker-dot" style="color: #f97316;">●</span> Sort Order (M4):</strong>
+        <span id="state-sort-order">-</span>
+
+        <strong class="marker-label"><span class="marker-dot" style="color: #8b5cf6;">●</span> Filter Column (M5):</strong>
+        <span id="state-filter-column">-</span>
+
+        <strong class="marker-label"><span class="marker-dot" style="color: #14b8a6;">●</span> Filter Value (M6):</strong>
+        <span id="state-filter-value">-</span>
+
+        <strong class="marker-label"><span class="marker-dot" style="color: #dc2626;">●</span> Chart Type (M7):</strong>
+        <span id="state-chart-type">-</span>
+
+        <strong class="marker-label">Available Columns:</strong>
+        <span id="state-columns">-</span>
       </div>
     </div>
 
     <div class="stats">
-      <h3>Debug Controls</h3>
-      <div class="control-group">
-        <label>
-          <input type="checkbox" id="debug-visualization" checked onchange="setDebugVisualization(this.checked)">
-          Show Debug Crosshair
-        </label>
-      </div>
-      <div class="control-group">
-        <label>
-          <input type="checkbox" id="mirror-video" checked onchange="setVideoMirroring(this.checked)">
-          Mirror Video Feed
-        </label>
-      </div>
+      <details>
+        <summary style="cursor: pointer; color: var(--muted);">Performance</summary>
+        <div id="performance-stats" style="font-size: 11px; margin-top: 6px;">
+          <div>Process time: <span id="process-time">-</span>ms</div>
+          <div>Video resolution: <span id="video-resolution">-</span></div>
+        </div>
+      </details>
     </div>
 
     <div class="stats">
-      <h3>Raycast Debug</h3>
-      <div id="raycast-debug" style="font-size: 10px; font-family: monospace;">
-        <div>No data</div>
-      </div>
+      <details>
+        <summary style="cursor: pointer; color: var(--muted);">Raycast Debug</summary>
+        <div id="raycast-debug" style="font-size: 10px; font-family: monospace; margin-top: 6px;">
+          <div>No data</div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- Right Panel: Controls -->
+  <div class="panel panel--right" id="controls-panel">
+    <div class="panel-header">
+      <h2 style="margin: 0;">AR Controls</h2>
+      <button class="panel-toggle" aria-expanded="true" onclick="togglePanel('controls-panel', this)">−</button>
+    </div>
+    <div class="panel-body">
+
+    <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: var(--primary); font-size: 14px;">Hand Tracking</h3>
+      <button id="start-hands">Start Hand Tracking</button>
+      <button id="stop-hands" disabled>Stop Hand Tracking</button>
     </div>
 
     <div class="stats">
-      <h3>Calibration</h3>
-      <div class="control-group">
-        <label for="calibration-x">X Offset: <span id="calibration-x-value">0.0</span></label>
-        <input type="range" id="calibration-x" min="-10" max="10" value="0" step="0.5"
-          oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
+      <details id="marker-test-panel" open>
+        <summary style="cursor: pointer; color: var(--muted);">Chart Assignment (Manual)</summary>
+        <p class="dev-panel-note">Use these controls to preview marker-driven chart configuration without physical markers.</p>
+        <div class="control-group">
+          <label for="dev-chart-type"><span style="color: #dc2626;">●</span> Chart Type (M7):</label>
+          <select id="dev-chart-type">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="scatter">Scatter</option>
+            <option value="pie">Pie</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="dev-x-axis"><span style="color: #2563eb;">●</span> X-Axis Column (M1):</label>
+          <select id="dev-x-axis"></select>
+        </div>
+        <div class="control-group">
+          <label for="dev-y-axis"><span style="color: #16a34a;">●</span> Y-Axis Column (M2):</label>
+          <select id="dev-y-axis"></select>
+        </div>
+        <div class="control-group">
+          <label for="dev-sort-column"><span style="color: #eab308;">●</span> Sort Column (M3):</label>
+          <select id="dev-sort-column"></select>
+        </div>
+        <div class="control-group">
+          <label for="dev-sort-order"><span style="color: #f97316;">●</span> Sort Order (M4):</label>
+          <select id="dev-sort-order">
+            <option value="ascending">Ascending</option>
+            <option value="descending">Descending</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="dev-filter-column"><span style="color: #8b5cf6;">●</span> Filter Column (M5):</label>
+          <select id="dev-filter-column"></select>
+        </div>
+        <div class="control-group">
+          <label for="dev-filter-value"><span style="color: #14b8a6;">●</span> Filter Value (M6):</label>
+          <select id="dev-filter-value" disabled>
+            <option value="">Select a column first</option>
+          </select>
+        </div>
+        <div class="control-group" style="display: flex; gap: 8px;">
+          <button id="dev-refresh-columns" style="flex: 1;">Refresh Columns</button>
+          <button id="dev-reset-config" style="flex: 1; background: #475569;">Reset</button>
+        </div>
+      </details>
+    </div>
 
-        <label for="calibration-y">Y Offset: <span id="calibration-y-value">0.0</span></label>
-        <input type="range" id="calibration-y" min="-10" max="10" value="0" step="0.5"
-          oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
+    <div class="stats">
+      <details>
+        <summary style="cursor: pointer; color: var(--muted);">Debug Controls</summary>
+        <div class="control-group" style="margin-top: 6px;">
+          <label>
+            <input type="checkbox" id="debug-visualization" checked onchange="setDebugVisualization(this.checked)">
+            Show Debug Crosshair
+          </label>
+        </div>
+        <div class="control-group">
+          <label>
+            <input type="checkbox" id="mirror-video" checked onchange="setVideoMirroring(this.checked)">
+            Mirror Video Feed
+          </label>
+        </div>
+      </details>
+    </div>
 
-        <button onclick="resetCalibrationUI()" style="width: 100%; background: #666;">Reset Calibration</button>
-      </div>
+    <div class="stats">
+      <details>
+        <summary style="cursor: pointer; color: var(--muted);">Point Controls Calibration</summary>
+        <div class="control-group" style="margin-top: 6px;">
+          <label for="calibration-x">X Offset: <span id="calibration-x-value">0.0</span></label>
+          <input type="range" id="calibration-x" min="-10" max="10" value="0" step="0.5"
+            oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
+
+          <label for="calibration-y">Y Offset: <span id="calibration-y-value">0.0</span></label>
+          <input type="range" id="calibration-y" min="-10" max="10" value="0" step="0.5"
+            oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
+
+          <button onclick="resetCalibrationUI()" style="width: 100%; background: #666; color: #fff;">Reset Calibration</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="stats">
+      <details>
+        <summary style="cursor: pointer; color: var(--muted);">Dev Controls</summary>
+        
+        <div class="control-group" style="margin-top: 6px;">
+          <h3 style="margin: 0 0 8px 0; color: #FF6B35; font-size: 13px;">Testing (No Markers)</h3>
+          <button id="spawn-mock-marker-chart" style="background: #ef4444; margin-bottom: 5px;">
+            Spawn Marker Chart (No Paper)
+          </button>
+          <button id="remove-mock-marker-chart" style="background: #666;">
+            Remove Marker Chart
+          </button>
+        </div>
+
+        <div class="control-group" style="margin-top: 12px;">
+          <h3 style="margin: 0 0 8px 0; color: var(--primary); font-size: 13px;">Blockly Sync</h3>
+          <button id="load-from-blockly" style="background: #16A34A; margin-bottom: 6px;">
+            Apply Blockly Config
+          </button>
+          <button id="move-to-marker" style="background: #059669;">
+            Put On Marker
+          </button>
+          <p style="font-size: 11px; color: #94a3b8; margin: 8px 0 0 0; line-height: 1.4;">
+            Data auto-loaded on startup. Use "Apply Blockly Config" to sync chart appearance with Blockly.
+          </p>
+        </div>
+      </details>
+    </div>
     </div>
   </div>
 
@@ -446,6 +639,427 @@
         document.getElementById('calibration-y-value').textContent = y.toFixed(1);
       }
     });
+
+    // Collapsible panel helper
+    function togglePanel(panelId, btn) {
+      const panel = document.getElementById(panelId);
+      if (!panel) return;
+      panel.classList.toggle('collapsed');
+      const isCollapsed = panel.classList.contains('collapsed');
+      if (btn) {
+        btn.setAttribute('aria-expanded', String(!isCollapsed));
+        btn.textContent = isCollapsed ? '+' : '−';
+      }
+    }
+  </script>
+
+  <script>
+    (function () {
+      const panel = {
+        initialized: false,
+        waiting: false,
+        init() {
+          if (this.initialized) return;
+          const controller = window.markerInteractionController;
+          if (!controller) {
+            if (!this.waiting) {
+              this.waiting = true;
+              setTimeout(() => {
+                this.waiting = false;
+                this.init();
+              }, 200);
+            }
+            return;
+          }
+
+          this.initialized = true;
+          this.controller = controller;
+          this.typeSelect = document.getElementById('dev-chart-type');
+          this.xSelect = document.getElementById('dev-x-axis');
+          this.ySelect = document.getElementById('dev-y-axis');
+          this.sortColumnSelect = document.getElementById('dev-sort-column');
+          this.sortOrderSelect = document.getElementById('dev-sort-order');
+          this.filterColumnSelect = document.getElementById('dev-filter-column');
+          this.filterValueSelect = document.getElementById('dev-filter-value');
+          this.refreshBtn = document.getElementById('dev-refresh-columns');
+          this.resetBtn = document.getElementById('dev-reset-config');
+
+          if (this.typeSelect) {
+            this.typeSelect.addEventListener('change', () => {
+              this.controller.setChartType(this.typeSelect.value);
+            });
+          }
+
+          if (this.xSelect) {
+            this.xSelect.addEventListener('change', () => {
+              if (this.xSelect.value) {
+                this.controller.setXAxisColumn(this.xSelect.value);
+              }
+            });
+          }
+
+          if (this.ySelect) {
+            this.ySelect.addEventListener('change', () => {
+              if (this.ySelect.value) {
+                this.controller.setYAxisColumn(this.ySelect.value);
+              }
+            });
+          }
+
+          if (this.sortColumnSelect) {
+            this.sortColumnSelect.addEventListener('change', () => {
+              if (this.sortColumnSelect.value) {
+                this.controller.setSortColumn(this.sortColumnSelect.value);
+              }
+            });
+          }
+
+          if (this.sortOrderSelect) {
+            this.sortOrderSelect.addEventListener('change', () => {
+              this.controller.setSortOrder(this.sortOrderSelect.value || 'ascending');
+            });
+          }
+
+          if (this.filterColumnSelect) {
+            this.filterColumnSelect.addEventListener('change', () => {
+              console.log('[TestPanel:FilterChange] User changed filter column dropdown');
+              console.log('[TestPanel:FilterChange] Current dropdown value:', this.filterColumnSelect.value);
+              const selected = this.filterColumnSelect.value;
+              console.log('[TestPanel:FilterChange] Selected value (after normalization):', selected);
+              console.log('[TestPanel:FilterChange] Calling controller.setFilterColumn with:', selected || null);
+              this.controller.setFilterColumn(selected || null);
+              console.log('[TestPanel:FilterChange] Calling populateFilterValues with column:', selected || null);
+              this.populateFilterValues(selected || null, null);
+              console.log('[TestPanel:FilterChange] Filter change handler complete, dropdown value now:', this.filterColumnSelect.value);
+            });
+          }
+
+          if (this.filterValueSelect) {
+            this.filterValueSelect.addEventListener('change', () => {
+              this.controller.setFilterValue(this.filterValueSelect.value);
+            });
+          }
+
+          if (this.refreshBtn) {
+            this.refreshBtn.addEventListener('click', () => {
+              this.controller.refreshAvailableColumns();
+              if (typeof this.controller.getStateSnapshot === 'function') {
+                this.applyState(this.controller.getStateSnapshot());
+              }
+            });
+          }
+
+          if (this.resetBtn) {
+            this.resetBtn.addEventListener('click', () => {
+              if (typeof this.controller.resetConfiguration === 'function') {
+                this.controller.resetConfiguration();
+              }
+            });
+          }
+
+          if (typeof this.controller.getStateSnapshot === 'function') {
+            // Force immediate refresh if columns already loaded
+            if (this.controller.availableColumns && this.controller.availableColumns.length > 0) {
+              console.log('[MarkerTestPanel] Columns already loaded on init, applying state');
+              this.applyState(this.controller.getStateSnapshot());
+            } else {
+              this.applyState(this.controller.getStateSnapshot());
+            }
+          }
+        },
+        populateColumns(columns) {
+          const list = Array.isArray(columns) ? columns : [];
+          const selects = [
+            { element: this.xSelect, fallbackIndex: 0 },
+            { element: this.ySelect, fallbackIndex: 1 },
+            { element: this.sortColumnSelect, fallbackIndex: 0 }
+          ];
+
+          selects.forEach(({ element, fallbackIndex }) => {
+            if (!element) return;
+            const previous = element.value;
+            element.innerHTML = '';
+
+            if (!list.length) {
+              const opt = document.createElement('option');
+              opt.value = '';
+              opt.textContent = 'No columns available';
+              element.appendChild(opt);
+              element.disabled = true;
+              return;
+            }
+
+            element.disabled = false;
+            list.forEach((column) => {
+              const option = document.createElement('option');
+              option.value = column;
+              option.textContent = column;
+              element.appendChild(option);
+            });
+
+            if (previous && list.includes(previous)) {
+              element.value = previous;
+            } else if (list[fallbackIndex]) {
+              element.value = list[fallbackIndex];
+            } else {
+              element.value = list[0];
+            }
+          });
+
+          if (this.filterColumnSelect) {
+            console.log('[TestPanel:PopulateColumns] Repopulating filter column dropdown');
+            const previous = this.filterColumnSelect.value;
+            console.log('[TestPanel:PopulateColumns] Previous filter dropdown value:', previous);
+            console.log('[TestPanel:PopulateColumns] Available columns to populate:', list);
+            this.filterColumnSelect.innerHTML = '';
+
+            const noneOption = document.createElement('option');
+            noneOption.value = '';
+            noneOption.textContent = 'No filter';
+            this.filterColumnSelect.appendChild(noneOption);
+
+            if (!list.length) {
+              console.log('[TestPanel:PopulateColumns] No columns available, disabling filter dropdown');
+              const placeholder = document.createElement('option');
+              placeholder.value = '';
+              placeholder.textContent = 'No columns available';
+              placeholder.disabled = true;
+              this.filterColumnSelect.appendChild(placeholder);
+              this.filterColumnSelect.disabled = true;
+              this.filterColumnSelect.value = '';
+              return;
+            }
+
+            this.filterColumnSelect.disabled = false;
+            list.forEach((column) => {
+              const option = document.createElement('option');
+              option.value = column;
+              option.textContent = column;
+              this.filterColumnSelect.appendChild(option);
+            });
+
+            if (previous && list.includes(previous)) {
+              console.log('[TestPanel:PopulateColumns] Restoring previous value:', previous);
+              this.filterColumnSelect.value = previous;
+            } else {
+              console.log('[TestPanel:PopulateColumns] Previous value not in list or empty, resetting to ""');
+              this.filterColumnSelect.value = '';
+            }
+            console.log('[TestPanel:PopulateColumns] Final filter dropdown value after populate:', this.filterColumnSelect.value);
+          }
+        },
+        hasOption(select, value) {
+          if (!select) return false;
+          const normalized = value === undefined || value === null ? '' : String(value);
+          return Array.from(select.options).some((option) => option.value === normalized);
+        },
+        populateFilterValues(column, selectedValue) {
+          console.log('[TestPanel:PopulateValues] === populateFilterValues called ===');
+          console.log('[TestPanel:PopulateValues] Column:', column);
+          console.log('[TestPanel:PopulateValues] Selected value:', selectedValue);
+          if (!this.filterValueSelect) {
+            console.log('[TestPanel:PopulateValues] filterValueSelect not found, returning');
+            return;
+          }
+
+          const select = this.filterValueSelect;
+          select.innerHTML = '';
+
+          if (!column) {
+            console.log('[TestPanel:PopulateValues] No column specified, disabling filter value dropdown');
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select a column first';
+            select.appendChild(placeholder);
+            select.disabled = true;
+            select.value = '';
+            return;
+          }
+
+          const values = typeof this.controller?.getFilterValuesForColumn === 'function'
+            ? this.controller.getFilterValuesForColumn(column)
+            : [];
+          console.log('[TestPanel:PopulateValues] Available values for column:', values);
+
+          select.disabled = false;
+
+          const allOption = document.createElement('option');
+          allOption.value = '';
+          allOption.textContent = 'All values';
+          select.appendChild(allOption);
+
+          if (!values.length) {
+            console.log('[TestPanel:PopulateValues] No values found for column');
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'No values found';
+            placeholder.disabled = true;
+            select.appendChild(placeholder);
+            select.value = '';
+            return;
+          }
+
+          values.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.appendChild(option);
+          });
+
+          const normalized = selectedValue === undefined || selectedValue === null ? '' : String(selectedValue);
+          console.log('[TestPanel:PopulateValues] Normalized selected value:', normalized);
+          if (this.hasOption(select, normalized)) {
+            console.log('[TestPanel:PopulateValues] Setting filter value dropdown to:', normalized);
+            select.value = normalized;
+          } else {
+            console.log('[TestPanel:PopulateValues] Selected value not in options, resetting to ""');
+            select.value = '';
+          }
+          console.log('[TestPanel:PopulateValues] Final filter value dropdown value:', select.value);
+        },
+        applyState(state = {}) {
+          console.log('[TestPanel:ApplyState] === applyState called ===');
+          console.log('[TestPanel:ApplyState] Full state object:', state);
+          console.log('[TestPanel:ApplyState] Filter column in state:', state.filterColumn);
+          console.log('[TestPanel:ApplyState] Filter value in state:', state.filterValue);
+          if (!this.initialized) return;
+
+          const columns = Array.isArray(state.availableColumns) ? state.availableColumns : [];
+          console.log('[TestPanel:ApplyState] Available columns from state:', columns);
+
+          // Only repopulate columns if they've changed (prevents dropdown resets)
+          const columnsChanged = !this._lastColumns ||
+            JSON.stringify(this._lastColumns) !== JSON.stringify(columns);
+          console.log('[TestPanel:ApplyState] Columns changed?', columnsChanged);
+          console.log('[TestPanel:ApplyState] Previous columns:', this._lastColumns);
+          console.log('[TestPanel:ApplyState] New columns:', columns);
+
+          if (columnsChanged) {
+            console.log('[TestPanel:ApplyState] Calling populateColumns (this will reset dropdowns)');
+            this.populateColumns(columns);
+            this._lastColumns = [...columns];
+          }
+
+          if (this.typeSelect && state.chartType) {
+            if (!this.hasOption(this.typeSelect, state.chartType)) {
+              const option = document.createElement('option');
+              option.value = state.chartType;
+              option.textContent = state.chartType;
+              this.typeSelect.appendChild(option);
+            }
+            this.typeSelect.value = state.chartType;
+          }
+
+          if (this.xSelect && this.hasOption(this.xSelect, state.xColumn)) {
+            this.xSelect.value = state.xColumn;
+          }
+
+          if (this.ySelect && this.hasOption(this.ySelect, state.yColumn)) {
+            this.ySelect.value = state.yColumn;
+          }
+
+          if (this.sortColumnSelect) {
+            if (this.hasOption(this.sortColumnSelect, state.sortColumn)) {
+              this.sortColumnSelect.value = state.sortColumn;
+            } else if (!this.sortColumnSelect.value && this.sortColumnSelect.options.length) {
+              this.sortColumnSelect.value = this.sortColumnSelect.options[0].value;
+            }
+          }
+
+          if (this.sortOrderSelect) {
+            this.sortOrderSelect.value = state.sortOrder || 'ascending';
+          }
+
+          if (this.filterColumnSelect) {
+            console.log('[TestPanel:ApplyState] Setting filter column dropdown value');
+            console.log('[TestPanel:ApplyState] Current dropdown value before set:', this.filterColumnSelect.value);
+            const targetColumn = state.filterColumn || '';
+            console.log('[TestPanel:ApplyState] Target column to set:', targetColumn);
+            const hasOption = this.hasOption(this.filterColumnSelect, targetColumn);
+            console.log('[TestPanel:ApplyState] hasOption check result:', hasOption);
+            if (hasOption) {
+              console.log('[TestPanel:ApplyState] Setting dropdown to:', targetColumn);
+              this.filterColumnSelect.value = targetColumn;
+            } else {
+              console.log('[TestPanel:ApplyState] Target not in options, resetting to ""');
+              this.filterColumnSelect.value = '';
+            }
+            console.log('[TestPanel:ApplyState] Dropdown value after set:', this.filterColumnSelect.value);
+          }
+
+          console.log('[TestPanel:ApplyState] Calling populateFilterValues with:', state.filterColumn || null, state.filterValue ?? null);
+          this.populateFilterValues(state.filterColumn || null, state.filterValue ?? null);
+          console.log('[TestPanel:ApplyState] Filter dropdown value after populateFilterValues:', this.filterColumnSelect?.value);
+        }
+      };
+
+      window.MarkerTestPanel = panel;
+
+      window.addEventListener('markerInteractionStateChange', (event) => {
+        console.log('[TestPanel:EventListener] ======================================');
+        console.log('[TestPanel:EventListener] markerInteractionStateChange event fired');
+        console.log('[TestPanel:EventListener] Event detail:', event?.detail);
+        console.log('[TestPanel:EventListener] Filter column from event:', event?.detail?.filterColumn);
+        console.log('[TestPanel:EventListener] Filter value from event:', event?.detail?.filterValue);
+        console.log('[TestPanel:EventListener] Current filter dropdown value before applyState:', panel.filterColumnSelect?.value);
+        panel.init();
+        if (panel.initialized) {
+          panel.applyState(event.detail || {});
+        }
+        console.log('[TestPanel:EventListener] Current filter dropdown value after applyState:', panel.filterColumnSelect?.value);
+        console.log('[TestPanel:EventListener] ======================================');
+      });
+
+      window.addEventListener('load', () => {
+        setTimeout(() => panel.init(), 300);
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const refs = {
+        x: document.getElementById('state-x-axis'),
+        y: document.getElementById('state-y-axis'),
+        sortColumn: document.getElementById('state-sort-column'),
+        sortOrder: document.getElementById('state-sort-order'),
+        filterColumn: document.getElementById('state-filter-column'),
+        filterValue: document.getElementById('state-filter-value'),
+        chartType: document.getElementById('state-chart-type'),
+        columns: document.getElementById('state-columns')
+      };
+
+      if (!refs.x) {
+        return;
+      }
+
+      const capitalize = (value) => {
+        if (!value || typeof value !== 'string') return '-';
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      };
+
+      const update = (detail = {}) => {
+        refs.x.textContent = detail.xColumn || '-';
+        refs.y.textContent = detail.yColumn || '-';
+        refs.sortColumn.textContent = detail.sortColumn || '-';
+        refs.sortOrder.textContent = detail.sortOrder ? capitalize(detail.sortOrder) : '-';
+
+        // Split filter into column and value
+        refs.filterColumn.textContent = detail.filterColumn || 'None';
+        refs.filterValue.textContent = detail.filterValue || 'All values';
+
+        refs.chartType.textContent = detail.chartType ? capitalize(detail.chartType) : '-';
+        refs.columns.textContent = Array.isArray(detail.availableColumns) && detail.availableColumns.length
+          ? detail.availableColumns.join(', ')
+          : 'None';
+      };
+
+      window.addEventListener('markerInteractionStateChange', (event) => {
+        update(event?.detail || {});
+      });
+
+      update({});
+    })();
   </script>
 
   <!-- AR JavaScript modules -->
@@ -453,6 +1067,7 @@
   <script src="../src/ar/gesture-detector.js"></script>
   <script src="../src/ar/chart-manager.js"></script>
   <script src="../src/ar/hand-tracking.js"></script>
+  <script src="../src/ar/marker-interaction-controller.js"></script>
   <script src="../src/ar/hybrid-ar-controller.js"></script>
 </body>
 

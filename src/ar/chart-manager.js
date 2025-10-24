@@ -38,6 +38,9 @@ class ChartManager {
     /** @type {string} Current data source: 'sample' or 'custom' */
     this.dataSource = 'sample';
 
+    /** @type {{column: string|null, order: 'ascending'|'descending'}} Sorting configuration */
+    this.sortConfig = { column: null, order: 'ascending' };
+
     /**
      * Sample datasets for chart generation
      */
@@ -90,24 +93,99 @@ class ChartManager {
   }
 
   /**
-   * Set data source to sample data
+   * Set data source to sample data (deprecated, no-op for backwards compatibility)
    */
   useSampleData() {
-    this.dataSource = 'sample';
-    this.customData = null;
-    console.log('Switched to sample data');
+    console.warn('useSampleData() is deprecated - AR now uses Blockly data exclusively');
+    // No-op for backwards compatibility
   }
 
   /**
-   * Get current data based on data source
-   * @param {string} datasetName - Dataset name (for sample data)
+   * Get current data (always returns custom/Blockly data)
    * @returns {Array<Object>} Current data array
    */
-  getCurrentData(datasetName = 'students') {
-    if (this.dataSource === 'custom' && this.customData) {
+  getCurrentData() {
+    if (this.dataSource === 'custom' && this.customData && Array.isArray(this.customData.data)) {
       return this.customData.data;
     }
-    return this.sampleData[datasetName] || this.sampleData.students;
+    console.warn('No Blockly data loaded. Please import CSV in Blockly first.');
+    return [];
+  }
+
+  /**
+   * Get data prepared for rendering, respecting active sort configuration
+   * @returns {Array<Object>} Renderable data copy
+   */
+  getRenderableData() {
+    const baseData = this.getCurrentData();
+    if (!Array.isArray(baseData)) {
+      return [];
+    }
+
+    const workingCopy = baseData.slice();
+    const { column, order } = this.sortConfig || {};
+    if (!column) {
+      return workingCopy;
+    }
+
+    const columnExists = workingCopy.some((row) => row && Object.prototype.hasOwnProperty.call(row, column));
+    if (!columnExists) {
+      return workingCopy;
+    }
+
+    const direction = order === 'descending' ? -1 : 1;
+    const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: false });
+
+    const extractValue = (row) => {
+      if (!row || !(column in row)) {
+        return null;
+      }
+      return row[column];
+    };
+
+    const toNumber = (value) => {
+      if (value == null || value === '') return NaN;
+      const num = Number(value);
+      return Number.isFinite(num) ? num : NaN;
+    };
+
+    workingCopy.sort((a, b) => {
+      const aVal = extractValue(a);
+      const bVal = extractValue(b);
+
+      const aNum = toNumber(aVal);
+      const bNum = toNumber(bVal);
+      const aIsNum = !Number.isNaN(aNum);
+      const bIsNum = !Number.isNaN(bNum);
+
+      if (aIsNum && bIsNum) {
+        if (aNum === bNum) return 0;
+        return aNum > bNum ? direction : -direction;
+      }
+
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+
+      const result = collator.compare(String(aVal), String(bVal));
+      if (result === 0) return 0;
+      return result * direction;
+    });
+
+    return workingCopy;
+  }
+
+  /**
+   * Update current sort configuration
+   * @param {string|null} column
+   * @param {'ascending'|'descending'} order
+   */
+  setSortConfig(column, order = 'ascending') {
+    const normalizedColumn = column && typeof column === 'string' ? column : null;
+    const normalizedOrder = order === 'descending' ? 'descending' : 'ascending';
+
+    this.sortConfig = { column: normalizedColumn, order: normalizedOrder };
+    console.log('[ChartManager] Sort config updated:', this.sortConfig);
   }
 
   /**
@@ -138,7 +216,7 @@ class ChartManager {
    * @param {string} chartType - Chart.js type ('bar' | 'line' | 'pie' | 'scatter')
    * @param {string} datasetName - One of sample datasets keys ('students'|'weather'|'sales')
    */
-  createOrUpdateMarkerChart(markerId, chartType, datasetName) {
+  createOrUpdateMarkerChart(markerId, chartType, datasetName, chartConfigOverride = null) {
     const marker = document.getElementById(markerId);
     if (!marker) {
       console.warn(`Marker not found: ${markerId}`);
@@ -169,8 +247,8 @@ class ChartManager {
     if (existing?.chart) {
       try { existing.chart.destroy(); } catch (_) {}
     }
-    const currentData = this.getCurrentData(datasetName);
-    const chart = this.generateChart(canvas, chartType, currentData);
+    const currentData = this.getRenderableData();
+    const chart = this.generateChart(canvas, chartType, currentData, chartConfigOverride);
 
     // Ensure a plane entity exists under the marker and points to our canvas
     let entity = existing?.entity || marker.querySelector('[data-marker-chart]');
@@ -191,7 +269,23 @@ class ChartManager {
     this.markerCharts[key] = { canvas, chart, entity };
 
     // Log for debugging
-    console.log(`Marker chart updated on ${markerId}: ${chartType} using ${datasetName}`);
+    const dataInfo = this.customData?.filename || 'Blockly data';
+    console.log(`Marker chart updated on ${markerId}: ${chartType} using ${dataInfo}`);
+  }
+
+  updateMarkerChartWithConfig(markerId, config = {}) {
+    const chartType = config.chartType || 'bar';
+
+    const override = {};
+    if (config.xColumn) {
+      override.xColumn = config.xColumn;
+    }
+    if (config.yColumn) {
+      override.yColumn = config.yColumn;
+    }
+
+    const hasOverride = Object.keys(override).length > 0;
+    this.createOrUpdateMarkerChart(markerId, chartType, null, hasOverride ? override : null);
   }
 
   /**
@@ -221,15 +315,21 @@ class ChartManager {
   }
 
   /**
-   * Helper to read control panel selections and update marker 0 chart.
+   * Helper to update marker 0 chart (chart type from Blockly config or marker controller).
    * @param {string} markerId
    */
   updateMarkerChartFromControls(markerId = 'marker-0') {
-    const typeSel = document.getElementById('chart-type');
-    const dataSel = document.getElementById('sample-data');
-    const chartType = typeSel ? typeSel.value : 'bar';
-    const datasetName = dataSel ? dataSel.value : 'students';
-    this.createOrUpdateMarkerChart(markerId, chartType, datasetName);
+    // Get chart type from localStorage (Blockly config) or use default
+    let chartType = 'bar';
+    try {
+      const rawCfg = localStorage.getItem('ar_last_visualization');
+      if (rawCfg) {
+        const parsed = JSON.parse(rawCfg);
+        chartType = parsed?.chartType || parsed?.config?.chartType || parsed?.config?.type || 'bar';
+      }
+    } catch (_) {}
+    
+    this.createOrUpdateMarkerChart(markerId, chartType, null);
   }
 
   /**
@@ -408,8 +508,15 @@ class ChartManager {
    * @param {number} screenY - Screen Y coordinate
    */
   createChart(screenX, screenY) {
-    const chartType = document.getElementById('chart-type').value;
-    const datasetName = document.getElementById('sample-data').value;
+    // Get chart type from Blockly config or use default
+    let chartType = 'bar';
+    try {
+      const rawCfg = localStorage.getItem('ar_last_visualization');
+      if (rawCfg) {
+        const parsed = JSON.parse(rawCfg);
+        chartType = parsed?.chartType || parsed?.config?.chartType || parsed?.config?.type || 'bar';
+      }
+    } catch (_) {}
     
     // Create unique canvas for this chart
     const canvas = document.createElement('canvas');
@@ -418,8 +525,8 @@ class ChartManager {
     canvas.height = 300;
     canvas.id = chartId + '-canvas';
     
-    // Generate chart texture
-    const currentData = this.getCurrentData(datasetName);
+    // Generate chart texture (always uses Blockly data)
+    const currentData = this.getRenderableData();
     const chart = this.generateChart(canvas, chartType, currentData);
     
     // Add canvas to assets
@@ -448,7 +555,7 @@ class ChartManager {
       chart: chart,
       canvas: canvas,
       type: chartType,
-      dataset: datasetName,
+      dataset: this.customData?.filename || 'Blockly data',
       screenX: screenX,
       screenY: screenY
     };
@@ -456,7 +563,8 @@ class ChartManager {
     this.handCharts.push(chartObj);
     this.updateChartList();
     
-    console.log(`Chart placed: ${chartType} with ${datasetName} data at world position ${worldPos}`);
+    const dataInfo = this.customData?.filename || 'Blockly data';
+    console.log(`Chart placed: ${chartType} with ${dataInfo} at world position ${worldPos}`);
   }
 
   /**
@@ -469,6 +577,43 @@ class ChartManager {
    */
   generateChart(canvas, type, data, chartConfigOverride = null) {
     const ctx = canvas.getContext('2d');
+
+    // Add logging to debug data flow
+    console.log('[ChartManager] generateChart called:', {
+      type,
+      dataRows: data?.length || 0,
+      hasOverride: !!chartConfigOverride,
+      override: chartConfigOverride
+    });
+
+    // Handle empty data gracefully
+    if (!data || data.length === 0) {
+      console.warn('[ChartManager] No data available for chart');
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['No Data'],
+          datasets: [{
+            label: 'No data available',
+            data: [0],
+            backgroundColor: '#ef4444'
+          }]
+        },
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'No data available - check Blockly filter',
+              color: '#ef4444',
+              font: { size: 14 }
+            },
+            legend: { display: false }
+          }
+        }
+      });
+    }
 
     let chartConfig = {
       type: type,
@@ -561,12 +706,50 @@ class ChartManager {
     const yCol = cfg.yColumn;
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
 
+    // Add detailed logging to understand data flow
+    console.log('[ChartManager] prepareOverriddenChartData:', {
+      type,
+      xCol,
+      yCol,
+      dataRows: data.length,
+      firstRow: data.length > 0 ? data[0] : null,
+      availableColumns: data.length > 0 ? Object.keys(data[0]) : []
+    });
+
     if (type === 'scatter') {
-      if (!xCol || !yCol) return { labels: [], datasets: [] };
+      if (!xCol || !yCol) {
+        console.warn('[ChartManager] Scatter chart missing columns');
+        return { labels: [], datasets: [] };
+      }
+      
+      // Validate data exists
+      if (data.length === 0) {
+        console.warn('[ChartManager] No data rows available for scatter chart');
+        return { labels: [], datasets: [] };
+      }
+      
+      // Check if columns exist in data
+      const firstRow = data[0];
+      if (!(xCol in firstRow)) {
+        console.error(`[ChartManager] X column "${xCol}" not found. Available:`, Object.keys(firstRow));
+        return { labels: [], datasets: [] };
+      }
+      if (!(yCol in firstRow)) {
+        console.error(`[ChartManager] Y column "${yCol}" not found. Available:`, Object.keys(firstRow));
+        return { labels: [], datasets: [] };
+      }
+      
+      const chartData = data.map(row => ({
+        x: parseFloat(row[xCol]) || 0,
+        y: parseFloat(row[yCol]) || 0
+      }));
+      
+      console.log(`[ChartManager] Scatter data points:`, chartData.slice(0, 5), `(showing first 5 of ${chartData.length})`);
+      
       return {
         datasets: [{
           label: `${xCol} vs ${yCol}`,
-          data: data.map(row => ({ x: parseFloat(row[xCol]) || 0, y: parseFloat(row[yCol]) || 0 })),
+          data: chartData,
           backgroundColor: colors[0]
         }]
       };

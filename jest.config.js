@@ -23,10 +23,22 @@ module.exports = {
       ]
     },
     {
-      displayName: 'frontend', 
+      displayName: 'frontend',
       testEnvironment: 'node',
       testMatch: [
         '**/tests/frontend/**/*.test.js'
+      ],
+      setupFilesAfterEnv: [],
+      globals: {
+        TextEncoder: TextEncoder,
+        TextDecoder: TextDecoder,
+      }
+    },
+    {
+      displayName: 'ar',
+      testEnvironment: 'node',
+      testMatch: [
+        '**/tests/ar/**/*.test.js'
       ],
       setupFilesAfterEnv: [],
       globals: {
