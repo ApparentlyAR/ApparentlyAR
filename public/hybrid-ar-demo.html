@@ -271,9 +271,14 @@
     body { font-family: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif; color: var(--text); }
     .panel { background: var(--panel); border: 1px solid var(--border); color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,0.18); backdrop-filter: blur(6px); }
     .panel h2 { color: var(--text); }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .panel-toggle { width: 28px; height: 28px; border: 1px solid var(--border); background: #fff; color: var(--text); border-radius: 6px; cursor: pointer; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .panel.collapsed .panel-body { display: none; }
     .stats { background: #F9FAFB; border: 1px solid var(--border); }
     .stats h3 { color: var(--primary); }
     .control-group select, .control-group input, .control-group button { border: 1px solid var(--border); background: #FFFFFF; color: var(--text); }
+    /* Fix checkbox alignment so it sits inline with its label text */
+    .control-group input[type="checkbox"] { width: auto; display: inline-block; vertical-align: middle; margin-right: 8px; border: none; background: transparent; }
     .control-group button { background: var(--primary); color: #fff; }
     .control-group button:hover { background: var(--primary-hover); }
     .control-group button:disabled { background: #A3A3A3; }
@@ -456,8 +461,12 @@
   </div>
 
   <!-- Right Panel: Controls -->
-  <div class="panel panel--right">
-    <h2>AR Controls</h2>
+  <div class="panel panel--right" id="controls-panel">
+    <div class="panel-header">
+      <h2 style="margin: 0;">AR Controls</h2>
+      <button class="panel-toggle" aria-expanded="true" onclick="togglePanel('controls-panel', this)">−</button>
+    </div>
+    <div class="panel-body">
 
     <div class="control-group">
       <h3 style="margin: 0 0 10px 0; color: var(--primary); font-size: 14px;">Hand Tracking</h3>
@@ -480,7 +489,7 @@
 
     <div class="stats">
       <details id="marker-test-panel">
-        <summary style="cursor: pointer;">Marker 0 Test Panel (Dev)</summary>
+        <summary style="cursor: pointer;">Chart Assignment (Manual)</summary>
         <p class="dev-panel-note">Use these controls to preview marker-driven chart configuration without physical markers.</p>
         <div class="control-group">
           <label for="dev-chart-type"><span style="color: #dc2626;">●</span> Chart Type (M7):</label>
@@ -547,7 +556,7 @@
 
     <div class="stats">
       <details open>
-        <summary style="cursor: pointer; color: var(--muted);">Calibration</summary>
+        <summary style="cursor: pointer; color: var(--muted);">Point Controls Calibration</summary>
         <div class="control-group" style="margin-top: 6px;">
           <label for="calibration-x">X Offset: <span id="calibration-x-value">0.0</span></label>
           <input type="range" id="calibration-x" min="-10" max="10" value="0" step="0.5"
@@ -560,6 +569,7 @@
           <button onclick="resetCalibrationUI()" style="width: 100%; background: #666; color: #fff;">Reset Calibration</button>
         </div>
       </details>
+    </div>
     </div>
   </div>
 
@@ -596,6 +606,18 @@
         document.getElementById('calibration-y-value').textContent = y.toFixed(1);
       }
     });
+
+    // Collapsible panel helper
+    function togglePanel(panelId, btn) {
+      const panel = document.getElementById(panelId);
+      if (!panel) return;
+      panel.classList.toggle('collapsed');
+      const isCollapsed = panel.classList.contains('collapsed');
+      if (btn) {
+        btn.setAttribute('aria-expanded', String(!isCollapsed));
+        btn.textContent = isCollapsed ? '+' : '−';
+      }
+    }
   </script>
 
   <script>
