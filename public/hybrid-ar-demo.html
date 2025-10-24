@@ -52,11 +52,9 @@
       z-index: 2;
     }
 
-    /* Controls panel */
-    .controls-panel {
+    /* Panels */
+    .panel {
       position: fixed;
-      top: 20px;
-      right: 20px;
       width: 300px;
       background: rgba(42, 42, 42, 0.95);
       padding: 20px;
@@ -67,10 +65,30 @@
       overflow-y: auto;
     }
 
-    .controls-panel h2 {
+    .panel h2 {
       margin-top: 0;
       color: #4CAF50;
       font-size: 18px;
+    }
+
+    .panel--left {
+      top: 20px;
+      left: 20px;
+    }
+
+    .panel--right {
+      top: 20px;
+      right: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .panel {
+        width: calc(100vw - 40px);
+        left: 20px;
+        right: 20px;
+      }
+      .panel--left { top: 20px; }
+      .panel--right { top: auto; bottom: 20px; }
     }
 
     .control-group {
@@ -322,13 +340,9 @@
 
   <!-- Dev mode chart overlay removed -->
 
-  <!-- Controls Panel -->
-  <div class="controls-panel">
-    <button class="back-button" onclick="window.location.href='/blockly'">
-      ← Back to Blockly
-    </button>
-
-    <h2>Hybrid AR Controls</h2>
+  <!-- Left Panel: Status & Markers -->
+  <div class="panel panel--left">
+    <h2>Status & Markers</h2>
 
     <div class="control-group">
       <div id="status" class="status">Initializing...</div>
@@ -337,25 +351,6 @@
     <div class="control-group">
       <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Marker Detection</h3>
       <div id="marker-status" class="status ready">Ready for markers</div>
-    </div>
-
-    <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Hand Tracking</h3>
-      <button id="start-hands">Start Hand Tracking</button>
-      <button id="stop-hands" disabled>Stop Hand Tracking</button>
-    </div>
-
-    <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: #FF6B35; font-size: 14px;">Dev Mode</h3>
-      <button id="spawn-mock-marker-chart" style="background: #ef4444; margin-bottom: 5px;">Spawn Marker Chart (No Paper)</button>
-      <button id="remove-mock-marker-chart" style="background: #666;">Remove Marker Chart</button>
-    </div>
-
-    <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: #22C55E; font-size: 14px;">From Blockly</h3>
-      <button id="load-from-blockly" style="background: #16A34A; margin-bottom: 6px;">Load Last Visualization</button>
-      <button id="move-to-marker" style="background: #059669;">Put On Marker</button>
-      <p style="font-size: 11px; color: #94a3b8; margin-top: 8px;">Data automatically loaded from most recent Blockly CSV</p>
     </div>
 
     <div class="stats">
@@ -407,6 +402,41 @@
         <div>Process time: <span id="process-time">-</span>ms</div>
         <div>Video resolution: <span id="video-resolution">-</span></div>
       </div>
+    </div>
+
+    <div class="stats">
+      <h3>Raycast Debug</h3>
+      <div id="raycast-debug" style="font-size: 10px; font-family: monospace;">
+        <div>No data</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Controls -->
+  <div class="panel panel--right">
+    <button class="back-button" onclick="window.location.href='/blockly'">
+      ← Back to Blockly
+    </button>
+
+    <h2>AR Controls</h2>
+
+    <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: #4CAF50; font-size: 14px;">Hand Tracking</h3>
+      <button id="start-hands">Start Hand Tracking</button>
+      <button id="stop-hands" disabled>Stop Hand Tracking</button>
+    </div>
+
+    <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: #FF6B35; font-size: 14px;">Dev Mode</h3>
+      <button id="spawn-mock-marker-chart" style="background: #ef4444; margin-bottom: 5px;">Spawn Marker Chart (No Paper)</button>
+      <button id="remove-mock-marker-chart" style="background: #666;">Remove Marker Chart</button>
+    </div>
+
+    <div class="control-group">
+      <h3 style="margin: 0 0 10px 0; color: #22C55E; font-size: 14px;">From Blockly</h3>
+      <button id="load-from-blockly" style="background: #16A34A; margin-bottom: 6px;">Load Last Visualization</button>
+      <button id="move-to-marker" style="background: #059669;">Put On Marker</button>
+      <p style="font-size: 11px; color: #94a3b8; margin-top: 8px;">Data automatically loaded from most recent Blockly CSV</p>
     </div>
 
     <div class="stats">
@@ -471,13 +501,6 @@
           <input type="checkbox" id="mirror-video" checked onchange="setVideoMirroring(this.checked)">
           Mirror Video Feed
         </label>
-      </div>
-    </div>
-
-    <div class="stats">
-      <h3>Raycast Debug</h3>
-      <div id="raycast-debug" style="font-size: 10px; font-family: monospace;">
-        <div>No data</div>
       </div>
     </div>
 
