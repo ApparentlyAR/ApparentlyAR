@@ -261,57 +261,53 @@
         <a-box position="0 0 0" material="opacity: 0; transparent: true" scale="0 0 0"></a-box>
       </a-marker>
 
-      <!-- Marker 1: Blue spinning sphere -->
+      <!-- Marker 1: Blue diamond (X-axis selector) -->
       <a-marker id="marker-1" type="barcode" value="1">
-        <a-sphere position="0 0 0" material="color: blue; opacity: 0.9"
-          animation="property: rotation; to: 360 0 360; loop: true; dur: 3000" radius="0.6">
-        </a-sphere>
-      </a-marker>
-
-      <!-- Marker 2: Green oscillating cylinder -->
-      <a-marker id="marker-2" type="barcode" value="2">
-        <a-cylinder position="0 0 0" material="color: green; opacity: 0.7"
-          animation="property: position; to: 0 -0.5 0; loop: true; dur: 2000; dir: alternate" radius="0.4" height="1.2">
-        </a-cylinder>
-      </a-marker>
-
-      <!-- Marker 3: Yellow pulsing octahedron -->
-      <a-marker id="marker-3" type="barcode" value="3">
-        <a-octahedron position="0 0 0" material="color: yellow; opacity: 0.8"
-          animation="property: scale; to: 1.2 1.2 1.2; loop: true; dur: 1500; dir: alternate" radius="0.5">
+        <a-octahedron position="0 0 0" material="color: #2563eb; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
         </a-octahedron>
       </a-marker>
 
-      <!-- Marker 4: Orange rotating cone -->
+      <!-- Marker 2: Green diamond (Y-axis selector) -->
+      <a-marker id="marker-2" type="barcode" value="2">
+        <a-octahedron position="0 0 0" material="color: #16a34a; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
+      </a-marker>
+
+      <!-- Marker 3: Yellow diamond (Sort column selector) -->
+      <a-marker id="marker-3" type="barcode" value="3">
+        <a-octahedron position="0 0 0" material="color: #eab308; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
+      </a-marker>
+
+      <!-- Marker 4: Orange diamond (Sort order selector) -->
       <a-marker id="marker-4" type="barcode" value="4">
-        <a-cone position="0 0 0" material="color: orange; opacity: 0.85"
-          animation="property: rotation; to: 0 360 0; loop: true; dur: 2500" radius-bottom="0.5" radius-top="0.1"
-          height="1.2">
-        </a-cone>
+        <a-octahedron position="0 0 0" material="color: #f97316; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
       </a-marker>
 
-      <!-- Marker 5: Purple pulsing torus -->
+      <!-- Marker 5: Purple diamond (Filter column selector) -->
       <a-marker id="marker-5" type="barcode" value="5">
-        <a-torus position="0 0 0" material="color: #8b5cf6; opacity: 0.85"
-          animation="property: scale; to: 1.3 1.3 1.3; loop: true; dur: 1800; dir: alternate" radius="0.6"
-          radius-tubular="0.18">
-        </a-torus>
+        <a-octahedron position="0 0 0" material="color: #8b5cf6; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
       </a-marker>
 
-      <!-- Marker 6: Teal oscillating ring -->
+      <!-- Marker 6: Teal diamond (Filter value selector) -->
       <a-marker id="marker-6" type="barcode" value="6">
-        <a-ring position="0 0 0" material="color: #14b8a6; opacity: 0.8"
-          animation="property: position; to: 0 0.4 0; loop: true; dur: 1600; dir: alternate" radius-inner="0.25"
-          radius-outer="0.55">
-        </a-ring>
+        <a-octahedron position="0 0 0" material="color: #14b8a6; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
       </a-marker>
 
-      <!-- Marker 7: Crimson twisting torus knot -->
+      <!-- Marker 7: Red diamond (Chart type selector) -->
       <a-marker id="marker-7" type="barcode" value="7">
-        <a-torus-knot position="0 0 0" material="color: #dc2626; opacity: 0.85"
-          animation="property: rotation; to: 360 360 0; loop: true; dur: 3000" radius="0.45"
-          radius-tubular="0.12" p="2" q="3">
-        </a-torus-knot>
+        <a-octahedron position="0 0 0" material="color: #dc2626; opacity: 0.9"
+          rotation="90 0 0" scale="0.4 1.5 0.4" radius="0.5">
+        </a-octahedron>
       </a-marker>
 
       <!-- Hand-placed charts removed in pointer-tooltip mode -->
@@ -373,9 +369,19 @@
 
     <div class="stats">
       <h3>Instructions</h3>
-      <p style="font-size: 11px; margin: 5px 0;">
-        <strong>Markers:</strong> Show barcode markers 0-3 for 3D objects<br>
-        <strong>Hands:</strong> Point your index finger at the marker chart to show tooltips
+      <p style="font-size: 11px; margin: 5px 0; line-height: 1.5;">
+        <strong>Marker 0 (Chart):</strong> Displays your data visualization<br>
+        <strong>Markers 1-7 (Dials):</strong> Rotate colored diamond markers to control chart:<br>
+        <span style="margin-left: 10px; display: block;">
+          • <span style="color: #2563eb;">Blue (M1)</span>: Select X-axis column<br>
+          • <span style="color: #16a34a;">Green (M2)</span>: Select Y-axis column<br>
+          • <span style="color: #eab308;">Yellow (M3)</span>: Select sort column<br>
+          • <span style="color: #f97316;">Orange (M4)</span>: Toggle sort order<br>
+          • <span style="color: #8b5cf6;">Purple (M5)</span>: Select filter column<br>
+          • <span style="color: #14b8a6;">Teal (M6)</span>: Select filter value<br>
+          • <span style="color: #dc2626;">Red (M7)</span>: Select chart type<br>
+        </span>
+        <strong>Hand Tracking:</strong> Point at marker 0 chart to show tooltips
         <!-- legacy gesture terms for test compatibility: pinch, fist -->
       </p>
     </div>
