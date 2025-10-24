@@ -474,21 +474,8 @@
       <button id="stop-hands" disabled>Stop Hand Tracking</button>
     </div>
 
-    <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: #FF6B35; font-size: 14px;">Dev Mode</h3>
-      <button id="spawn-mock-marker-chart" style="background: #ef4444; margin-bottom: 5px;">Spawn Marker Chart (No Paper)</button>
-      <button id="remove-mock-marker-chart" style="background: #666;">Remove Marker Chart</button>
-    </div>
-
-    <div class="control-group">
-      <h3 style="margin: 0 0 10px 0; color: var(--primary); font-size: 14px;">From Blockly</h3>
-      <button id="load-from-blockly" style="background: #16A34A; margin-bottom: 6px;">Load Last Visualization</button>
-      <button id="move-to-marker" style="background: #059669;">Put On Marker</button>
-      <p style="font-size: 11px; color: #94a3b8; margin-top: 8px;">Data automatically loaded from most recent Blockly CSV</p>
-    </div>
-
     <div class="stats">
-      <details id="marker-test-panel">
+      <details id="marker-test-panel" open>
         <summary style="cursor: pointer;">Chart Assignment (Manual)</summary>
         <p class="dev-panel-note">Use these controls to preview marker-driven chart configuration without physical markers.</p>
         <div class="control-group">
@@ -555,7 +542,7 @@
     </div>
 
     <div class="stats">
-      <details open>
+      <details>
         <summary style="cursor: pointer; color: var(--muted);">Point Controls Calibration</summary>
         <div class="control-group" style="margin-top: 6px;">
           <label for="calibration-x">X Offset: <span id="calibration-x-value">0.0</span></label>
@@ -567,6 +554,35 @@
             oninput="updateCalibration()" style="width: 100%; margin-bottom: 8px;">
 
           <button onclick="resetCalibrationUI()" style="width: 100%; background: #666; color: #fff;">Reset Calibration</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="stats">
+      <details>
+        <summary style="cursor: pointer; color: var(--muted);">Dev Controls</summary>
+        
+        <div class="control-group" style="margin-top: 6px;">
+          <h3 style="margin: 0 0 8px 0; color: #FF6B35; font-size: 13px;">Testing (No Markers)</h3>
+          <button id="spawn-mock-marker-chart" style="background: #ef4444; margin-bottom: 5px;">
+            Spawn Marker Chart (No Paper)
+          </button>
+          <button id="remove-mock-marker-chart" style="background: #666;">
+            Remove Marker Chart
+          </button>
+        </div>
+
+        <div class="control-group" style="margin-top: 12px;">
+          <h3 style="margin: 0 0 8px 0; color: var(--primary); font-size: 13px;">Blockly Sync</h3>
+          <button id="load-from-blockly" style="background: #16A34A; margin-bottom: 6px;">
+            Apply Blockly Config
+          </button>
+          <button id="move-to-marker" style="background: #059669;">
+            Put On Marker
+          </button>
+          <p style="font-size: 11px; color: #94a3b8; margin: 8px 0 0 0; line-height: 1.4;">
+            Data auto-loaded on startup. Use "Apply Blockly Config" to sync chart appearance with Blockly.
+          </p>
         </div>
       </details>
     </div>
