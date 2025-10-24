@@ -289,11 +289,28 @@
     .chart-item { background: #F3F4F6; }
     .chart-item:hover { background: #E5E7EB; }
     .chart-item.selected { background: rgba(34, 197, 94, 0.2); }
-    .back-button { background: #FBBF24 !important; color: #1F2937 !important; border: 1px solid var(--border); }
+    .back-button { 
+      background: #FBBF24 !important; /* Tailwind yellow-400 */
+      color: #FFFFFF !important;
+      border: none !important; 
+      border-radius: 4px; 
+      padding: 8px; 
+      width: 100%; 
+      margin-bottom: 15px; 
+      font-size: 14px; 
+      font-weight: 600; 
+      cursor: pointer;
+    }
+    .back-button:hover { background: #F59E0B !important; /* Tailwind yellow-500 */ }
     input[type="range"] { background: var(--border); }
     input[type="range"]::-webkit-slider-thumb { background: var(--primary); }
     input[type="range"]::-moz-range-thumb { background: var(--primary); }
     .dev-panel-note { color: var(--muted); }
+
+    /* Marker Controls & State prominence */
+    .marker-mapping-grid { display: grid; grid-template-columns: 185px 1fr; gap: 8px; font-size: 14px; line-height: 1.6; }
+    .marker-label { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+    .marker-dot { font-size: 16px; line-height: 1; }
 
   </style>
 </head>
@@ -413,29 +430,29 @@
         <strong>Markers 1-7:</strong> Rotate diamond dials to control chart<br>
         <strong>Hand Tracking:</strong> Point at marker 0 to show tooltips
       </p>
-      <div style="display: grid; grid-template-columns: 155px 1fr; gap: 6px; font-size: 11px; line-height: 1.4;">
-        <strong><span style="color: #2563eb;">●</span> X-Axis (M1):</strong>
+      <div class="marker-mapping-grid">
+        <strong class="marker-label"><span class="marker-dot" style="color: #2563eb;">●</span> X-Axis (M1):</strong>
         <span id="state-x-axis">-</span>
 
-        <strong><span style="color: #16a34a;">●</span> Y-Axis (M2):</strong>
+        <strong class="marker-label"><span class="marker-dot" style="color: #16a34a;">●</span> Y-Axis (M2):</strong>
         <span id="state-y-axis">-</span>
 
-        <strong><span style="color: #eab308;">●</span> Sort Column (M3):</strong>
+        <strong class="marker-label"><span class="marker-dot" style="color: #eab308;">●</span> Sort Column (M3):</strong>
         <span id="state-sort-column">-</span>
 
-        <strong><span style="color: #f97316;">●</span> Sort Order (M4):</strong>
+        <strong class="marker-label"><span class="marker-dot" style="color: #f97316;">●</span> Sort Order (M4):</strong>
         <span id="state-sort-order">-</span>
 
-        <strong><span style="color: #8b5cf6;">●</span> Filter Column (M5):</strong>
+        <strong class="marker-label"><span class="marker-dot" style="color: #8b5cf6;">●</span> Filter Column (M5):</strong>
         <span id="state-filter-column">-</span>
 
-        <strong><span style="color: #14b8a6;">●</span> Filter Value (M6):</strong>
+        <strong class="marker-label"><span class="marker-dot" style="color: #14b8a6;">●</span> Filter Value (M6):</strong>
         <span id="state-filter-value">-</span>
 
-        <strong><span style="color: #dc2626;">●</span> Chart Type (M7):</strong>
+        <strong class="marker-label"><span class="marker-dot" style="color: #dc2626;">●</span> Chart Type (M7):</strong>
         <span id="state-chart-type">-</span>
 
-        <strong>Available Columns:</strong>
+        <strong class="marker-label">Available Columns:</strong>
         <span id="state-columns">-</span>
       </div>
     </div>
@@ -476,7 +493,7 @@
 
     <div class="stats">
       <details id="marker-test-panel" open>
-        <summary style="cursor: pointer;">Chart Assignment (Manual)</summary>
+        <summary style="cursor: pointer; color: var(--muted);">Chart Assignment (Manual)</summary>
         <p class="dev-panel-note">Use these controls to preview marker-driven chart configuration without physical markers.</p>
         <div class="control-group">
           <label for="dev-chart-type"><span style="color: #dc2626;">●</span> Chart Type (M7):</label>
