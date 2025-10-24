@@ -368,45 +368,32 @@
     </div>
 
     <div class="stats">
-      <h3>Instructions</h3>
-      <p style="font-size: 11px; margin: 5px 0; line-height: 1.5;">
-        <strong>Marker 0 (Chart):</strong> Displays your data visualization<br>
-        <strong>Markers 1-7 (Dials):</strong> Rotate colored diamond markers to control chart:<br>
-        <span style="margin-left: 10px; display: block;">
-          • <span style="color: #2563eb;">Blue (M1)</span>: Select X-axis column<br>
-          • <span style="color: #16a34a;">Green (M2)</span>: Select Y-axis column<br>
-          • <span style="color: #eab308;">Yellow (M3)</span>: Select sort column<br>
-          • <span style="color: #f97316;">Orange (M4)</span>: Toggle sort order<br>
-          • <span style="color: #8b5cf6;">Purple (M5)</span>: Select filter column<br>
-          • <span style="color: #14b8a6;">Teal (M6)</span>: Select filter value<br>
-          • <span style="color: #dc2626;">Red (M7)</span>: Select chart type<br>
-        </span>
-        <strong>Hand Tracking:</strong> Point at marker 0 chart to show tooltips
-        <!-- legacy gesture terms for test compatibility: pinch, fist -->
+      <h3>Marker Controls & State</h3>
+      <p style="font-size: 10px; margin: 5px 0 10px 0; line-height: 1.4;">
+        <strong>Marker 0:</strong> Displays your data visualization<br>
+        <strong>Markers 1-7:</strong> Rotate diamond dials to control chart<br>
+        <strong>Hand Tracking:</strong> Point at marker 0 to show tooltips
       </p>
-    </div>
-    <div class="stats">
-      <h3>Marker State</h3>
-      <div style="display: grid; grid-template-columns: 150px 1fr; gap: 6px; font-size: 11px;">
-        <strong>X-Axis (M1):</strong>
+      <div style="display: grid; grid-template-columns: 155px 1fr; gap: 6px; font-size: 11px; line-height: 1.4;">
+        <strong><span style="color: #2563eb;">●</span> X-Axis (M1):</strong>
         <span id="state-x-axis">-</span>
 
-        <strong>Y-Axis (M2):</strong>
+        <strong><span style="color: #16a34a;">●</span> Y-Axis (M2):</strong>
         <span id="state-y-axis">-</span>
 
-        <strong>Sort Column (M3):</strong>
+        <strong><span style="color: #eab308;">●</span> Sort Column (M3):</strong>
         <span id="state-sort-column">-</span>
 
-        <strong>Sort Order (M4):</strong>
+        <strong><span style="color: #f97316;">●</span> Sort Order (M4):</strong>
         <span id="state-sort-order">-</span>
 
-        <strong>Filter Column (M5):</strong>
+        <strong><span style="color: #8b5cf6;">●</span> Filter Column (M5):</strong>
         <span id="state-filter-column">-</span>
 
-        <strong>Filter Value (M6):</strong>
+        <strong><span style="color: #14b8a6;">●</span> Filter Value (M6):</strong>
         <span id="state-filter-value">-</span>
 
-        <strong>Chart Type (M7):</strong>
+        <strong><span style="color: #dc2626;">●</span> Chart Type (M7):</strong>
         <span id="state-chart-type">-</span>
 
         <strong>Available Columns:</strong>
@@ -427,7 +414,7 @@
         <summary style="cursor: pointer;">Marker 0 Test Panel (Dev)</summary>
         <p class="dev-panel-note">Use these controls to preview marker-driven chart configuration without physical markers.</p>
         <div class="control-group">
-          <label for="dev-chart-type">Chart Type (M7):</label>
+          <label for="dev-chart-type"><span style="color: #dc2626;">●</span> Chart Type (M7):</label>
           <select id="dev-chart-type">
             <option value="bar">Bar</option>
             <option value="line">Line</option>
@@ -436,30 +423,30 @@
           </select>
         </div>
         <div class="control-group">
-          <label for="dev-x-axis">X-Axis Column (M1):</label>
+          <label for="dev-x-axis"><span style="color: #2563eb;">●</span> X-Axis Column (M1):</label>
           <select id="dev-x-axis"></select>
         </div>
         <div class="control-group">
-          <label for="dev-y-axis">Y-Axis Column (M2):</label>
+          <label for="dev-y-axis"><span style="color: #16a34a;">●</span> Y-Axis Column (M2):</label>
           <select id="dev-y-axis"></select>
         </div>
         <div class="control-group">
-          <label for="dev-sort-column">Sort Column (M3):</label>
+          <label for="dev-sort-column"><span style="color: #eab308;">●</span> Sort Column (M3):</label>
           <select id="dev-sort-column"></select>
         </div>
         <div class="control-group">
-          <label for="dev-sort-order">Sort Order (M4):</label>
+          <label for="dev-sort-order"><span style="color: #f97316;">●</span> Sort Order (M4):</label>
           <select id="dev-sort-order">
             <option value="ascending">Ascending</option>
             <option value="descending">Descending</option>
           </select>
         </div>
         <div class="control-group">
-          <label for="dev-filter-column">Filter Column (M5):</label>
+          <label for="dev-filter-column"><span style="color: #8b5cf6;">●</span> Filter Column (M5):</label>
           <select id="dev-filter-column"></select>
         </div>
         <div class="control-group">
-          <label for="dev-filter-value">Filter Value (M6):</label>
+          <label for="dev-filter-value"><span style="color: #14b8a6;">●</span> Filter Value (M6):</label>
           <select id="dev-filter-value" disabled>
             <option value="">Select a column first</option>
           </select>
@@ -467,15 +454,6 @@
         <div class="control-group" style="display: flex; gap: 8px;">
           <button id="dev-refresh-columns" style="flex: 1;">Refresh Columns</button>
           <button id="dev-reset-config" style="flex: 1; background: #475569;">Reset</button>
-        </div>
-        <div class="dev-state-readout">
-          <div>Chart Type: <span id="dev-state-chart">-</span></div>
-          <div>X-Axis: <span id="dev-state-x">-</span></div>
-          <div>Y-Axis: <span id="dev-state-y">-</span></div>
-          <div>Sort Column: <span id="dev-state-sort">-</span></div>
-          <div>Sort Order: <span id="dev-state-order">-</span></div>
-          <div>Filter Column: <span id="dev-state-filter-column">-</span></div>
-          <div>Filter Value: <span id="dev-state-filter-value">-</span></div>
         </div>
       </details>
     </div>
@@ -584,13 +562,6 @@
           this.filterValueSelect = document.getElementById('dev-filter-value');
           this.refreshBtn = document.getElementById('dev-refresh-columns');
           this.resetBtn = document.getElementById('dev-reset-config');
-          this.chartStateEl = document.getElementById('dev-state-chart');
-          this.xStateEl = document.getElementById('dev-state-x');
-          this.yStateEl = document.getElementById('dev-state-y');
-          this.sortStateEl = document.getElementById('dev-state-sort');
-          this.sortOrderStateEl = document.getElementById('dev-state-order');
-          this.filterColumnStateEl = document.getElementById('dev-state-filter-column');
-          this.filterValueStateEl = document.getElementById('dev-state-filter-value');
 
           if (this.typeSelect) {
             this.typeSelect.addEventListener('change', () => {
@@ -898,32 +869,6 @@
           console.log('[TestPanel:ApplyState] Calling populateFilterValues with:', state.filterColumn || null, state.filterValue ?? null);
           this.populateFilterValues(state.filterColumn || null, state.filterValue ?? null);
           console.log('[TestPanel:ApplyState] Filter dropdown value after populateFilterValues:', this.filterColumnSelect?.value);
-
-          if (this.chartStateEl) {
-            this.chartStateEl.textContent = state.chartType || '-';
-          }
-          if (this.xStateEl) {
-            this.xStateEl.textContent = state.xColumn || '-';
-          }
-          if (this.yStateEl) {
-            this.yStateEl.textContent = state.yColumn || '-';
-          }
-          if (this.sortStateEl) {
-            this.sortStateEl.textContent = state.sortColumn || '-';
-          }
-          if (this.sortOrderStateEl) {
-            const label = state.sortOrder || 'ascending';
-            this.sortOrderStateEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
-          }
-          if (this.filterColumnStateEl) {
-            this.filterColumnStateEl.textContent = state.filterColumn || '-';
-          }
-          if (this.filterValueStateEl) {
-            const display = state.filterValue === undefined || state.filterValue === null || state.filterValue === ''
-              ? 'All values'
-              : state.filterValue;
-            this.filterValueStateEl.textContent = display;
-          }
         }
       };
 
