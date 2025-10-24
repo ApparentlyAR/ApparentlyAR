@@ -624,9 +624,15 @@
 
           if (this.filterColumnSelect) {
             this.filterColumnSelect.addEventListener('change', () => {
+              console.log('[TestPanel:FilterChange] User changed filter column dropdown');
+              console.log('[TestPanel:FilterChange] Current dropdown value:', this.filterColumnSelect.value);
               const selected = this.filterColumnSelect.value;
+              console.log('[TestPanel:FilterChange] Selected value (after normalization):', selected);
+              console.log('[TestPanel:FilterChange] Calling controller.setFilterColumn with:', selected || null);
               this.controller.setFilterColumn(selected || null);
+              console.log('[TestPanel:FilterChange] Calling populateFilterValues with column:', selected || null);
               this.populateFilterValues(selected || null, null);
+              console.log('[TestPanel:FilterChange] Filter change handler complete, dropdown value now:', this.filterColumnSelect.value);
             });
           }
 
@@ -703,7 +709,10 @@
           });
 
           if (this.filterColumnSelect) {
+            console.log('[TestPanel:PopulateColumns] Repopulating filter column dropdown');
             const previous = this.filterColumnSelect.value;
+            console.log('[TestPanel:PopulateColumns] Previous filter dropdown value:', previous);
+            console.log('[TestPanel:PopulateColumns] Available columns to populate:', list);
             this.filterColumnSelect.innerHTML = '';
 
             const noneOption = document.createElement('option');
@@ -712,6 +721,7 @@
             this.filterColumnSelect.appendChild(noneOption);
 
             if (!list.length) {
+              console.log('[TestPanel:PopulateColumns] No columns available, disabling filter dropdown');
               const placeholder = document.createElement('option');
               placeholder.value = '';
               placeholder.textContent = 'No columns available';
@@ -731,10 +741,13 @@
             });
 
             if (previous && list.includes(previous)) {
+              console.log('[TestPanel:PopulateColumns] Restoring previous value:', previous);
               this.filterColumnSelect.value = previous;
             } else {
+              console.log('[TestPanel:PopulateColumns] Previous value not in list or empty, resetting to ""');
               this.filterColumnSelect.value = '';
             }
+            console.log('[TestPanel:PopulateColumns] Final filter dropdown value after populate:', this.filterColumnSelect.value);
           }
         },
         hasOption(select, value) {
@@ -743,7 +756,11 @@
           return Array.from(select.options).some((option) => option.value === normalized);
         },
         populateFilterValues(column, selectedValue) {
+          console.log('[TestPanel:PopulateValues] === populateFilterValues called ===');
+          console.log('[TestPanel:PopulateValues] Column:', column);
+          console.log('[TestPanel:PopulateValues] Selected value:', selectedValue);
           if (!this.filterValueSelect) {
+            console.log('[TestPanel:PopulateValues] filterValueSelect not found, returning');
             return;
           }
 
@@ -751,6 +768,7 @@
           select.innerHTML = '';
 
           if (!column) {
+            console.log('[TestPanel:PopulateValues] No column specified, disabling filter value dropdown');
             const placeholder = document.createElement('option');
             placeholder.value = '';
             placeholder.textContent = 'Select a column first';
@@ -763,6 +781,7 @@
           const values = typeof this.controller?.getFilterValuesForColumn === 'function'
             ? this.controller.getFilterValuesForColumn(column)
             : [];
+          console.log('[TestPanel:PopulateValues] Available values for column:', values);
 
           select.disabled = false;
 
@@ -772,6 +791,7 @@
           select.appendChild(allOption);
 
           if (!values.length) {
+            console.log('[TestPanel:PopulateValues] No values found for column');
             const placeholder = document.createElement('option');
             placeholder.value = '';
             placeholder.textContent = 'No values found';
@@ -789,17 +809,38 @@
           });
 
           const normalized = selectedValue === undefined || selectedValue === null ? '' : String(selectedValue);
+          console.log('[TestPanel:PopulateValues] Normalized selected value:', normalized);
           if (this.hasOption(select, normalized)) {
+            console.log('[TestPanel:PopulateValues] Setting filter value dropdown to:', normalized);
             select.value = normalized;
           } else {
+            console.log('[TestPanel:PopulateValues] Selected value not in options, resetting to ""');
             select.value = '';
           }
+          console.log('[TestPanel:PopulateValues] Final filter value dropdown value:', select.value);
         },
         applyState(state = {}) {
+          console.log('[TestPanel:ApplyState] === applyState called ===');
+          console.log('[TestPanel:ApplyState] Full state object:', state);
+          console.log('[TestPanel:ApplyState] Filter column in state:', state.filterColumn);
+          console.log('[TestPanel:ApplyState] Filter value in state:', state.filterValue);
           if (!this.initialized) return;
 
           const columns = Array.isArray(state.availableColumns) ? state.availableColumns : [];
-          this.populateColumns(columns);
+          console.log('[TestPanel:ApplyState] Available columns from state:', columns);
+
+          // Only repopulate columns if they've changed (prevents dropdown resets)
+          const columnsChanged = !this._lastColumns ||
+            JSON.stringify(this._lastColumns) !== JSON.stringify(columns);
+          console.log('[TestPanel:ApplyState] Columns changed?', columnsChanged);
+          console.log('[TestPanel:ApplyState] Previous columns:', this._lastColumns);
+          console.log('[TestPanel:ApplyState] New columns:', columns);
+
+          if (columnsChanged) {
+            console.log('[TestPanel:ApplyState] Calling populateColumns (this will reset dropdowns)');
+            this.populateColumns(columns);
+            this._lastColumns = [...columns];
+          }
 
           if (this.typeSelect && state.chartType) {
             if (!this.hasOption(this.typeSelect, state.chartType)) {
@@ -832,15 +873,25 @@
           }
 
           if (this.filterColumnSelect) {
+            console.log('[TestPanel:ApplyState] Setting filter column dropdown value');
+            console.log('[TestPanel:ApplyState] Current dropdown value before set:', this.filterColumnSelect.value);
             const targetColumn = state.filterColumn || '';
-            if (this.hasOption(this.filterColumnSelect, targetColumn)) {
+            console.log('[TestPanel:ApplyState] Target column to set:', targetColumn);
+            const hasOption = this.hasOption(this.filterColumnSelect, targetColumn);
+            console.log('[TestPanel:ApplyState] hasOption check result:', hasOption);
+            if (hasOption) {
+              console.log('[TestPanel:ApplyState] Setting dropdown to:', targetColumn);
               this.filterColumnSelect.value = targetColumn;
             } else {
+              console.log('[TestPanel:ApplyState] Target not in options, resetting to ""');
               this.filterColumnSelect.value = '';
             }
+            console.log('[TestPanel:ApplyState] Dropdown value after set:', this.filterColumnSelect.value);
           }
 
+          console.log('[TestPanel:ApplyState] Calling populateFilterValues with:', state.filterColumn || null, state.filterValue ?? null);
           this.populateFilterValues(state.filterColumn || null, state.filterValue ?? null);
+          console.log('[TestPanel:ApplyState] Filter dropdown value after populateFilterValues:', this.filterColumnSelect?.value);
 
           if (this.chartStateEl) {
             this.chartStateEl.textContent = state.chartType || '-';
@@ -873,10 +924,18 @@
       window.MarkerTestPanel = panel;
 
       window.addEventListener('markerInteractionStateChange', (event) => {
+        console.log('[TestPanel:EventListener] ======================================');
+        console.log('[TestPanel:EventListener] markerInteractionStateChange event fired');
+        console.log('[TestPanel:EventListener] Event detail:', event?.detail);
+        console.log('[TestPanel:EventListener] Filter column from event:', event?.detail?.filterColumn);
+        console.log('[TestPanel:EventListener] Filter value from event:', event?.detail?.filterValue);
+        console.log('[TestPanel:EventListener] Current filter dropdown value before applyState:', panel.filterColumnSelect?.value);
         panel.init();
         if (panel.initialized) {
           panel.applyState(event.detail || {});
         }
+        console.log('[TestPanel:EventListener] Current filter dropdown value after applyState:', panel.filterColumnSelect?.value);
+        console.log('[TestPanel:EventListener] ======================================');
       });
 
       window.addEventListener('load', () => {

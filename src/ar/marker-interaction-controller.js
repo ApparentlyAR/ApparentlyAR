@@ -374,10 +374,18 @@ class MarkerInteractionController {
   }
 
   setFilterColumn(column) {
+    console.log('[Controller:SetFilter] === setFilterColumn called ===');
+    console.log('[Controller:SetFilter] Column parameter:', column);
+    console.log('[Controller:SetFilter] Current filter column before change:', this.currentFilterColumn);
+    console.log('[Controller:SetFilter] Available columns:', this.availableColumns);
+
     if (!column) {
+      console.log('[Controller:SetFilter] Column is falsy, clearing filter');
       if (this.currentFilterColumn !== null || this.currentFilterValue !== null) {
+        console.log('[Controller:SetFilter] Resetting currentFilterColumn and currentFilterValue to null');
         this.currentFilterColumn = null;
         this.currentFilterValue = null;
+        console.log('[Controller:SetFilter] Dispatching state change for filter clear');
         this.dispatchStateChange();
         this.applyFilterDebounced();
       }
@@ -385,16 +393,23 @@ class MarkerInteractionController {
     }
 
     if (!this.availableColumns.includes(column)) {
-      console.warn(`[MarkerInteraction] Invalid filter column: ${column}`);
+      console.warn(`[Controller:SetFilter] Invalid filter column: ${column} - not in available columns`);
       return;
     }
 
     if (this.currentFilterColumn !== column) {
+      console.log('[Controller:SetFilter] Filter column changed, updating state');
+      console.log('[Controller:SetFilter] Old filter column:', this.currentFilterColumn);
+      console.log('[Controller:SetFilter] New filter column:', column);
       this.currentFilterColumn = column;
       this.currentFilterValue = null;
+      console.log('[Controller:SetFilter] Dispatching state change');
       this.dispatchStateChange();
       this.applyFilterDebounced();
+    } else {
+      console.log('[Controller:SetFilter] Column unchanged, no action needed');
     }
+    console.log('[Controller:SetFilter] Final currentFilterColumn:', this.currentFilterColumn);
   }
 
   setFilterValue(value) {
@@ -744,8 +759,16 @@ class MarkerInteractionController {
    * Dispatch state change event
    */
   dispatchStateChange() {
+    const snapshot = this.getStateSnapshot();
+    console.log('[Controller:StateChange] ====================================');
+    console.log('[Controller:StateChange] Dispatching markerInteractionStateChange event');
+    console.log('[Controller:StateChange] State snapshot:', snapshot);
+    console.log('[Controller:StateChange] Filter column in snapshot:', snapshot.filterColumn);
+    console.log('[Controller:StateChange] Filter value in snapshot:', snapshot.filterValue);
+    console.log('[Controller:StateChange] Available columns in snapshot:', snapshot.availableColumns);
+    console.log('[Controller:StateChange] ====================================');
     window.dispatchEvent(new CustomEvent('markerInteractionStateChange', {
-      detail: this.getStateSnapshot()
+      detail: snapshot
     }));
   }
 
