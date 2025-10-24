@@ -1,6 +1,6 @@
-# ApparentlyAR 
+# ApparentlyAR
 
-A comprehensive educational data visualization platform that combines block-based programming with cutting-edge Augmented Reality technology. Designed for students in grades 8-10 to explore and visualize data through hands-on, creative learning experiences.
+ApparentlyAR is a browser‑based learning platform that lets students import a CSV, transform it with Blockly blocks, and visualise results in 2D (Chart.js) and in AR (AR.js/A‑Frame + optional MediaPipe Hands). It runs locally with a lightweight Node/Express backend.
 
 ## Markers
 
@@ -8,40 +8,18 @@ Markers can be viewed and downloaded [here](https://github.com/nicolocarpignoli/
 
 ## Features
 
-### Core Platform
-
-- **Project Management System**: Multi-user platform with student and teacher dashboards
-- **User Authentication**: Secure login system with role-based access control
-- **Block-Based Programming**: Drag-and-drop interface using Blockly for accessible data manipulation
-- **Backend Data Processing**: Server-side data operations for improved performance on low-powered devices
-- **Advanced Data Operations**: Filter, sort, aggregate, group, and calculate with visual programming blocks
-- **Data Transformation Tools**: 10+ transformation blocks for data cleaning and preparation (NEW)
-- **Statistical Analysis**: Built-in statistical computation blocks for data exploration
-- **Chart Generation**: Create various chart types (bar, line, scatter, pie, doughnut, area, histogram, heatmap, radar)
-- **RESTful APIs**: Clean, well-documented API endpoints for data processing and visualization
-- **CSV Import/Export**: Upload CSV files and download processed data
-
-### Augmented Reality Experiences
-
-- **Hand Tracking AR**: MediaPipe-powered gesture recognition for intuitive chart manipulation
-- **Marker-Based AR**: AR.js fiducial markers for precise chart positioning
-- **Hybrid AR**: Combined marker detection and hand tracking for enhanced interaction
-- **3D Visualizations**: Immersive data exploration in augmented reality environments
-
-### Advanced Features
-
-- **Modular Architecture**: Clean separation of concerns with reusable AR modules
-- **Backend Data Processing**: Server-side operations for improved performance on low-powered devices
-- **Real-Time Processing**: Optimized performance with frame-skipping and efficient rendering
-- **Interactive Charts**: Zoom, pan, click events, and hover effects for enhanced data exploration
-- **Comprehensive Testing**: 95%+ test coverage with 230+ passing tests including backend integration
+- **Block‑based data wrangling**: Import CSV, filter/sort/range, group/aggregate, transform, and compute statistics via custom Blockly blocks.
+- **Charts**: Bar, line, scatter, pie/doughnut, histogram, heatmap, radar (client‑side and/or backend‑assisted config).
+- **AR visualisation**: Marker‑based AR (AR.js/A‑Frame). Optional on‑device pointing/tooltip via MediaPipe Hands.
+- **Lightweight backend**: Node/Express APIs for data processing, chart generation, CSV upload/list/save, and sample datasets.
+- **Teacher/Student pages**: Static dashboards and project views with JSON‑file persistence for prototype use.
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js >= 14.0.0
-- npm >= 6.0.0
+- Node.js >= 14 (tested with Node 20)
+- npm 8+
 
 ### Installation
 
@@ -53,28 +31,40 @@ cd ApparentlyAR
 # Install dependencies
 npm install
 
-# Start the development server
+# Start in development (auto‑reload)
 npm run dev
 
-# Or start production server
+# Or start in production mode
 npm start
 ```
 
-The server will be available at `http://localhost:3000` by default. If port 3000 is already in use, the server will automatically try the next available port (up to 10 consecutive ports).
+The server runs at `http://localhost:3000` by default. If 3000 is in use, it tries the next ports.
 
-### Available Interfaces
+### AR prerequisites
 
-- **Login**: `http://localhost:[PORT]/login.html` - User authentication
-- **Student Dashboard**: `http://localhost:[PORT]/student-dashboard.html` - Student project management
-- **Teacher Dashboard**: `http://localhost:[PORT]/teacher-dashboard.html` - Teacher project management
-- **Create Project**: `http://localhost:[PORT]/create-project.html` - Create new projects
-- **Edit Project**: `http://localhost:[PORT]/edit-project.html` - Edit existing projects
-- **View Project**: `http://localhost:[PORT]/view-project.html` - View project details
-- **Block-Based Programming**: `http://localhost:[PORT]/blockly-demo.html` - Main block programming interface
-- **Hand Tracking AR**: `http://localhost:[PORT]/ar-demo.html` - MediaPipe hand gesture controls
-- **Hybrid AR Demo**: `http://localhost:[PORT]/hybrid-ar-demo.html` - Combined markers + hand tracking
+- Use Chrome or Edge with camera permissions granted.
+- For AR on devices, prefer HTTPS origins or localhost for getUserMedia.
+- Print ARToolKit barcode markers (see Markers link above). Ensure good lighting and minimal glare.
 
-Where `[PORT]` is the port number shown in the server startup message (3000 by default, or the next available port if 3000 is in use).
+### App pages
+
+Pretty routes are provided (the `.html` files are also served statically):
+
+- Login: `http://localhost:[PORT]/` (serves `login.html`)
+- Student Dashboard: `http://localhost:[PORT]/student-dashboard`
+- Teacher Dashboard: `http://localhost:[PORT]/teacher-dashboard`
+- Create Project: `http://localhost:[PORT]/create-project`
+- Edit Project: `http://localhost:[PORT]/edit-project.html` (static)
+- View Project: `http://localhost:[PORT]/view-project`
+- Blockly Workspace: `http://localhost:[PORT]/blockly`
+- AR Demo (hands only): `http://localhost:[PORT]/ar-demo.html`
+- Hybrid AR Demo (markers + hands): `http://localhost:[PORT]/hybrid-ar`
+
+### Teacher login
+
+- Default facilitator password: `secret` (stored in `facilitator-auth.json`).
+- Start at `http://localhost:[PORT]/` (login), then navigate to `Teacher Dashboard`.
+- Password can be changed via the backend endpoint `PUT /api/facilitator/password` (requires current and new password in JSON body).
 
 ### Blockly Block Categories
 
@@ -121,12 +111,11 @@ Where `[PORT]` is the port number shown in the server startup message (3000 by d
 - `histogram_config`: Create histogram visualizations
 - `heatmap_config`: Create heatmap visualizations
 
-**Technical Details:**
-- CSV import uses PapaParse; parsed rows are available at `Blockly.CsvImportData.data`
-- Generators register after Blockly is ready and support both classic and `forBlock` APIs
-- System accepts arrays, PapaParse results (`{ data: [...] }`), or JSON strings
-- Backend processing via `/api/process-data` for improved performance
-- Placeholder values (e.g., `column`, `value`) trigger no-op behavior
+**Technical Notes:**
+- CSV import uses PapaParse (client‑side); parsed rows are available at `Blockly.CsvImportData.data`.
+- Generators register after Blockly is ready and support classic and `forBlock` APIs.
+- System accepts arrays, PapaParse results (`{ data: [...] }`), or JSON strings.
+- Backend processing via `/api/process-data` is available for heavier transforms.
 
 **Troubleshooting:**
 - "Generator does not know how to generate code": Hard refresh (Ctrl+F5) to reload scripts
@@ -169,15 +158,15 @@ Where `[PORT]` is the port number shown in the server startup message (3000 by d
 
 #### GET `/`
 
-Serves the main block-based programming interface.
+Serves the login page.
 
 #### GET `/ar-demo`
 
-Serves the hand tracking AR demonstration page.
+Serves the hand‑tracking AR demo.
 
 #### GET `/hybrid-ar`
 
-Serves the hybrid AR demo combining marker detection with hand tracking.
+Serves the hybrid AR demo (markers + hands).
 
 #### GET `/api/test-data/:type`
 
@@ -343,14 +332,9 @@ npm test
 npm run test:coverage
 ```
 
-### Test Coverage
+### Coverage
 
-The backend maintains **95%+ test coverage** across:
-
-- **Statements**: 95.43%
-- **Functions**: 95.52%
-- **Lines**: 95.41%
-- **Branches**: 81.14%
+Run `npm run test:coverage` to generate coverage. An HTML report will appear under `coverage/`.
 
 ### New Backend Integration Tests
 
@@ -512,4 +496,89 @@ Business analytics data with product sales, revenue, and regional information.
 
 ---
 
-**Built with ❤️ for DECO3801**
+---
+
+## Libraries
+
+Client‑side (CDN where noted):
+- Blockly: `blockly.min.js`, `javascript_compressed.js` (unpkg)
+- PapaParse: `5.4.1` (jsDelivr)
+- Chart.js: `4.4.1` (Blockly page) / latest (AR page)
+- A‑Frame: `1.6.0`
+- AR.js (A‑Frame build): latest from `AR-js-org/AR.js` (githack)
+- MediaPipe: `@mediapipe/hands`, `camera_utils`, `drawing_utils`
+- Tailwind CSS (CDN config)
+
+Server‑side (package.json):
+- express `^4.18.2`, cors `^2.8.5`, multer `^2.0.2`
+- papaparse `^5.4.1` (primarily used client‑side)
+
+Dev/tooling:
+- jest `^30.x`, jest-environment-jsdom, jsdom, supertest
+- webpack `^5.x`, webpack‑dev‑server `^5.x`, babel toolchain
+- nodemon for local dev
+
+## Docker (optional)
+
+Build and run locally:
+
+```bash
+docker build -t apparentlyar .
+docker run --rm -p 3000:3000 apparentlyar
+```
+
+## Security and Privacy (prototype)
+
+- Camera access is opt‑in; MediaPipe runs in‑browser; no video is sent server‑side.
+- CSV uploads are stored under `/uploads/`; in the prototype this path is publicly served. Avoid sensitive data.
+- Facilitator password is file‑based (plaintext) for demo; not suitable for production.
+- CORS is permissive in dev. Restrict origins before external deployment.
+
+See documentation Section 5 for detailed privacy, security, and ethics notes.
+
+## GenAI Usage
+
+- Prompts/responses used during development are archived here: `https://docs.google.com/document/d/16a_527mtUpsZUMxq0JmLCrdeopyjLhDBtgmZh3yZHic/edit?usp=sharing`.
+
+## Acknowledgements
+
+- Marker set: ARToolKit barcode markers by Nicolo Carpignoli.
+- Third‑party licenses are included in `public/react-bundle.js.LICENSE.txt` where applicable.
+
+**Built with ❤️ for DECO3801/7381**
+
+---
+
+## Deployment (Fly.io)
+
+- App name: `apparentlyar` (from `fly.toml`).
+- Production URL: `https://apparentlyar.fly.dev`.
+- If you rename the app, production becomes `https://<app-name>.fly.dev`.
+
+### Deploy steps (summary)
+
+```bash
+# Requires flyctl installed and logged in
+flyctl apps list                  # confirm access
+flyctl status -a apparentlyar     # check current status
+flyctl deploy                     # deploy using fly.toml
+flyctl open -a apparentlyar       # open https://apparentlyar.fly.dev
+```
+
+If creating a new app name:
+
+```bash
+flyctl launch --no-deploy
+flyctl apps create <new-app-name>
+flyctl deploy -a <new-app-name>
+```
+
+Note: The prototype serves `/uploads` publicly; avoid sensitive data in production.
+
+## Troubleshooting
+
+- Camera blocked: Allow camera permissions in the browser; reload AR pages.
+- No charts: Ensure CSV was imported and blocks executed; check console for errors.
+- Empty dataset after filters: Review filter blocks; try removing or relaxing conditions.
+- Cannot see uploaded CSV under AR: Use Blockly to generate a visualization first (which persists CSV via API), then load it in Hybrid AR.
+- CORS or mixed‑content warnings: Use `http://localhost:3000` locally or the HTTPS Fly URL.
